@@ -12,13 +12,56 @@ export interface User {
 export interface DailyReport {
   id: string;
   fecha: Date;
-  turno: 'mañana' | 'tarde' | 'noche';
-  incidencias: Incidencia[];
-  operaciones: string[];
-  notas: string;
-  reportadoPor: string;
+  hora: string; // HH:mm formato
+  tipo: 'incidencia' | 'mejora' | 'operacion' | 'nota';
+  categoria: 'personal' | 'material-sala' | 'servicio' | 'paciente' | 'software';
+  prioridad: 'baja' | 'media' | 'alta';
+  responsable: 'direccion' | 'administracion' | 'coordinacion';
+  descripcion: string;
+  estado: 'pendiente' | 'en-proceso' | 'resuelta';
+  observaciones?: string;
+  
+  // Campos adicionales profesionales
+  ubicacion?: string; // Sala, área o departamento específico
+  personasInvolucradas?: string[]; // Nombres de personas relacionadas
+  accionInmediata?: string; // Acción tomada en el momento
+  requiereSeguimiento: boolean; // Si necesita revisión posterior
+  fechaLimite?: Date; // Fecha límite para resolver (si aplica)
+  adjuntos?: string[]; // URLs de archivos/fotos adjuntas
+  tags?: string[]; // Etiquetas para búsqueda rápida
+  
+  // Seguimiento
+  historialEstados?: CambioEstado[]; // Historial de cambios de estado
+  resolucion?: string; // Descripción de cómo se resolvió
+  fechaResolucion?: Date; // Cuándo se resolvió
+  
+  // Metadata
+  reportadoPor: string; // Email del usuario
+  reportadoPorId: string; // ID del usuario
+  reportadoPorNombre?: string; // Nombre completo del usuario
   createdAt: Date;
   updatedAt: Date;
+  modificadoPor?: string; // Último usuario que modificó
+}
+
+// Historial de cambios de estado
+export interface CambioEstado {
+  estadoAnterior: 'pendiente' | 'en-proceso' | 'resuelta';
+  estadoNuevo: 'pendiente' | 'en-proceso' | 'resuelta';
+  fecha: Date;
+  usuario: string;
+  comentario?: string;
+}
+
+// Estadísticas del módulo
+export interface EstadisticasReporte {
+  totalReportes: number;
+  porTipo: Record<string, number>;
+  porCategoria: Record<string, number>;
+  porPrioridad: Record<string, number>;
+  porEstado: Record<string, number>;
+  pendientesAlta: number;
+  promedioResolucion: number; // días promedio
 }
 
 export interface Incidencia {
