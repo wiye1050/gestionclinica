@@ -22,7 +22,6 @@ export interface DailyReport {
   observaciones?: string;
   
   // Campos adicionales profesionales
-  ubicacion?: string; // Sala, área o departamento específico
   personasInvolucradas?: string[]; // Nombres de personas relacionadas
   accionInmediata?: string; // Acción tomada en el momento
   requiereSeguimiento: boolean; // Si necesita revisión posterior
@@ -142,7 +141,6 @@ export interface ItemInventario {
   cantidad: number;
   unidad: string;
   stockMinimo: number;
-  ubicacion: string;
   proveedor?: string;
   ultimaActualizacion: Date;
   estado: 'disponible' | 'bajo-stock' | 'agotado';

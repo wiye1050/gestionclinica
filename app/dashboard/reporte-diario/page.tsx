@@ -23,7 +23,6 @@ export default function ReporteDiarioPage() {
     prioridad: 'media' as const,
     responsable: 'coordinacion' as const,
     descripcion: '',
-    ubicacion: '',
     accionInmediata: '',
     requiereSeguimiento: false,
   });
@@ -84,7 +83,6 @@ export default function ReporteDiarioPage() {
         prioridad: 'media',
         responsable: 'coordinacion',
         descripcion: '',
-        ubicacion: '',
         accionInmediata: '',
         requiereSeguimiento: false,
       });
@@ -254,19 +252,7 @@ export default function ReporteDiarioPage() {
                   <option value="coordinacion">Coordinación</option>
                 </select>
               </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Ubicación (opcional)</label>
-                <input
-                  type="text"
-                  value={nuevoReporte.ubicacion}
-                  onChange={(e) => setNuevoReporte({...nuevoReporte, ubicacion: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  placeholder="Ej: Sala 3, Recepción, Almacén..."
-                />
-              </div>
-            </div>
-
+    
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
               <textarea
@@ -401,12 +387,6 @@ export default function ReporteDiarioPage() {
                     </div>
                     <span>•</span>
                     <span>Responsable: {reporte.responsable}</span>
-                    {reporte.ubicacion && (
-                      <>
-                        <span>•</span>
-                        <span>📍 {reporte.ubicacion}</span>
-                      </>
-                    )}
                     <span>•</span>
                     <span>Por: {reporte.reportadoPor}</span>
                   </div>
