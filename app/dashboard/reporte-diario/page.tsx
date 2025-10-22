@@ -8,6 +8,11 @@ import { DailyReport } from '@/types';
 import { Plus, Filter, Search, Clock, AlertCircle } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils/helpers';
 
+type TipoReporte = 'incidencia' | 'mejora' | 'operacion' | 'nota';
+type CategoriaReporte = 'personal' | 'material-sala' | 'servicio' | 'paciente' | 'software';
+type PrioridadReporte = 'baja' | 'media' | 'alta';
+type ResponsableReporte = 'direccion' | 'administracion' | 'coordinacion';
+
 export default function ReporteDiarioPage() {
   const { user } = useAuth();
   const [reportes, setReportes] = useState<DailyReport[]>([]);
@@ -16,11 +21,19 @@ export default function ReporteDiarioPage() {
   const [filtroPrioridad, setFiltroPrioridad] = useState<string>('todos');
   const [busqueda, setBusqueda] = useState('');
 
-  const [nuevoReporte, setNuevoReporte] = useState({
-    tipo: 'incidencia' as const,
-    categoria: 'personal' as const,
-    prioridad: 'media' as const,
-    responsable: 'coordinacion' as const,
+  const [nuevoReporte, setNuevoReporte] = useState<{
+    tipo: TipoReporte;
+    categoria: CategoriaReporte;
+    prioridad: PrioridadReporte;
+    responsable: ResponsableReporte;
+    descripcion: string;
+    accionInmediata: string;
+    requiereSeguimiento: boolean;
+  }>({
+    tipo: 'incidencia',
+    categoria: 'personal',
+    prioridad: 'media',
+    responsable: 'coordinacion',
     descripcion: '',
     accionInmediata: '',
     requiereSeguimiento: false,
@@ -188,7 +201,7 @@ export default function ReporteDiarioPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
                 <select
                   value={nuevoReporte.tipo}
-                  onChange={(e) => setNuevoReporte({...nuevoReporte, tipo: e.target.value as 'incidencia' | 'mejora' | 'operacion' | 'nota'})}
+                  onChange={(e) => setNuevoReporte({...nuevoReporte, tipo: e.target.value as TipoReporte})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   required
                 >
@@ -203,7 +216,7 @@ export default function ReporteDiarioPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
                 <select
                   value={nuevoReporte.categoria}
-                  onChange={(e) => setNuevoReporte({...nuevoReporte, categoria: e.target.value as 'personal' | 'material-sala' | 'servicio' | 'paciente' | 'software'})}
+                  onChange={(e) => setNuevoReporte({...nuevoReporte, categoria: e.target.value as CategoriaReporte})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   required
                 >
@@ -219,7 +232,7 @@ export default function ReporteDiarioPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Prioridad</label>
                 <select
                   value={nuevoReporte.prioridad}
-                  onChange={(e) => setNuevoReporte({...nuevoReporte, prioridad: e.target.value as 'baja' | 'media' | 'alta'})}
+                  onChange={(e) => setNuevoReporte({...nuevoReporte, prioridad: e.target.value as PrioridadReporte})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   required
                 >
@@ -233,7 +246,7 @@ export default function ReporteDiarioPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Responsable</label>
                 <select
                   value={nuevoReporte.responsable}
-                  onChange={(e) => setNuevoReporte({...nuevoReporte, responsable: e.target.value as 'direccion' | 'administracion' | 'coordinacion'})}
+                  onChange={(e) => setNuevoReporte({...nuevoReporte, responsable: e.target.value as ResponsableReporte})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   required
                 >
