@@ -5,8 +5,9 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { DailyReport } from '@/types';
-import { Plus, Filter, Search, Clock, AlertCircle, Edit2, Trash2, Save, X } from 'lucide-react';
+import { Plus, Filter, Search, Clock, AlertCircle, Edit2, Trash2, Save, X, Download } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils/helpers';
+import * as XLSX from 'xlsx';
 
 type TipoReporte = 'incidencia' | 'mejora' | 'operacion' | 'nota';
 type CategoriaReporte = 'personal' | 'material-sala' | 'servicio' | 'paciente' | 'software';
@@ -177,6 +178,46 @@ export default function ReporteDiarioPage() {
     setReporteEditando(null);
   };
 
+  const exportarAExcel = () => {
+    // Preparar datos para Excel
+    const datosExcel = reportesFiltrados.map(reporte => ({
+      'Fecha': formatDateTime(reporte.createdAt),
+      'Tipo': reporte.tipo.toUpperCase(),
+      'Categoría': reporte.categoria.replace('-', '/'),
+      'Prioridad': reporte.prioridad.toUpperCase(),
+      'Estado': reporte.estado.replace('-', ' ').toUpperCase(),
+      'Responsable': reporte.responsable,
+      'Descripción': reporte.descripcion,
+      'Acción Inmediata': reporte.accionInmediata || 'N/A',
+      'Requiere Seguimiento': reporte.requiereSeguimiento ? 'Sí' : 'No',
+      'Reportado Por': reporte.reportadoPor,
+    }));
+
+    // Crear libro de trabajo
+    const ws = XLSX.utils.json_to_sheet(datosExcel);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Reportes Diarios');
+
+    // Ajustar ancho de columnas
+    const colWidths = [
+      { wch: 20 }, // Fecha
+      { wch: 12 }, // Tipo
+      { wch: 15 }, // Categoría
+      { wch: 10 }, // Prioridad
+      { wch: 15 }, // Estado
+      { wch: 15 }, // Responsable
+      { wch: 50 }, // Descripción
+      { wch: 30 }, // Acción Inmediata
+      { wch: 18 }, // Requiere Seguimiento
+      { wch: 25 }, // Reportado Por
+    ];
+    ws['!cols'] = colWidths;
+
+    // Generar archivo
+    const fecha = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `Reportes_Diarios_${fecha}.xlsx`);
+  };
+
   const reportesFiltrados = reportes.filter(reporte => {
     const cumpleTipo = filtroTipo === 'todos' || reporte.tipo === filtroTipo;
     const cumplePrioridad = filtroPrioridad === 'todos' || reporte.prioridad === filtroPrioridad;
@@ -218,13 +259,23 @@ export default function ReporteDiarioPage() {
           <h1 className="text-3xl font-bold text-gray-900">Reporte Diario</h1>
           <p className="text-gray-600 mt-1">Registro de incidencias, mejoras y operaciones</p>
         </div>
-        <button
-          onClick={() => setMostrarFormulario(!mostrarFormulario)}
-          className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Nuevo Reporte</span>
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={exportarAExcel}
+            className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+            title="Exportar reportes filtrados a Excel"
+          >
+            <Download className="w-5 h-5" />
+            <span>Exportar Excel</span>
+          </button>
+          <button
+            onClick={() => setMostrarFormulario(!mostrarFormulario)}
+            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Nuevo Reporte</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
