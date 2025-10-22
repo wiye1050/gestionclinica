@@ -27,8 +27,8 @@ export const useAuth = () => {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       return { success: true, user: result.user };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' };
     }
   };
 
@@ -36,8 +36,8 @@ export const useAuth = () => {
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
       return { success: true, user: result.user };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' };
     }
   };
 
@@ -45,8 +45,8 @@ export const useAuth = () => {
     try {
       await signOut(auth);
       return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' };
     }
   };
 
