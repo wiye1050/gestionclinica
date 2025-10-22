@@ -188,7 +188,7 @@ export default function ReporteDiarioPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
                 <select
                   value={nuevoReporte.tipo}
-                  onChange={(e) => setNuevoReporte({...nuevoReporte, tipo: e.target.value as any})}
+                  onChange={(e) => setNuevoReporte({...nuevoReporte, tipo: e.target.value as 'incidencia' | 'mejora' | 'operacion' | 'nota'})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   required
                 >
@@ -203,7 +203,7 @@ export default function ReporteDiarioPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
                 <select
                   value={nuevoReporte.categoria}
-                  onChange={(e) => setNuevoReporte({...nuevoReporte, categoria: e.target.value as any})}
+                  onChange={(e) => setNuevoReporte({...nuevoReporte, categoria: e.target.value as 'personal' | 'material-sala' | 'servicio' | 'paciente' | 'software'})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   required
                 >
@@ -219,7 +219,7 @@ export default function ReporteDiarioPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Prioridad</label>
                 <select
                   value={nuevoReporte.prioridad}
-                  onChange={(e) => setNuevoReporte({...nuevoReporte, prioridad: e.target.value as any})}
+                  onChange={(e) => setNuevoReporte({...nuevoReporte, prioridad: e.target.value as 'baja' | 'media' | 'alta'})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   required
                 >
@@ -233,7 +233,7 @@ export default function ReporteDiarioPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Responsable</label>
                 <select
                   value={nuevoReporte.responsable}
-                  onChange={(e) => setNuevoReporte({...nuevoReporte, responsable: e.target.value as any})}
+                  onChange={(e) => setNuevoReporte({...nuevoReporte, responsable: e.target.value as 'direccion' | 'administracion' | 'coordinacion'})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   required
                 >
