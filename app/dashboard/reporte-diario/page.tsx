@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc } from 'firebase/firestore';
 import { DailyReport } from '@/types';
 import { Plus, Filter, Search, Clock, AlertCircle } from 'lucide-react';
-import { formatDateTime, formatDate } from '@/lib/utils/helpers';
+import { formatDateTime } from '@/lib/utils/helpers';
 
 export default function ReporteDiarioPage() {
   const { user } = useAuth();
@@ -16,7 +16,6 @@ export default function ReporteDiarioPage() {
   const [filtroPrioridad, setFiltroPrioridad] = useState<string>('todos');
   const [busqueda, setBusqueda] = useState('');
 
-  // Formulario
   const [nuevoReporte, setNuevoReporte] = useState({
     tipo: 'incidencia' as const,
     categoria: 'personal' as const,
@@ -27,7 +26,6 @@ export default function ReporteDiarioPage() {
     requiereSeguimiento: false,
   });
 
-  // Cargar reportes desde Firestore
   useEffect(() => {
     const q = query(
       collection(db, 'reportes-diarios'),
@@ -49,7 +47,6 @@ export default function ReporteDiarioPage() {
     return () => unsubscribe();
   }, []);
 
-  // Crear nuevo reporte
   const handleCrearReporte = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -76,7 +73,6 @@ export default function ReporteDiarioPage() {
         }]
       });
 
-      // Resetear formulario
       setNuevoReporte({
         tipo: 'incidencia',
         categoria: 'personal',
@@ -93,7 +89,6 @@ export default function ReporteDiarioPage() {
     }
   };
 
-  // Cambiar estado de reporte
   const cambiarEstado = async (reporteId: string, nuevoEstado: 'pendiente' | 'en-proceso' | 'resuelta') => {
     if (!user) return;
     
@@ -108,7 +103,6 @@ export default function ReporteDiarioPage() {
     });
   };
 
-  // Filtrar reportes
   const reportesFiltrados = reportes.filter(reporte => {
     const cumpleTipo = filtroTipo === 'todos' || reporte.tipo === filtroTipo;
     const cumplePrioridad = filtroPrioridad === 'todos' || reporte.prioridad === filtroPrioridad;
@@ -117,7 +111,6 @@ export default function ReporteDiarioPage() {
     return cumpleTipo && cumplePrioridad && cumpleBusqueda;
   });
 
-  // Estadísticas rápidas
   const stats = {
     total: reportes.length,
     pendientes: reportes.filter(r => r.estado === 'pendiente').length,
@@ -146,7 +139,6 @@ export default function ReporteDiarioPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Reporte Diario</h1>
@@ -161,7 +153,6 @@ export default function ReporteDiarioPage() {
         </button>
       </div>
 
-      {/* Estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="bg-white p-4 rounded-lg shadow">
           <p className="text-sm text-gray-600">Total Reportes</p>
@@ -188,7 +179,6 @@ export default function ReporteDiarioPage() {
         </div>
       </div>
 
-      {/* Formulario de nuevo reporte */}
       {mostrarFormulario && (
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Nuevo Reporte</h2>
@@ -252,7 +242,8 @@ export default function ReporteDiarioPage() {
                   <option value="coordinacion">Coordinación</option>
                 </select>
               </div>
-    
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
               <textarea
@@ -306,7 +297,6 @@ export default function ReporteDiarioPage() {
         </div>
       )}
 
-      {/* Filtros y búsqueda */}
       <div className="bg-white p-4 rounded-lg shadow">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center space-x-2">
@@ -352,7 +342,6 @@ export default function ReporteDiarioPage() {
         </div>
       </div>
 
-      {/* Lista de reportes */}
       <div className="space-y-4">
         {reportesFiltrados.length === 0 ? (
           <div className="bg-white p-8 rounded-lg shadow text-center">
