@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { DailyReport } from '@/types';
-import { Plus, Filter, Search, Clock, AlertCircle } from 'lucide-react';
+import { Plus, Filter, Search, Clock, AlertCircle, Edit2, Trash2, Save, X } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils/helpers';
 
 type TipoReporte = 'incidencia' | 'mejora' | 'operacion' | 'nota';
@@ -20,6 +20,16 @@ export default function ReporteDiarioPage() {
   const [filtroTipo, setFiltroTipo] = useState<string>('todos');
   const [filtroPrioridad, setFiltroPrioridad] = useState<string>('todos');
   const [busqueda, setBusqueda] = useState('');
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [reporteEditando, setReporteEditando] = useState<{
+    tipo: TipoReporte;
+    categoria: CategoriaReporte;
+    prioridad: PrioridadReporte;
+    responsable: ResponsableReporte;
+    descripcion: string;
+    accionInmediata: string;
+    requiereSeguimiento: boolean;
+  } | null>(null);
 
   const [nuevoReporte, setNuevoReporte] = useState<{
     tipo: TipoReporte;
@@ -114,6 +124,57 @@ export default function ReporteDiarioPage() {
       modificadoPor: user.email,
       ...(nuevoEstado === 'resuelta' && { fechaResolucion: ahora })
     });
+  };
+
+  const eliminarReporte = async (reporteId: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este reporte? Esta acción no se puede deshacer.')) {
+      return;
+    }
+    
+    try {
+      const reporteRef = doc(db, 'reportes-diarios', reporteId);
+      await deleteDoc(reporteRef);
+    } catch (error) {
+      console.error('Error al eliminar reporte:', error);
+      alert('Error al eliminar el reporte');
+    }
+  };
+
+  const iniciarEdicion = (reporte: DailyReport) => {
+    setEditandoId(reporte.id);
+    setReporteEditando({
+      tipo: reporte.tipo,
+      categoria: reporte.categoria,
+      prioridad: reporte.prioridad,
+      responsable: reporte.responsable,
+      descripcion: reporte.descripcion,
+      accionInmediata: reporte.accionInmediata || '',
+      requiereSeguimiento: reporte.requiereSeguimiento,
+    });
+  };
+
+  const guardarEdicion = async (reporteId: string) => {
+    if (!user || !reporteEditando) return;
+    
+    try {
+      const reporteRef = doc(db, 'reportes-diarios', reporteId);
+      await updateDoc(reporteRef, {
+        ...reporteEditando,
+        updatedAt: new Date(),
+        modificadoPor: user.email,
+      });
+      
+      setEditandoId(null);
+      setReporteEditando(null);
+    } catch (error) {
+      console.error('Error al actualizar reporte:', error);
+      alert('Error al actualizar el reporte');
+    }
+  };
+
+  const cancelarEdicion = () => {
+    setEditandoId(null);
+    setReporteEditando(null);
   };
 
   const reportesFiltrados = reportes.filter(reporte => {
@@ -363,71 +424,196 @@ export default function ReporteDiarioPage() {
         ) : (
           reportesFiltrados.map((reporte) => (
             <div key={reporte.id} className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getPrioridadColor(reporte.prioridad)}`}>
-                      {reporte.prioridad.toUpperCase()}
-                    </span>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getEstadoColor(reporte.estado)}`}>
-                      {reporte.estado.replace('-', ' ').toUpperCase()}
-                    </span>
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      {reporte.tipo.toUpperCase()}
-                    </span>
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                      {reporte.categoria.replace('-', '/')}
-                    </span>
+              {editandoId === reporte.id && reporteEditando ? (
+                // MODO EDICIÓN
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                      <select
+                        value={reporteEditando.tipo}
+                        onChange={(e) => setReporteEditando({...reporteEditando, tipo: e.target.value as TipoReporte})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      >
+                        <option value="incidencia">Incidencia</option>
+                        <option value="mejora">Mejora</option>
+                        <option value="operacion">Operación</option>
+                        <option value="nota">Nota</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+                      <select
+                        value={reporteEditando.categoria}
+                        onChange={(e) => setReporteEditando({...reporteEditando, categoria: e.target.value as CategoriaReporte})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      >
+                        <option value="personal">Personal</option>
+                        <option value="material-sala">Material/Sala</option>
+                        <option value="servicio">Servicio</option>
+                        <option value="paciente">Paciente</option>
+                        <option value="software">Software</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Prioridad</label>
+                      <select
+                        value={reporteEditando.prioridad}
+                        onChange={(e) => setReporteEditando({...reporteEditando, prioridad: e.target.value as PrioridadReporte})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      >
+                        <option value="baja">Baja</option>
+                        <option value="media">Media</option>
+                        <option value="alta">Alta</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Responsable</label>
+                      <select
+                        value={reporteEditando.responsable}
+                        onChange={(e) => setReporteEditando({...reporteEditando, responsable: e.target.value as ResponsableReporte})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      >
+                        <option value="direccion">Dirección</option>
+                        <option value="administracion">Administración</option>
+                        <option value="coordinacion">Coordinación</option>
+                      </select>
+                    </div>
                   </div>
-                  
-                  <p className="text-gray-900 font-medium mb-2">{reporte.descripcion}</p>
-                  
-                  <div className="flex items-center space-x-4 text-sm text-gray-600">
-                    <div className="flex items-center space-x-1">
-                      <Clock className="w-4 h-4" />
-                      <span>{formatDateTime(reporte.createdAt)}</span>
-                    </div>
-                    <span>•</span>
-                    <span>Responsable: {reporte.responsable}</span>
-                    <span>•</span>
-                    <span>Por: {reporte.reportadoPor}</span>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                    <textarea
+                      value={reporteEditando.descripcion}
+                      onChange={(e) => setReporteEditando({...reporteEditando, descripcion: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      rows={4}
+                    />
                   </div>
 
-                  {reporte.accionInmediata && (
-                    <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                      <p className="text-sm text-gray-700">
-                        <span className="font-medium">Acción inmediata:</span> {reporte.accionInmediata}
-                      </p>
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Acción Inmediata</label>
+                    <textarea
+                      value={reporteEditando.accionInmediata}
+                      onChange={(e) => setReporteEditando({...reporteEditando, accionInmediata: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      rows={2}
+                    />
+                  </div>
 
-                  {reporte.requiereSeguimiento && (
-                    <div className="mt-2 flex items-center space-x-2 text-orange-600 text-sm">
-                      <AlertCircle className="w-4 h-4" />
-                      <span>Requiere seguimiento</span>
-                    </div>
-                  )}
-                </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id={`seguimiento-${reporte.id}`}
+                      checked={reporteEditando.requiereSeguimiento}
+                      onChange={(e) => setReporteEditando({...reporteEditando, requiereSeguimiento: e.target.checked})}
+                      className="mr-2"
+                    />
+                    <label htmlFor={`seguimiento-${reporte.id}`} className="text-sm text-gray-700">Requiere seguimiento posterior</label>
+                  </div>
 
-                <div className="flex flex-col space-y-2 ml-4">
-                  {reporte.estado === 'pendiente' && (
+                  <div className="flex space-x-3">
                     <button
-                      onClick={() => cambiarEstado(reporte.id, 'en-proceso')}
-                      className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200"
+                      onClick={() => guardarEdicion(reporte.id)}
+                      className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
                     >
-                      Iniciar
+                      <Save className="w-4 h-4" />
+                      <span>Guardar</span>
                     </button>
-                  )}
-                  {reporte.estado === 'en-proceso' && (
                     <button
-                      onClick={() => cambiarEstado(reporte.id, 'resuelta')}
-                      className="px-3 py-1 bg-green-100 text-green-700 rounded text-sm hover:bg-green-200"
+                      onClick={cancelarEdicion}
+                      className="flex items-center space-x-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300"
                     >
-                      Resolver
+                      <X className="w-4 h-4" />
+                      <span>Cancelar</span>
                     </button>
-                  )}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                // MODO VISTA
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getPrioridadColor(reporte.prioridad)}`}>
+                        {reporte.prioridad.toUpperCase()}
+                      </span>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getEstadoColor(reporte.estado)}`}>
+                        {reporte.estado.replace('-', ' ').toUpperCase()}
+                      </span>
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        {reporte.tipo.toUpperCase()}
+                      </span>
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        {reporte.categoria.replace('-', '/')}
+                      </span>
+                    </div>
+                    
+                    <p className="text-gray-900 font-medium mb-2">{reporte.descripcion}</p>
+                    
+                    <div className="flex items-center space-x-4 text-sm text-gray-600">
+                      <div className="flex items-center space-x-1">
+                        <Clock className="w-4 h-4" />
+                        <span>{formatDateTime(reporte.createdAt)}</span>
+                      </div>
+                      <span>•</span>
+                      <span>Responsable: {reporte.responsable}</span>
+                      <span>•</span>
+                      <span>Por: {reporte.reportadoPor}</span>
+                    </div>
+
+                    {reporte.accionInmediata && (
+                      <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                        <p className="text-sm text-gray-700">
+                          <span className="font-medium">Acción inmediata:</span> {reporte.accionInmediata}
+                        </p>
+                      </div>
+                    )}
+
+                    {reporte.requiereSeguimiento && (
+                      <div className="mt-2 flex items-center space-x-2 text-orange-600 text-sm">
+                        <AlertCircle className="w-4 h-4" />
+                        <span>Requiere seguimiento</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col space-y-2 ml-4">
+                    {reporte.estado === 'pendiente' && (
+                      <button
+                        onClick={() => cambiarEstado(reporte.id, 'en-proceso')}
+                        className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200"
+                      >
+                        Iniciar
+                      </button>
+                    )}
+                    {reporte.estado === 'en-proceso' && (
+                      <button
+                        onClick={() => cambiarEstado(reporte.id, 'resuelta')}
+                        className="px-3 py-1 bg-green-100 text-green-700 rounded text-sm hover:bg-green-200"
+                      >
+                        Resolver
+                      </button>
+                    )}
+                    <button
+                      onClick={() => iniciarEdicion(reporte)}
+                      className="flex items-center justify-center space-x-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded text-sm hover:bg-yellow-200"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                      <span>Editar</span>
+                    </button>
+                    <button
+                      onClick={() => eliminarReporte(reporte.id)}
+                      className="flex items-center justify-center space-x-1 px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Eliminar</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))
         )}
