@@ -71,8 +71,7 @@ export default function InventarioPage() {
         alert('✅ Producto creado');
       }
       resetForm();
-    } catch (_error) {
-      console.error('Error:', error);
+    } catch (error) { console.error(error); console.error('Error:', error);
       alert('❌ Error al guardar');
     }
   };
@@ -83,8 +82,7 @@ export default function InventarioPage() {
     try {
       await deleteDoc(doc(db, 'inventario-productos', id));
       alert('✅ Eliminado');
-    } catch (_error) {
-      alert('❌ Error al eliminar');
+    } catch (error) { console.error(error); alert('❌ Error al eliminar');
     }
   };
 

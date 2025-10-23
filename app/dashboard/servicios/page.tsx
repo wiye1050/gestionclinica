@@ -30,8 +30,7 @@ export default function ServiciosPage() {
     requiereApoyo: false,
     sala: '',
     supervision: false,
-    esActual: false,
-  });
+    esActual: false});
 
   // Cargar datos
   useEffect(() => {
@@ -43,8 +42,7 @@ export default function ServiciosPage() {
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
         updatedAt: doc.data().updatedAt?.toDate(),
-        fechaProgramada: doc.data().fechaProgramada?.toDate(),
-      })) as ServicioAsignado[];
+        fechaProgramada: doc.data().fechaProgramada?.toDate()})) as ServicioAsignado[];
       setServicios(serviciosData);
     });
 
@@ -55,8 +53,7 @@ export default function ServiciosPage() {
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-      })) as Profesional[];
+        updatedAt: doc.data().updatedAt?.toDate()})) as Profesional[];
       setProfesionales(profesionalesData.filter(p => p.activo));
     });
 
@@ -67,8 +64,7 @@ export default function ServiciosPage() {
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-      })) as GrupoPaciente[];
+        updatedAt: doc.data().updatedAt?.toDate()})) as GrupoPaciente[];
       setGrupos(gruposData.filter(g => g.activo));
     });
 
@@ -79,8 +75,7 @@ export default function ServiciosPage() {
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-      })) as CatalogoServicio[];
+        updatedAt: doc.data().updatedAt?.toDate()})) as CatalogoServicio[];
       setCatalogoServicios(catalogoData.filter(s => s.activo));
     });
 
@@ -130,8 +125,7 @@ export default function ServiciosPage() {
         vecesRealizadoMes: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
-        creadoPor: user.email,
-      });
+        creadoPor: user.email});
 
       // Reset form
       setNuevoServicio({
@@ -144,8 +138,7 @@ export default function ServiciosPage() {
         requiereApoyo: false,
         sala: '',
         supervision: false,
-        esActual: false,
-      });
+        esActual: false});
       setMostrarFormulario(false);
     } catch (error) {
       console.error('Error al crear servicio:', error);
@@ -157,8 +150,7 @@ export default function ServiciosPage() {
     try {
       await updateDoc(doc(db, 'servicios-asignados', servicioId), {
         esActual: !valorActual,
-        updatedAt: new Date(),
-      });
+        updatedAt: new Date()});
     } catch (error) {
       console.error('Error al actualizar:', error);
     }
@@ -169,8 +161,7 @@ export default function ServiciosPage() {
     try {
       await updateDoc(doc(db, 'servicios-asignados', servicioId), {
         tiquet: nuevoTiquet,
-        updatedAt: new Date(),
-      });
+        updatedAt: new Date()});
     } catch (error) {
       console.error('Error al actualizar tiquet:', error);
     }
@@ -185,8 +176,7 @@ export default function ServiciosPage() {
       await updateDoc(doc(db, 'servicios-asignados', servicioId), {
         [campo]: profesionalId,
         [`${campo}Nombre`]: nombreCompleto,
-        updatedAt: new Date(),
-      });
+        updatedAt: new Date()});
     } catch (error) {
       console.error('Error al actualizar profesional:', error);
     }
@@ -216,8 +206,7 @@ export default function ServiciosPage() {
       'Sala': servicio.sala || '-',
       'Tiempo': servicio.tiempoReal ? `${servicio.tiempoReal} min` : '-',
       'Requiere Apoyo': servicio.requiereApoyo ? 'Sí' : 'No',
-      'Supervisión': servicio.supervision ? 'Sí' : 'No',
-    }));
+      'Supervisión': servicio.supervision ? 'Sí' : 'No'}));
 
     const ws = XLSX.utils.json_to_sheet(datosExcel);
     const wb = XLSX.utils.book_new();
