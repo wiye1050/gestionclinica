@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { Proyecto } from '@/types';
-import { Plus, Edit2, Trash2, Clock, User, Calendar, MessageSquare, X, Save } from 'lucide-react';
+import { Plus, Edit2, Trash2, Clock, User, Calendar, X, Save } from 'lucide-react';
 
 export default function ProyectosPage() {
   const { user } = useAuth();

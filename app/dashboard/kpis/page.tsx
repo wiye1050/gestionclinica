@@ -16,8 +16,7 @@ import {
   TrendingUp, 
   Users, 
   Activity, 
-  Award, 
-  Clock, 
+  Award,  
   BarChart3,
   Download,
   Calendar,
@@ -51,7 +50,7 @@ type PeriodoFiltro = 'semana' | 'mes' | 'trimestre' | 'año';
 type VistaActual = 'general' | 'profesionales' | 'servicios' | 'calidad';
 
 export default function KPIsPage() {
-  const { user } = useAuth();
+  useAuth();
   
   // Estados de datos
   const [reportes, setReportes] = useState<DailyReport[]>([]);
@@ -317,7 +316,7 @@ export default function KPIsPage() {
         manejo: (evalsProfesional.reduce((acc, e) => acc + e.manejoPaciente, 0) / evalsProfesional.length).toFixed(1),
         equipamiento: (evalsProfesional.reduce((acc, e) => acc + e.usoEquipamiento, 0) / evalsProfesional.length).toFixed(1),
         comunicacion: (evalsProfesional.reduce((acc, e) => acc + e.comunicacion, 0) / evalsProfesional.length).toFixed(1)};
-    });
+    }, []);
   }, [profesionales, evaluaciones]);
 
   // Datos para rendimiento de profesionales
@@ -339,7 +338,7 @@ export default function KPIsPage() {
         cargaTrabajo: prof.cargaTrabajo,
         evaluaciones: evalsProfesional.length,
         promedioCalidad: Number(promedio.toFixed(2))};
-    }).sort((a, b) => b.promedioCalidad - a.promedioCalidad);
+    }, []).sort((a, b) => b.promedioCalidad - a.promedioCalidad);
   }, [profesionales, evaluaciones]);
 
   // Exportar a Excel
@@ -505,7 +504,7 @@ export default function KPIsPage() {
 
       {/* Indicadores de Calidad */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg border border-blue-200">
+        <div className="bg-linear-to-br from-blue-50 to-blue-100 p-6 rounded-lg border border-blue-200">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-medium text-blue-900">Cumplimiento Protocolos</p>
             <CheckCircle className="w-5 h-5 text-blue-600" />
@@ -519,7 +518,7 @@ export default function KPIsPage() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200">
+        <div className="bg-linear-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-medium text-green-900">Satisfacción Pacientes</p>
             <Award className="w-5 h-5 text-green-600" />
@@ -533,7 +532,7 @@ export default function KPIsPage() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg border border-purple-200">
+        <div className="bg-linear-to-br from-purple-50 to-purple-100 p-6 rounded-lg border border-purple-200">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-medium text-purple-900">Carga Promedio Equipo</p>
             <Users className="w-5 h-5 text-purple-600" />
@@ -676,7 +675,7 @@ export default function KPIsPage() {
         { name: 'Fisioterapia', value: fisioterapia, color: COLORS.success },
         { name: 'Enfermería', value: enfermeria, color: COLORS.purple },
       ];
-    });
+    }, []);
 
     const serviciosPorTicket = useMemo(() => {
       return [
@@ -685,7 +684,7 @@ export default function KPIsPage() {
         { name: 'CORD', value: servicios.filter(s => s.tiquet === 'CORD').length, color: COLORS.warning },
         { name: 'ESPACH', value: servicios.filter(s => s.tiquet === 'ESPACH').length, color: COLORS.cyan },
       ];
-    });
+    }, []);
 
     return (
       <div className="space-y-6">
