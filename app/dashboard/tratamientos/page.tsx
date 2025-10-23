@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { CatalogoServicio } from '@/types';
-import { Plus, Edit2, Trash2, Save, X, List, Clock, CheckSquare } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, List, Clock } from 'lucide-react';
 
 interface Tratamiento {
   id: string;
@@ -43,8 +43,7 @@ export default function TratamientosPage() {
       orden: number;
       opcional: boolean;
     }[],
-    activo: true,
-  });
+    activo: true});
 
   // Cargar datos
   useEffect(() => {
@@ -55,8 +54,7 @@ export default function TratamientosPage() {
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-      })) as Tratamiento[];
+        updatedAt: doc.data().updatedAt?.toDate()})) as Tratamiento[];
       setTratamientos(tratamientosData);
     });
 
@@ -67,8 +65,7 @@ export default function TratamientosPage() {
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-      })) as CatalogoServicio[];
+        updatedAt: doc.data().updatedAt?.toDate()})) as CatalogoServicio[];
       setCatalogoServicios(serviciosData.filter(s => s.activo));
     });
 
@@ -85,8 +82,7 @@ export default function TratamientosPage() {
       descripcion: '',
       categoria: 'mixto',
       serviciosIncluidos: [],
-      activo: true,
-    });
+      activo: true});
     setEditandoId(null);
     setMostrarFormulario(false);
   };
@@ -116,8 +112,7 @@ export default function TratamientosPage() {
     const datos = {
       ...formData,
       tiempoTotalEstimado: tiempoTotal,
-      updatedAt: new Date(),
-    };
+      updatedAt: new Date()};
 
     try {
       if (editandoId) {
@@ -125,8 +120,7 @@ export default function TratamientosPage() {
       } else {
         await addDoc(collection(db, 'tratamientos'), {
           ...datos,
-          createdAt: new Date(),
-        });
+          createdAt: new Date()});
       }
       resetForm();
     } catch (error) {
@@ -142,8 +136,7 @@ export default function TratamientosPage() {
       descripcion: tratamiento.descripcion || '',
       categoria: tratamiento.categoria,
       serviciosIncluidos: tratamiento.serviciosIncluidos,
-      activo: tratamiento.activo,
-    });
+      activo: tratamiento.activo});
     setEditandoId(tratamiento.id);
     setMostrarFormulario(true);
   };
@@ -178,8 +171,7 @@ export default function TratamientosPage() {
           servicioId: servicio.id,
           servicioNombre: servicio.nombre,
           orden: prev.serviciosIncluidos.length + 1,
-          opcional: false,
-        }
+          opcional: false}
       ]
     }));
   };
@@ -224,8 +216,7 @@ export default function TratamientosPage() {
     try {
       await updateDoc(doc(db, 'tratamientos', id), {
         activo: !estadoActual,
-        updatedAt: new Date(),
-      });
+        updatedAt: new Date()});
     } catch (error) {
       console.error('Error al cambiar estado:', error);
     }
@@ -244,8 +235,7 @@ export default function TratamientosPage() {
     medicina: tratamientos.filter(t => t.categoria === 'medicina').length,
     fisioterapia: tratamientos.filter(t => t.categoria === 'fisioterapia').length,
     enfermeria: tratamientos.filter(t => t.categoria === 'enfermeria').length,
-    mixtos: tratamientos.filter(t => t.categoria === 'mixto').length,
-  };
+    mixtos: tratamientos.filter(t => t.categoria === 'mixto').length};
 
   const getColorCategoria = (categoria: string) => {
     switch (categoria) {
