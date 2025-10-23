@@ -72,7 +72,7 @@ export default function ProyectosPage() {
     e.preventDefault();
     if (!user) return;
 
-    const datos = {
+    const datos: any = {
       ...formData,
       fechaInicio: formData.fechaInicio ? new Date(formData.fechaInicio) : null,
       fechaFinEstimada: formData.fechaFinEstimada ? new Date(formData.fechaFinEstimada) : null,
@@ -131,13 +131,13 @@ export default function ProyectosPage() {
   // Cambiar estado del proyecto
   const cambiarEstado = async (id: string, nuevoEstado: 'propuesta' | 'en-curso' | 'completado') => {
     try {
-      const datos: unknown = {
+      const datos: any = {
         estado: nuevoEstado,
         updatedAt: new Date(),
       };
 
       if (nuevoEstado === 'completado') {
-        datos.fechaFinReal = new Date();
+        (datos as any).fechaFinReal = new Date();
       }
 
       await updateDoc(doc(db, 'proyectos', id), datos);
