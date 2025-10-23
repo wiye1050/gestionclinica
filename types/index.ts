@@ -1,18 +1,25 @@
-// Tipos para Usuario
+// types/index.ts
+
+// ============================================
+// TIPOS DE USUARIO Y AUTENTICACIÓN
+// ============================================
+
 export interface User {
-  id: string;
-  nombre: string;
+  uid: string;
   email: string;
-  rol: 'admin' | 'coordinador' | 'supervisor' | 'personal';
-  activo: boolean;
-  createdAt: Date;
+  displayName?: string;
+  role?: 'admin' | 'coordinador' | 'profesional' | 'usuario';
+  createdAt?: Date;
 }
 
-// Tipos para Reporte Diario
+// ============================================
+// TIPOS PARA REPORTE DIARIO
+// ============================================
+
 export interface DailyReport {
   id: string;
   fecha: Date;
-  hora: string; // HH:mm formato
+  hora: string;
   tipo: 'incidencia' | 'mejora' | 'operacion' | 'nota';
   categoria: 'personal' | 'material-sala' | 'servicio' | 'paciente' | 'software';
   prioridad: 'baja' | 'media' | 'alta';
@@ -21,29 +28,25 @@ export interface DailyReport {
   estado: 'pendiente' | 'en-proceso' | 'resuelta';
   observaciones?: string;
   
-  // Campos adicionales profesionales
-  personasInvolucradas?: string[]; // Nombres de personas relacionadas
-  accionInmediata?: string; // Acción tomada en el momento
-  requiereSeguimiento: boolean; // Si necesita revisión posterior
-  fechaLimite?: Date; // Fecha límite para resolver (si aplica)
-  adjuntos?: string[]; // URLs de archivos/fotos adjuntas
-  tags?: string[]; // Etiquetas para búsqueda rápida
+  personasInvolucradas?: string[];
+  accionInmediata?: string;
+  requiereSeguimiento: boolean;
+  fechaLimite?: Date;
+  adjuntos?: string[];
+  tags?: string[];
   
-  // Seguimiento
-  historialEstados?: CambioEstado[]; // Historial de cambios de estado
-  resolucion?: string; // Descripción de cómo se resolvió
-  fechaResolucion?: Date; // Cuándo se resolvió
+  historialEstados?: CambioEstado[];
+  resolucion?: string;
+  fechaResolucion?: Date;
   
-  // Metadata
-  reportadoPor: string; // Email del usuario
-  reportadoPorId: string; // ID del usuario
-  reportadoPorNombre?: string; // Nombre completo del usuario
+  reportadoPor: string;
+  reportadoPorId: string;
+  reportadoPorNombre?: string;
   createdAt: Date;
   updatedAt: Date;
-  modificadoPor?: string; // Último usuario que modificó
+  modificadoPor?: string;
 }
 
-// Historial de cambios de estado
 export interface CambioEstado {
   estadoAnterior: 'pendiente' | 'en-proceso' | 'resuelta';
   estadoNuevo: 'pendiente' | 'en-proceso' | 'resuelta';
@@ -52,7 +55,6 @@ export interface CambioEstado {
   comentario?: string;
 }
 
-// Estadísticas del módulo
 export interface EstadisticasReporte {
   totalReportes: number;
   porTipo: Record<string, number>;
@@ -60,134 +62,431 @@ export interface EstadisticasReporte {
   porPrioridad: Record<string, number>;
   porEstado: Record<string, number>;
   pendientesAlta: number;
-  promedioResolucion: number; // días promedio
+  promedioResolucion: number;
 }
 
-export interface Incidencia {
-  tipo: 'operativa' | 'equipamiento' | 'personal' | 'paciente' | 'otro';
-  descripcion: string;
-  prioridad: 'baja' | 'media' | 'alta' | 'critica';
-  estado: 'abierta' | 'en-proceso' | 'resuelta';
-  responsable?: string;
-}
+// ============================================
+// TIPOS PARA GESTIÓN DE SERVICIOS Y TAREAS
+// ============================================
 
-// Tipos para KPIs
-export interface KPI {
+// Profesionales de la clínica
+export interface Profesional {
   id: string;
   nombre: string;
-  categoria: 'calidad' | 'productividad' | 'financiero' | 'satisfaccion';
-  valor: number;
-  unidad: string;
-  objetivo: number;
-  fecha: Date;
-  tendencia: 'subida' | 'bajada' | 'estable';
+  apellidos: string;
+  especialidad: 'medicina' | 'fisioterapia' | 'enfermeria';
+  email: string;
+  telefono?: string;
+  activo: boolean;
+  
+  // Disponibilidad y capacidad
+  horasSemanales: number;
+  diasTrabajo: string[];
+  horaInicio: string;
+  horaFin: string;
+  
+  // Estadísticas
+  serviciosAsignados: number;
+  cargaTrabajo: number;
+  
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-// Tipos para Tareas y Servicios
-export interface Servicio {
+// Grupos de pacientes
+export interface GrupoPaciente {
   id: string;
   nombre: string;
-  descripcion: string;
-  duracion: number; // en minutos
-  protocolo?: Protocolo;
+  pacientes: string[];
+  color: string;
+  activo: boolean;
+  
+  // Profesionales asignados por defecto
+  medicinaPrincipal?: string;
+  fisioterapiaPrincipal?: string;
+  enfermeriaPrincipal?: string;
+  
+  notas?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Catálogo de Servicios (plantillas)
+export interface CatalogoServicio {
+  id: string;
+  nombre: string;
+  categoria: 'medicina' | 'fisioterapia' | 'enfermeria';
+  descripcion?: string;
+  
+  // Configuración del servicio
+  tiempoEstimado: number;
+  requiereSala: boolean;
+  salaPredeterminada?: string;
+  requiereSupervision: boolean;
+  requiereApoyo: boolean;
+  
+  // Para cálculos
+  frecuenciaMensual?: number;
+  cargaMensualEstimada?: string;
+  
+  // Profesionales que pueden realizar este servicio
+  profesionalesHabilitados: string[];
+  
   activo: boolean;
   createdAt: Date;
+  updatedAt: Date;
 }
 
-export interface Protocolo {
-  pasos: string[];
-  materialesNecesarios: string[];
-  precauciones: string[];
-  tiempoEstimado: number;
-}
-
-export interface TareaOperativa {
+// Servicios Asignados (instancias reales del catálogo)
+export interface ServicioAsignado {
   id: string;
-  titulo: string;
-  descripcion: string;
-  servicioRelacionado?: string;
-  responsable: string;
-  estado: 'pendiente' | 'en-proceso' | 'completada' | 'cancelada';
-  prioridad: 'baja' | 'media' | 'alta';
-  fechaLimite?: Date;
+  
+  // Referencia al catálogo y grupo
+  catalogoServicioId: string;
+  catalogoServicioNombre: string;
+  grupoId: string;
+  grupoNombre: string;
+  
+  // Estado del servicio
+  esActual: boolean;
+  estado: 'activo' | 'pendiente' | 'coordinacion' | 'pausado' | 'completado';
+  tiquet: 'SI' | 'NO' | 'CORD' | 'ESPACH' | string;
+  
+  // Asignación de profesionales
+  profesionalPrincipalId: string;
+  profesionalPrincipalNombre: string;
+  profesionalSegundaOpcionId?: string;
+  profesionalSegundaOpcionNombre?: string;
+  profesionalTerceraOpcionId?: string;
+  profesionalTerceraOpcionNombre?: string;
+  
+  // Detalles de ejecución
+  requiereApoyo: boolean;
+  sala?: string;
+  tiempoReal?: number;
+  
+  // Planificación
+  fechaProgramada?: Date;
+  horaInicio?: string;
+  horaFin?: string;
+  
+  // Seguimiento
+  ultimaRealizacion?: Date;
+  proximaRealizacion?: Date;
+  vecesRealizadoMes: number;
+  
+  // Observaciones
+  notas?: string;
+  supervision: boolean;
+  
+  // Metadata
   createdAt: Date;
+  updatedAt: Date;
+  creadoPor: string;
+  modificadoPor?: string;
 }
 
-// Tipos para Supervisión Clínica
-export interface Evaluacion {
+// Salas de la clínica
+export interface Sala {
+  id: string;
+  nombre: string;
+  tipo: 'medicina' | 'fisioterapia' | 'enfermeria' | 'general';
+  capacidad: number;
+  equipamiento?: string[];
+  activa: boolean;
+  
+  ocupacionActual?: number;
+  
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Estadísticas y reportes
+export interface EstadisticasServicios {
+  totalServicios: number;
+  serviciosActivos: number;
+  serviciosPendientes: number;
+  serviciosCoordinacion: number;
+  
+  porCategoria: {
+    medicina: number;
+    fisioterapia: number;
+    enfermeria: number;
+  };
+  
+  conTicket: number;
+  sinTicket: number;
+  enCoordinacion: number;
+  
+  cargaTotalMensual: number;
+  distribucionPorProfesional: {
+    profesionalId: string;
+    profesionalNombre: string;
+    serviciosAsignados: number;
+    cargaPorcentaje: number;
+  }[];
+  
+  ocupacionSalas: {
+    salaId: string;
+    salaNombre: string;
+    ocupacionPorcentaje: number;
+    serviciosProgramados: number;
+  }[];
+}
+
+// Plantilla de horario semanal
+export interface HorarioSemanal {
   id: string;
   profesionalId: string;
   profesionalNombre: string;
-  evaluadorId: string;
-  fecha: Date;
-  periodo: string;
-  areas: AreaEvaluacion[];
-  comentarios: string;
-  puntuacionGeneral: number;
+  semana: string;
+  
+  bloques: {
+    dia: 'lunes' | 'martes' | 'miercoles' | 'jueves' | 'viernes' | 'sabado' | 'domingo';
+    horaInicio: string;
+    horaFin: string;
+    servicioAsignadoId?: string;
+    grupoId?: string;
+    tipo: 'disponible' | 'ocupado' | 'descanso';
+  }[];
+  
   createdAt: Date;
+  updatedAt: Date;
 }
 
-export interface AreaEvaluacion {
-  nombre: string;
-  puntuacion: number; // 1-5
-  observaciones?: string;
-}
+// ============================================
+// TIPOS PARA GESTIÓN DE PROYECTOS
+// ============================================
 
-// Tipos para Inventario
-export interface ItemInventario {
-  id: string;
-  nombre: string;
-  categoria: string;
-  cantidad: number;
-  unidad: string;
-  stockMinimo: number;
-  proveedor?: string;
-  ultimaActualizacion: Date;
-  estado: 'disponible' | 'bajo-stock' | 'agotado';
-}
-
-export interface MovimientoInventario {
-  id: string;
-  itemId: string;
-  tipo: 'entrada' | 'salida' | 'ajuste';
-  cantidad: number;
-  motivo: string;
-  responsable: string;
-  fecha: Date;
-}
-
-// Tipos para Proyectos
 export interface Proyecto {
   id: string;
   nombre: string;
   descripcion: string;
-  estado: 'planificacion' | 'en-curso' | 'pausado' | 'completado' | 'cancelado';
+  tipo: 'externo' | 'interno' | 'investigacion';
+  estado: 'propuesta' | 'en-curso' | 'completado';
   prioridad: 'baja' | 'media' | 'alta';
+  
   responsable: string;
-  equipo: string[];
+  
+  fechaInicio?: Date;
+  fechaFinEstimada?: Date;
+  fechaFinReal?: Date;
+  
+  actualizaciones: {
+    id: string;
+    fecha: Date;
+    texto: string;
+    autor: string;
+  }[];
+  
+  createdAt: Date;
+  updatedAt: Date;
+  creadoPor: string;
+}
+// ============================================
+// TIPOS PARA SUPERVISIÓN CLÍNICA
+// ============================================
+
+export interface EvaluacionSesion {
+  id: string;
+  
+  // Información de la sesión
+  servicioId: string;
+  servicioNombre: string;
+  grupoId: string;
+  grupoNombre: string;
+  paciente: string;
+  profesionalId: string;
+  profesionalNombre: string;
+  
+  fecha: Date;
+  horaInicio: string;
+  horaFin: string;
+  
+  // Tiempos
+  tiempoEstimado: number; // minutos
+  tiempoReal: number; // minutos
+  
+  // Evaluación de Técnica y Habilidad (1-5)
+  aplicacionProtocolo: number;
+  manejoPaciente: number;
+  usoEquipamiento: number;
+  comunicacion: number;
+  
+  // Satisfacción del Paciente
+  dolorPostTratamiento: number; // 0-10
+  confortDuranteSesion: number; // 1-5
+  resultadoPercibido: number; // 1-5
+  
+  // Cumplimiento
+  protocoloSeguido: boolean;
+  
+  // Observaciones
+  observaciones?: string;
+  mejorasSugeridas?: string;
+  fortalezasObservadas?: string;
+  
+  // Metadata
+  evaluadoPor: string;
+  evaluadoPorId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface EstadisticasProfesional {
+  profesionalId: string;
+  profesionalNombre: string;
+  
+  // Totales
+  totalEvaluaciones: number;
+  
+  // Promedios generales
+  promedioGeneral: number;
+  promedioAplicacionProtocolo: number;
+  promedioManejoPaciente: number;
+  promedioUsoEquipamiento: number;
+  promedioComunicacion: number;
+  
+  // Satisfacción
+  promedioSatisfaccionPaciente: number;
+  
+  // Tiempos
+  puntualidad: number; // porcentaje
+  desviacionTiempoPromedio: number; // minutos de diferencia
+  
+  // Cumplimiento
+  cumplimientoProtocolos: number; // porcentaje
+  
+  // Última actualización
+  ultimaEvaluacion?: Date;
+}
+
+export interface MetricasCalidad {
+  // Período
   fechaInicio: Date;
-  fechaFin?: Date;
-  progreso: number; // 0-100
-  hitos: Hito[];
+  fechaFin: Date;
+  
+  // Indicadores clave
+  cumplimientoProtocolos: number; // porcentaje
+  satisfaccionPromedio: number; // 1-5
+  puntualidadPromedio: number; // porcentaje
+  
+  // Totales
+  totalEvaluaciones: number;
+  totalProfesionales: number;
+  
+  // Por profesional
+  rendimientoPorProfesional: {
+    profesionalId: string;
+    profesionalNombre: string;
+    promedio: number;
+    totalEvaluaciones: number;
+  }[];
+  
+  // Alertas
+  alertasTiempoExcedido: number;
+  alertasSatisfaccionBaja: number;
+  alertasProtocoloNoSeguido: number;
+}
+// AÑADE ESTO AL FINAL DE /types/index.ts
+
+// ============================================
+// TIPOS PARA INVENTARIO
+// ============================================
+
+export interface ProductoInventario {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+  categoria: 'medicamento' | 'fungible' | 'equipamiento' | 'limpieza' | 'oficina' | 'otro';
+  subcategoria?: string;
+  
+  // Stock
+  cantidadActual: number;
+  cantidadMinima: number;
+  cantidadMaxima: number;
+  unidadMedida: 'unidad' | 'caja' | 'paquete' | 'litro' | 'gramo' | 'kilo' | 'metro' | 'otro';
+  
+  // Proveedor
+  proveedorId?: string;
+  proveedorNombre?: string;
+  codigoProveedor?: string;
+  
+  // Ubicación
+  ubicacion: string;
+  ubicacionSecundaria?: string;
+  
+  // Información adicional
+  lote?: string;
+  fechaCaducidad?: Date;
+  precio?: number;
+  codigoBarras?: string;
+  imagenUrl?: string;
+  
+  // Alertas
+  alertaStockBajo: boolean;
+  alertaCaducidad: boolean;
+  
+  // Estado
+  activo: boolean;
+  
+  // Metadata
+  createdAt: Date;
+  updatedAt: Date;
+  creadoPor: string;
+  modificadoPor?: string;
+}
+
+export interface Proveedor {
+  id: string;
+  nombre: string;
+  contacto?: string;
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  notas?: string;
+  activo: boolean;
+  
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MovimientoInventario {
+  id: string;
+  productoId: string;
+  productoNombre: string;
+  
+  tipo: 'entrada' | 'salida' | 'ajuste' | 'devolucion' | 'caducado' | 'perdida';
+  cantidad: number;
+  cantidadAnterior: number;
+  cantidadNueva: number;
+  
+  motivo?: string;
+  observaciones?: string;
+  
+  // Referencias
+  servicioRelacionadoId?: string;
+  profesionalId?: string;
+  profesionalNombre?: string;
+  
+  // Metadata
+  fecha: Date;
+  creadoPor: string;
   createdAt: Date;
 }
 
-export interface Hito {
-  nombre: string;
-  descripcion: string;
-  fechaObjetivo: Date;
-  completado: boolean;
-  fechaCompletado?: Date;
-}
-
-// Tipos para Alertas y Notificaciones
-export interface Alerta {
-  id: string;
-  tipo: 'info' | 'warning' | 'error' | 'success';
-  modulo: string;
-  titulo: string;
-  mensaje: string;
-  fecha: Date;
-  leida: boolean;
-  usuarioId: string;
+export interface EstadisticasInventario {
+  totalProductos: number;
+  productosActivos: number;
+  productosStockBajo: number;
+  productosProximosCaducar: number;
+  
+  porCategoria: Record<string, number>;
+  valorTotalInventario: number;
+  
+  movimientosUltimoMes: {
+    entradas: number;
+    salidas: number;
+    ajustes: number;
+  };
 }
