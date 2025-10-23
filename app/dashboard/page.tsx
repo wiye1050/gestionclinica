@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getCountFromServer, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Mail, Cloud, BarChart3, Wrench, AlertTriangle, Package, ExternalLink, TrendingUp } from 'lucide-react';
 
