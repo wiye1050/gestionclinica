@@ -6,7 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "next lint --max-warnings=0",
     "seed:servicios": "tsx scripts/seed-servicios.ts",
     "typecheck": "tsc --noEmit"
   },
