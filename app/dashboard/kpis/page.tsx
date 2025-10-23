@@ -75,8 +75,7 @@ export default function KPIsPage() {
     purple: '#8B5CF6',
     pink: '#EC4899',
     cyan: '#06B6D4',
-    orange: '#F97316',
-  };
+    orange: '#F97316'};
 
   const CHART_COLORS = [
     COLORS.primary,
@@ -127,8 +126,7 @@ export default function KPIsPage() {
         ...doc.data(),
         fecha: doc.data().fecha?.toDate(),
         createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-      })) as DailyReport[];
+        updatedAt: doc.data().updatedAt?.toDate()})) as DailyReport[];
       setReportes(data);
     });
 
@@ -139,8 +137,7 @@ export default function KPIsPage() {
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-      })) as ServicioAsignado[];
+        updatedAt: doc.data().updatedAt?.toDate()})) as ServicioAsignado[];
       setServicios(data);
     });
 
@@ -154,8 +151,7 @@ export default function KPIsPage() {
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-      })) as Profesional[];
+        updatedAt: doc.data().updatedAt?.toDate()})) as Profesional[];
       setProfesionales(data);
     });
 
@@ -171,8 +167,7 @@ export default function KPIsPage() {
         ...doc.data(),
         fecha: doc.data().fecha?.toDate(),
         createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-      })) as EvaluacionSesion[];
+        updatedAt: doc.data().updatedAt?.toDate()})) as EvaluacionSesion[];
       setEvaluaciones(data);
     });
 
@@ -186,8 +181,7 @@ export default function KPIsPage() {
         fechaFinEstimada: doc.data().fechaFinEstimada?.toDate(),
         fechaFinReal: doc.data().fechaFinReal?.toDate(),
         createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-      })) as Proyecto[];
+        updatedAt: doc.data().updatedAt?.toDate()})) as Proyecto[];
       setProyectos(data);
     });
 
@@ -245,29 +239,23 @@ export default function KPIsPage() {
         resueltos: reportesResueltos,
         pendientes: reportesPendientes,
         alta: reportesAlta,
-        tasaResolucion: tasaResolucion.toFixed(1),
-      },
+        tasaResolucion: tasaResolucion.toFixed(1)},
       servicios: {
         total: totalServicios,
         actuales: serviciosActuales,
         conTicket: serviciosConTicket,
-        porcentajeActuales: totalServicios > 0 ? ((serviciosActuales / totalServicios) * 100).toFixed(1) : 0,
-      },
+        porcentajeActuales: totalServicios > 0 ? ((serviciosActuales / totalServicios) * 100).toFixed(1) : 0},
       profesionales: {
         total: totalProfesionales,
-        cargaPromedio: cargaPromedioEquipo.toFixed(1),
-      },
+        cargaPromedio: cargaPromedioEquipo.toFixed(1)},
       calidad: {
         totalEvaluaciones,
         promedioCalidad: promedioCalidad.toFixed(2),
         cumplimientoProtocolos: cumplimientoProtocolos.toFixed(1),
-        satisfaccionPacientes: satisfaccionPacientes.toFixed(2),
-      },
+        satisfaccionPacientes: satisfaccionPacientes.toFixed(2)},
       proyectos: {
         activos: proyectosActivos,
-        completados: proyectosCompletados,
-      },
-    };
+        completados: proyectosCompletados}};
   }, [reportes, servicios, profesionales, evaluaciones, proyectos]);
 
   // Datos para gráfico de tendencia de reportes
@@ -295,8 +283,7 @@ export default function KPIsPage() {
 
     return Object.entries(tipos).map(([tipo, cantidad]) => ({
       name: tipo.charAt(0).toUpperCase() + tipo.slice(1),
-      value: cantidad,
-    }));
+      value: cantidad}));
   }, [reportes]);
 
   // Datos para gráfico de profesionales por carga
@@ -305,8 +292,7 @@ export default function KPIsPage() {
       .map(p => ({
         nombre: `${p.nombre} ${p.apellidos.split(' ')[0]}`,
         carga: p.cargaTrabajo,
-        servicios: p.serviciosAsignados,
-      }))
+        servicios: p.serviciosAsignados}))
       .sort((a, b) => b.carga - a.carga)
       .slice(0, 8);
   }, [profesionales]);
@@ -322,8 +308,7 @@ export default function KPIsPage() {
           tecnica: 0,
           manejo: 0,
           equipamiento: 0,
-          comunicacion: 0,
-        };
+          comunicacion: 0};
       }
 
       return {
@@ -331,8 +316,7 @@ export default function KPIsPage() {
         tecnica: (evalsProfesional.reduce((acc, e) => acc + e.aplicacionProtocolo, 0) / evalsProfesional.length).toFixed(1),
         manejo: (evalsProfesional.reduce((acc, e) => acc + e.manejoPaciente, 0) / evalsProfesional.length).toFixed(1),
         equipamiento: (evalsProfesional.reduce((acc, e) => acc + e.usoEquipamiento, 0) / evalsProfesional.length).toFixed(1),
-        comunicacion: (evalsProfesional.reduce((acc, e) => acc + e.comunicacion, 0) / evalsProfesional.length).toFixed(1),
-      };
+        comunicacion: (evalsProfesional.reduce((acc, e) => acc + e.comunicacion, 0) / evalsProfesional.length).toFixed(1)};
     });
   }, [profesionales, evaluaciones]);
 
@@ -354,8 +338,7 @@ export default function KPIsPage() {
         serviciosAsignados: prof.serviciosAsignados,
         cargaTrabajo: prof.cargaTrabajo,
         evaluaciones: evalsProfesional.length,
-        promedioCalidad: Number(promedio.toFixed(2)),
-      };
+        promedioCalidad: Number(promedio.toFixed(2))};
     }).sort((a, b) => b.promedioCalidad - a.promedioCalidad);
   }, [profesionales, evaluaciones]);
 
@@ -395,8 +378,7 @@ export default function KPIsPage() {
       'Servicios Asignados': p.serviciosAsignados,
       'Carga Trabajo': p.cargaTrabajo,
       'Evaluaciones': p.evaluaciones,
-      'Promedio Calidad': p.promedioCalidad,
-    }));
+      'Promedio Calidad': p.promedioCalidad}));
     const wsProfesionales = XLSX.utils.json_to_sheet(datosProfesionales);
     XLSX.utils.book_append_sheet(wb, wsProfesionales, 'Profesionales');
 
@@ -408,8 +390,7 @@ export default function KPIsPage() {
       'Prioridad': r.prioridad,
       'Estado': r.estado,
       'Responsable': r.responsable,
-      'Descripción': r.descripcion,
-    }));
+      'Descripción': r.descripcion}));
     const wsReportes = XLSX.utils.json_to_sheet(datosReportesExcel);
     XLSX.utils.book_append_sheet(wb, wsReportes, 'Reportes');
 
@@ -695,7 +676,7 @@ export default function KPIsPage() {
         { name: 'Fisioterapia', value: fisioterapia, color: COLORS.success },
         { name: 'Enfermería', value: enfermeria, color: COLORS.purple },
       ];
-    }, [servicios]);
+    });
 
     const serviciosPorTicket = useMemo(() => {
       return [
@@ -704,7 +685,7 @@ export default function KPIsPage() {
         { name: 'CORD', value: servicios.filter(s => s.tiquet === 'CORD').length, color: COLORS.warning },
         { name: 'ESPACH', value: servicios.filter(s => s.tiquet === 'ESPACH').length, color: COLORS.cyan },
       ];
-    }, [servicios]);
+    });
 
     return (
       <div className="space-y-6">
@@ -809,8 +790,7 @@ export default function KPIsPage() {
               .map(e => ({
                 fecha: e.fecha.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }),
                 calidad: ((e.aplicacionProtocolo + e.manejoPaciente + e.usoEquipamiento + e.comunicacion) / 4).toFixed(1),
-                satisfaccion: e.resultadoPercibido,
-              }))
+                satisfaccion: e.resultadoPercibido}))
             }
           >
             <CartesianGrid strokeDasharray="3 3" />

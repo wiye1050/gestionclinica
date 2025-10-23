@@ -25,8 +25,7 @@ export default function ProyectosPage() {
     prioridad: 'media' as 'baja' | 'media' | 'alta',
     responsable: '',
     fechaInicio: '',
-    fechaFinEstimada: '',
-  });
+    fechaFinEstimada: ''});
 
   // Cargar proyectos
   useEffect(() => {
@@ -42,9 +41,7 @@ export default function ProyectosPage() {
         fechaFinReal: doc.data().fechaFinReal?.toDate(),
         actualizaciones: (doc.data().actualizaciones || []).map((act: any) => ({ ...(act ?? {}),
           ...act,
-          fecha: typeof act?.fecha?.toDate === 'function' ? act.fecha.toDate() : act?.fecha,
-        })),
-      })) as Proyecto[];
+          fecha: typeof act?.fecha?.toDate === 'function' ? act.fecha.toDate() : act?.fecha}))})) as Proyecto[];
       setProyectos(proyectosData);
     });
 
@@ -61,8 +58,7 @@ export default function ProyectosPage() {
       prioridad: 'media',
       responsable: '',
       fechaInicio: '',
-      fechaFinEstimada: '',
-    });
+      fechaFinEstimada: ''});
     setEditandoId(null);
     setMostrarFormulario(false);
   };
@@ -76,8 +72,7 @@ export default function ProyectosPage() {
       ...formData,
       fechaInicio: formData.fechaInicio ? new Date(formData.fechaInicio) : null,
       fechaFinEstimada: formData.fechaFinEstimada ? new Date(formData.fechaFinEstimada) : null,
-      updatedAt: new Date(),
-    };
+      updatedAt: new Date()};
 
     try {
       if (editandoId) {
@@ -87,8 +82,7 @@ export default function ProyectosPage() {
           ...datos,
           actualizaciones: [],
           createdAt: new Date(),
-          creadoPor: user.email,
-        });
+          creadoPor: user.email});
       }
       resetForm();
     } catch (error) {
@@ -107,8 +101,7 @@ export default function ProyectosPage() {
       prioridad: proyecto.prioridad,
       responsable: proyecto.responsable,
       fechaInicio: proyecto.fechaInicio ? proyecto.fechaInicio.toISOString().split('T')[0] : '',
-      fechaFinEstimada: proyecto.fechaFinEstimada ? proyecto.fechaFinEstimada.toISOString().split('T')[0] : '',
-    });
+      fechaFinEstimada: proyecto.fechaFinEstimada ? proyecto.fechaFinEstimada.toISOString().split('T')[0] : ''});
     setEditandoId(proyecto.id);
     setMostrarFormulario(true);
   };
@@ -133,8 +126,7 @@ export default function ProyectosPage() {
     try {
       const datos: any = {
         estado: nuevoEstado,
-        updatedAt: new Date(),
-      };
+        updatedAt: new Date()};
 
       if (nuevoEstado === 'completado') {
         (datos as any).fechaFinReal = new Date();
@@ -154,14 +146,12 @@ export default function ProyectosPage() {
       id: Date.now().toString(),
       fecha: new Date(),
       texto: nuevaActualizacion.trim(),
-      autor: user.email || 'Usuario',
-    };
+      autor: user.email || 'Usuario'};
 
     try {
       await updateDoc(doc(db, 'proyectos', proyectoSeleccionado.id), {
         actualizaciones: [nuevaAct, ...proyectoSeleccionado.actualizaciones],
-        updatedAt: new Date(),
-      });
+        updatedAt: new Date()});
       setNuevaActualizacion('');
     } catch (error) {
       console.error('Error al añadir actualización:', error);
