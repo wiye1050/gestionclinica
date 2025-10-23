@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+//* removed unused useState */
 import LoginForm from '@/components/auth/LoginForm';
 
 export default function HomePage() {

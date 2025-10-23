@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -70,8 +71,7 @@ export default function InventarioPage() {
         alert('✅ Producto creado');
       }
       resetForm();
-    } catch (error) {
-      console.error('Error:', error);
+    } catch (error) { console.error(error); console.error('Error:', error);
       alert('❌ Error al guardar');
     }
   };
@@ -82,8 +82,7 @@ export default function InventarioPage() {
     try {
       await deleteDoc(doc(db, 'inventario-productos', id));
       alert('✅ Eliminado');
-    } catch (error) {
-      alert('❌ Error al eliminar');
+    } catch (error) { console.error(error); alert('❌ Error al eliminar');
     }
   };
 

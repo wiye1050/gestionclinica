@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -5,7 +6,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { CatalogoServicio, Profesional } from '@/types';
-import { Plus, Edit2, Trash2, Save, X, Clock, CheckSquare, Square, AlertCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, Clock, } from 'lucide-react';
 
 export default function CatalogoServiciosPage() {
   const { user } = useAuth();
@@ -27,8 +28,7 @@ export default function CatalogoServiciosPage() {
     frecuenciaMensual: 0,
     cargaMensualEstimada: '',
     profesionalesHabilitados: [] as string[],
-    activo: true,
-  });
+    activo: true});
 
   // Cargar datos
   useEffect(() => {
@@ -39,8 +39,7 @@ export default function CatalogoServiciosPage() {
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-      })) as CatalogoServicio[];
+        updatedAt: doc.data().updatedAt?.toDate()})) as CatalogoServicio[];
       setServicios(serviciosData);
     });
 
@@ -51,8 +50,7 @@ export default function CatalogoServiciosPage() {
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-      })) as Profesional[];
+        updatedAt: doc.data().updatedAt?.toDate()})) as Profesional[];
       setProfesionales(profesionalesData.filter(p => p.activo));
     });
 
@@ -76,8 +74,7 @@ export default function CatalogoServiciosPage() {
       frecuenciaMensual: 0,
       cargaMensualEstimada: '',
       profesionalesHabilitados: [],
-      activo: true,
-    });
+      activo: true});
     setEditandoId(null);
     setMostrarFormulario(false);
   };
@@ -89,8 +86,7 @@ export default function CatalogoServiciosPage() {
 
     const datos = {
       ...formData,
-      updatedAt: new Date(),
-    };
+      updatedAt: new Date()};
 
     try {
       if (editandoId) {
@@ -98,8 +94,7 @@ export default function CatalogoServiciosPage() {
       } else {
         await addDoc(collection(db, 'catalogo-servicios'), {
           ...datos,
-          createdAt: new Date(),
-        });
+          createdAt: new Date()});
       }
       resetForm();
     } catch (error) {
@@ -122,8 +117,7 @@ export default function CatalogoServiciosPage() {
       frecuenciaMensual: servicio.frecuenciaMensual || 0,
       cargaMensualEstimada: servicio.cargaMensualEstimada || '',
       profesionalesHabilitados: servicio.profesionalesHabilitados,
-      activo: servicio.activo,
-    });
+      activo: servicio.activo});
     setEditandoId(servicio.id);
     setMostrarFormulario(true);
   };
@@ -155,8 +149,7 @@ export default function CatalogoServiciosPage() {
     try {
       await updateDoc(doc(db, 'catalogo-servicios', id), {
         activo: !estadoActual,
-        updatedAt: new Date(),
-      });
+        updatedAt: new Date()});
     } catch (error) {
       console.error('Error al cambiar estado:', error);
     }
@@ -174,8 +167,7 @@ export default function CatalogoServiciosPage() {
     activos: servicios.filter(s => s.activo).length,
     medicina: servicios.filter(s => s.categoria === 'medicina').length,
     fisioterapia: servicios.filter(s => s.categoria === 'fisioterapia').length,
-    enfermeria: servicios.filter(s => s.categoria === 'enfermeria').length,
-  };
+    enfermeria: servicios.filter(s => s.categoria === 'enfermeria').length};
 
   const getColorCategoria = (categoria: string) => {
     switch (categoria) {
