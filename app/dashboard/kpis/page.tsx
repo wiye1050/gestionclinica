@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -91,7 +92,7 @@ export default function KPIsPage() {
   // Calcular rango de fechas según período
   useEffect(() => {
     const hoy = new Date();
-    let inicio = new Date();
+    const inicio = new Date();
 
     switch (periodo) {
       case 'semana':

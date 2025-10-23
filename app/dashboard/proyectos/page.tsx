@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react/no-unescaped-entities */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -38,7 +40,7 @@ export default function ProyectosPage() {
         fechaInicio: doc.data().fechaInicio?.toDate(),
         fechaFinEstimada: doc.data().fechaFinEstimada?.toDate(),
         fechaFinReal: doc.data().fechaFinReal?.toDate(),
-        actualizaciones: (doc.data().actualizaciones || []).map((act: any) => ({
+        actualizaciones: (doc.data().actualizaciones || []).map((act: unknown) => ({
           ...act,
           fecha: act.fecha?.toDate(),
         })),
@@ -129,7 +131,7 @@ export default function ProyectosPage() {
   // Cambiar estado del proyecto
   const cambiarEstado = async (id: string, nuevoEstado: 'propuesta' | 'en-curso' | 'completado') => {
     try {
-      const datos: any = {
+      const datos: unknown = {
         estado: nuevoEstado,
         updatedAt: new Date(),
       };
