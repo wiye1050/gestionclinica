@@ -45,3 +45,15 @@ dist/
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+
+# backups
+*.bak
++# env
++.env*
+
+# env
+.env*
+# logs
+*.log
+# zips
+*.zip
