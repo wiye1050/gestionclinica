@@ -1,6 +1,8 @@
 import { db } from './_shared-firebase-client';
 import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
 
+
+interface DailyReport { resuelta?: boolean }
 async function main() {
   const col = collection(db, 'daily-reports');
   const snap = await getDocs(col);
@@ -8,7 +10,7 @@ async function main() {
   let count = 0;
 
   snap.forEach(d => {
-    const data = d.data() as any;
+    const data = d.data() as DailyReport;
     if (typeof data.resuelta !== 'boolean') {
       batch.update(doc(db, 'daily-reports', d.id), { resuelta: false });
       count++;
