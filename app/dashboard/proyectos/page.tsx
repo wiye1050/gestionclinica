@@ -40,9 +40,9 @@ export default function ProyectosPage() {
         fechaInicio: doc.data().fechaInicio?.toDate(),
         fechaFinEstimada: doc.data().fechaFinEstimada?.toDate(),
         fechaFinReal: doc.data().fechaFinReal?.toDate(),
-        actualizaciones: (doc.data().actualizaciones || []).map((act: unknown) => ({
+        actualizaciones: (doc.data().actualizaciones || []).map((act: any) => ({ ...(act ?? {}),
           ...act,
-          fecha: act.fecha?.toDate(),
+          fecha: typeof act?.fecha?.toDate === 'function' ? act.fecha.toDate() : act?.fecha,
         })),
       })) as Proyecto[];
       setProyectos(proyectosData);
