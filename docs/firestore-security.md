@@ -84,8 +84,35 @@ service cloud.firestore {
 
 ## Buenas prácticas
 
-- Usa **roles en custom claims** (`roles: ['coordinacion']`) para evaluar permisos.
+- Usa **roles en custom claims** (`roles: ['coordinacion']`) para evaluar permisos en las nuevas colecciones (`protocolos`, `mejoras`).
 - Limita los campos accesibles: para datos muy sensibles crea subcolecciones con reglas más estrictas.
 - Añade validaciones en reglas (por ejemplo, evitar fechas anteriores en agenda).
 - Registra auditoría en Cloud Functions si necesitas histórico de cambios delicados.
 - Cuando generes enlaces temporales (por ejemplo, historiales PDF en Storage), define un proceso que elimine objetos caducados y actualice el registro correspondiente en `pacientes-historial`.
+### Protocolo clínico (nuevo módulo)
+
+```javascript
+    match /protocolos/{protocoloId} {
+      allow read: if hasRole('admin') || hasRole('coordinacion') || hasRole('admin_ops') || hasRole('terapeuta') || hasRole('marketing') || hasRole('invitado');
+      allow create, update: if hasRole('admin') || hasRole('coordinacion');
+      allow delete: if false;
+    }
+
+    match /protocolos-versiones/{versionId} {
+      allow read: if isSignedIn();
+      allow create: if hasRole('admin') || hasRole('coordinacion');
+      allow delete: if false;
+    }
+
+    match /protocolos-lecturas/{lecturaId} {
+      allow read: if hasRole('admin') || hasRole('coordinacion');
+      allow create: if hasRole('admin') || hasRole('coordinacion') || hasRole('terapeuta') || hasRole('admin_ops');
+      allow update, delete: if false;
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if hasRole('admin');
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+```

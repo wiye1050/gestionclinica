@@ -171,3 +171,30 @@ export const isFollowUpResolution = (data: DocumentData): boolean => {
     || hasResolutionKeyword(data.resultado)
     || hasResolutionKeyword(data.planesSeguimiento);
 };
+
+export const hasActiveFollowUpInHistory = (
+  historial: Array<{ planesSeguimiento?: unknown; descripcion?: unknown; resultado?: unknown; fecha?: Date; createdAt?: Date }>
+) => {
+  let lastPlanDate: Date | null = null;
+
+  historial
+    .slice()
+    .sort((a, b) => {
+      const fechaA = a.fecha ?? a.createdAt ?? new Date(0);
+      const fechaB = b.fecha ?? b.createdAt ?? new Date(0);
+      return fechaA.getTime() - fechaB.getTime();
+    })
+    .forEach((entry) => {
+      const fecha = entry.fecha ?? entry.createdAt ?? new Date();
+      if (isPlanStillActive(entry.planesSeguimiento)) {
+        lastPlanDate = fecha;
+        return;
+      }
+
+      if (lastPlanDate && fecha >= lastPlanDate && isFollowUpResolution(entry)) {
+        lastPlanDate = null;
+      }
+    });
+
+  return lastPlanDate !== null;
+};
