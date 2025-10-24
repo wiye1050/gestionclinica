@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { ServicioAsignado, Profesional, GrupoPaciente, CatalogoServicio } from '@/types';
-import { Plus, Filter, Users, UserCheck, Clock, CheckSquare, Square, Trash2, Download } from 'lucide-react';
+import { Plus, Filter, Users, UserCheck, CheckSquare, Square, Trash2, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 export default function ServiciosPage() {
