@@ -1,9 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { Mail, Cloud, BarChart3, Wrench, AlertTriangle, Package, ExternalLink, TrendingUp } from 'lucide-react';
-import { collection, getCountFromServer, query, where } from 'firebase/firestore';
+import {
+  collection,
+  getCountFromServer,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  where
+} from 'firebase/firestore';
+import { getPendingFollowUpPatientIds, hasPendingPlan } from '@/lib/utils/followUps';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
@@ -11,6 +21,18 @@ export default function DashboardPage() {
     incidenciasPendientes: 0,
     productosStockBajo: 0,
   });
+  const [historialReciente, setHistorialReciente] = useState<
+    Array<{
+      id: string;
+      pacienteNombre: string;
+      tipo: string;
+      fecha: Date;
+      descripcion: string;
+      seguimiento: boolean;
+      enlace?: string;
+    }>
+  >([]);
+  const [seguimientosPendientes, setSeguimientosPendientes] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,6 +65,48 @@ export default function DashboardPage() {
           incidenciasPendientes: incidenciasCount.data().count,
           productosStockBajo: inventarioCount.data().count,
         });
+
+        const historialSnap = await getDocs(
+          query(
+            collection(db, 'pacientes-historial'),
+            orderBy('fecha', 'desc'),
+            limit(5)
+          )
+        );
+
+        const historialData = await Promise.all(
+          historialSnap.docs.map(async (docSnap) => {
+            const data = docSnap.data();
+            const pacienteId = data.pacienteId as string;
+            let pacienteNombre = 'Paciente';
+            try {
+              const pacienteDoc = await getDocs(
+                query(collection(db, 'pacientes'), where('__name__', '==', pacienteId), limit(1))
+              );
+              if (!pacienteDoc.empty) {
+                const pacienteData = pacienteDoc.docs[0].data();
+                pacienteNombre = `${pacienteData.nombre ?? ''} ${pacienteData.apellidos ?? ''}`.trim();
+              }
+            } catch (err) {
+              console.error('Error obteniendo paciente', err);
+            }
+
+            return {
+              id: docSnap.id,
+              pacienteNombre,
+              tipo: (data.tipo as string) ?? 'seguimiento',
+              fecha: data.fecha?.toDate?.() ?? new Date(),
+              descripcion: data.descripcion ?? '',
+              seguimiento: hasPendingPlan(data.planesSeguimiento),
+              enlace: Array.isArray(data.adjuntos) && data.adjuntos.length > 0 ? data.adjuntos[0] : undefined
+            };
+          })
+        );
+
+        const pacientesSeguimiento = await getPendingFollowUpPatientIds();
+
+        setHistorialReciente(historialData);
+        setSeguimientosPendientes(pacientesSeguimiento.size);
       } catch (error) {
         console.error('Error cargando contadores del dashboard:', error);
       } finally {
@@ -150,6 +214,75 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Historial reciente */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Historial reciente de pacientes</h3>
+            <p className="text-sm text-gray-500">
+              Últimos movimientos clínicos y administrativos registrados.
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            {seguimientosPendientes > 0 && (
+              <Link
+                href={{ pathname: '/dashboard/pacientes', query: { filtro: 'seguimiento' } }}
+                className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-800 hover:bg-yellow-200"
+              >
+                {seguimientosPendientes} seguimiento{seguimientosPendientes > 1 ? 's' : ''} pendiente{seguimientosPendientes > 1 ? 's' : ''}
+              </Link>
+            )}
+            <Link
+              href="/dashboard/pacientes"
+              className="text-sm text-blue-600 hover:underline"
+            >
+              Ver pacientes
+            </Link>
+          </div>
+        </div>
+        {historialReciente.length === 0 ? (
+          <p className="text-sm text-gray-500">No hay registros recientes.</p>
+        ) : (
+          <ul className="space-y-4">
+            {historialReciente.map((item) => (
+              <li key={item.id} className="flex items-start justify-between border-b border-gray-100 pb-3 last:border-b-0">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{item.pacienteNombre}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs uppercase tracking-wide text-blue-600">{item.tipo}</span>
+                    {item.seguimiento && (
+                      <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800">
+                        Requiere seguimiento
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {item.fecha.toLocaleString('es-ES', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                  <p className="text-sm text-gray-600 mt-1">{item.descripcion}</p>
+                </div>
+                {item.enlace && (
+                  <a
+                    href={item.enlace}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    Ver enlace
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Estado General */}
