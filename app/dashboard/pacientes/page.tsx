@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { collection, getDocs, orderBy, query, limit, where } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Paciente, Profesional } from '@/types';
 import { PacientesTable } from '@/components/pacientes/PacientesTable';
@@ -26,6 +26,43 @@ export default function PacientesPage() {
   const [riesgoFilter, setRiesgoFilter] = useState<'todos' | 'alto' | 'medio' | 'bajo'>('todos');
   const [followUpOnly, setFollowUpOnly] = useState(searchParams.get('filtro') === 'seguimiento');
   const [profesionalFilter, setProfesionalFilter] = useState<string>('todos');
+  const [filtersLoaded, setFiltersLoaded] = useState(false);
+
+  const STORAGE_KEY = 'pacientesFilters.v1';
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || filtersLoaded) return;
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { followUpOnly?: boolean; profesionalId?: string };
+      if (saved) {
+        if (saved.followUpOnly !== undefined && searchParams.get('filtro') !== 'seguimiento') {
+          setFollowUpOnly(Boolean(saved.followUpOnly));
+        }
+        if (saved.profesionalId) {
+          setProfesionalFilter(saved.profesionalId);
+        }
+      }
+    } catch (err) {
+      console.warn('No se pudieron cargar los filtros guardados', err);
+    } finally {
+      setFiltersLoaded(true);
+    }
+  }, [filtersLoaded, searchParams]);
+
+  useEffect(() => {
+    if (!filtersLoaded || typeof window === 'undefined') return;
+    try {
+      const payload = JSON.stringify({
+        followUpOnly,
+        profesionalId: profesionalFilter
+      });
+      window.localStorage.setItem(STORAGE_KEY, payload);
+    } catch (err) {
+      console.warn('No se pudieron guardar los filtros', err);
+    }
+  }, [followUpOnly, profesionalFilter, filtersLoaded]);
 
   useEffect(() => {
     const cargarPacientes = async () => {
@@ -149,12 +186,13 @@ export default function PacientesPage() {
   }, []);
 
   useEffect(() => {
+    if (!filtersLoaded) return;
     if (!user || profesionales.length === 0 || profesionalFilter !== 'todos') return;
     const profesional = profesionales.find((prof) => prof.email === user.email);
     if (profesional) {
       setProfesionalFilter(profesional.id);
     }
-  }, [user, profesionales, profesionalFilter]);
+  }, [user, profesionales, profesionalFilter, filtersLoaded]);
 
   useEffect(() => {
     const cargarSeguimientos = async () => {
