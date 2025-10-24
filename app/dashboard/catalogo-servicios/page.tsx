@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { CatalogoServicio, Profesional } from "@/types";
+import { CatalogoServicio, Profesional, Protocolo } from "@/types";
 import { Plus, Save, X, Trash2, Edit2 } from "lucide-react";
 
 type CategoriaServicio = "medicina" | "fisioterapia" | "enfermeria";
@@ -29,6 +29,7 @@ interface FormData {
   requiereApoyo: boolean;
   profesionalesHabilitados: string[];
   frecuenciaMensual: number;
+  protocolosRequeridos: string[];
   activo: boolean;
 }
 
@@ -43,6 +44,7 @@ const initialForm: FormData = {
   requiereApoyo: false,
   profesionalesHabilitados: [],
   frecuenciaMensual: 0,
+  protocolosRequeridos: [],
   activo: true
 };
 
@@ -50,6 +52,7 @@ export default function CatalogoServiciosPage() {
   const { user } = useAuth();
   const [servicios, setServicios] = useState<CatalogoServicio[]>([]);
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
+  const [protocolos, setProtocolos] = useState<Array<Pick<Protocolo, "id" | "titulo" | "area" | "estado">>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -101,14 +104,39 @@ export default function CatalogoServiciosPage() {
       }
     );
 
+    const qProtocolos = query(collection(db, "protocolos"), orderBy("titulo"));
+    const unsubProtocolos = onSnapshot(
+      qProtocolos,
+      (snapshot) => {
+        const data = snapshot.docs.map((docSnap) => {
+          const value = docSnap.data();
+          return {
+            id: docSnap.id,
+            titulo: value.titulo ?? "Sin título",
+            area: value.area ?? "general",
+            estado: value.estado ?? "borrador"
+          };
+        }) as Array<Pick<Protocolo, "id" | "titulo" | "area" | "estado">>;
+        setProtocolos(data);
+      },
+      (err) => {
+        console.error("Error cargando protocolos:", err);
+      }
+    );
+
     return () => {
       unsubServicios();
       unsubProfesionales();
+      unsubProtocolos();
     };
   }, []);
 
   const resetForm = () => {
-    setFormData(initialForm);
+    setFormData({
+      ...initialForm,
+      profesionalesHabilitados: [],
+      protocolosRequeridos: []
+    });
     setEditandoId(null);
     setMostrarFormulario(false);
   };
@@ -126,8 +154,11 @@ export default function CatalogoServiciosPage() {
       return;
     }
 
+    const protocolosRequeridos = Array.from(new Set(formData.protocolosRequeridos));
+
     const payload = {
       ...formData,
+      protocolosRequeridos,
       profesionalesHabilitados: formData.profesionalesHabilitados,
       tiempoEstimado: Number(formData.tiempoEstimado),
       frecuenciaMensual: formData.frecuenciaMensual || 0,
@@ -169,6 +200,7 @@ export default function CatalogoServiciosPage() {
       requiereApoyo: servicio.requiereApoyo,
       profesionalesHabilitados: servicio.profesionalesHabilitados || [],
       frecuenciaMensual: servicio.frecuenciaMensual || 0,
+      protocolosRequeridos: servicio.protocolosRequeridos || [],
       activo: servicio.activo
     });
     setEditandoId(servicio.id);
@@ -430,6 +462,48 @@ export default function CatalogoServiciosPage() {
               )}
             </div>
 
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">Protocolos requeridos</p>
+              {protocolos.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  Aún no hay protocolos registrados. Podrás vincularlos cuando existan en el módulo
+                  Protocolos.
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {protocolos.map((protocolo) => {
+                    const checked = formData.protocolosRequeridos.includes(protocolo.id);
+                    return (
+                      <label
+                        key={protocolo.id}
+                        className="flex items-center space-x-2 rounded-md border border-indigo-100 px-3 py-2 text-sm hover:bg-indigo-50"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              protocolosRequeridos: e.target.checked
+                                ? [...prev.protocolosRequeridos, protocolo.id]
+                                : prev.protocolosRequeridos.filter((id) => id !== protocolo.id)
+                            }))
+                          }
+                          className="h-4 w-4 text-blue-600"
+                        />
+                        <div>
+                          <p className="font-medium text-gray-900">{protocolo.titulo}</p>
+                          <p className="text-xs text-gray-500">
+                            {protocolo.area} · {protocolo.estado}
+                          </p>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -552,6 +626,28 @@ export default function CatalogoServiciosPage() {
                         ) : (
                           <p className="text-yellow-700">Sin profesionales asignados.</p>
                         )}
+                        <div className="pt-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            Protocolos requeridos
+                          </p>
+                          {servicio.protocolosRequeridos?.length ? (
+                            <div className="mt-1 flex flex-wrap gap-2">
+                              {servicio.protocolosRequeridos.map((protoId) => {
+                                const proto = protocolos.find((p) => p.id === protoId);
+                                return (
+                                  <span
+                                    key={protoId}
+                                    className="inline-flex items-center rounded-full border border-indigo-200 px-2.5 py-0.5 text-xs text-indigo-700"
+                                  >
+                                    {proto?.titulo ?? "Protocolo sin título"}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-400">No hay protocolos asociados.</p>
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between mt-4">

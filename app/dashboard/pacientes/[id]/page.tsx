@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { addDoc, collection, doc, getDoc, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Paciente, Profesional, RegistroHistorialPaciente } from '@/types';
+import { Paciente, Profesional, RegistroHistorialPaciente, ServicioAsignado } from '@/types';
 import { db, storage } from '@/lib/firebase';
 import { PacienteResumen } from '@/components/pacientes/PacienteResumen';
 import { PacienteAlertas } from '@/components/pacientes/PacienteAlertas';
@@ -13,8 +13,24 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { toast } from 'sonner';
+import { resolverSeguimientoAction } from '../actions';
+import { hasActiveFollowUpInHistory } from '@/lib/utils/followUps';
 
 type TabKey = 'resumen' | 'historial' | 'documentos';
+
+type ServicioRelacionado = {
+  id: string;
+  nombre: string;
+  estado?: string;
+  catalogoServicioId?: string | null;
+  protocolos: Array<{ id: string; titulo: string }>;
+};
+
+type ProtocoloRelacionado = {
+  id: string;
+  titulo: string;
+  servicios: string[];
+};
 
 export default function PacienteDetallePage() {
   const params = useParams();
@@ -28,6 +44,125 @@ export default function PacienteDetallePage() {
   const [activeTab, setActiveTab] = useState<TabKey>('resumen');
   const [historialFiltro, setHistorialFiltro] = useState<'todos' | 'clinico' | 'administrativo'>('todos');
   const [compartiendo, setCompartiendo] = useState(false);
+  const [serviciosRelacionados, setServiciosRelacionados] = useState<ServicioRelacionado[]>([]);
+  const [protocolosRelacionados, setProtocolosRelacionados] = useState<ProtocoloRelacionado[]>([]);
+  const [relacionesLoading, setRelacionesLoading] = useState(false);
+  const [relacionesError, setRelacionesError] = useState<string | null>(null);
+
+  const fetchRelacionesGrupo = useCallback(
+    async (grupoId: string | null | undefined) => {
+      if (!grupoId) {
+        setServiciosRelacionados([]);
+        setProtocolosRelacionados([]);
+        return;
+      }
+
+      setRelacionesLoading(true);
+      setRelacionesError(null);
+
+      try {
+        const serviciosSnap = await getDocs(
+          query(
+            collection(db, 'servicios-asignados'),
+            where('grupoId', '==', grupoId),
+            limit(25)
+          )
+        );
+
+        if (serviciosSnap.empty) {
+          setServiciosRelacionados([]);
+          setProtocolosRelacionados([]);
+          return;
+        }
+
+        const catalogoCache = new Map<string, string[]>();
+
+        const serviciosBase = await Promise.all(
+          serviciosSnap.docs.map(async (docSnap) => {
+            const data = docSnap.data() as Partial<ServicioAsignado>;
+            const catalogoId = data.catalogoServicioId ?? null;
+            let protocolosIds: string[] = [];
+            if (catalogoId) {
+              if (catalogoCache.has(catalogoId)) {
+                protocolosIds = catalogoCache.get(catalogoId) ?? [];
+              } else {
+                const catalogoSnap = await getDoc(doc(db, 'catalogo-servicios', catalogoId));
+                const catalogoData = catalogoSnap.data();
+                const ids = Array.isArray(catalogoData?.protocolosRequeridos)
+                  ? catalogoData.protocolosRequeridos.filter(
+                      (value: unknown): value is string => typeof value === 'string'
+                    )
+                  : [];
+                catalogoCache.set(catalogoId, ids);
+                protocolosIds = ids;
+              }
+            }
+            return {
+              id: docSnap.id,
+              nombre:
+                data.catalogoServicioNombre ??
+                data.catalogoServicioId ??
+                data.id ??
+                'Servicio sin nombre',
+              estado: data.estado ?? 'activo',
+              catalogoServicioId: catalogoId,
+              protocolosIds
+            };
+          })
+        );
+
+        const uniqueProtocolIds = new Set<string>();
+        serviciosBase.forEach((servicio) => {
+          servicio.protocolosIds.forEach((protoId) => uniqueProtocolIds.add(protoId));
+        });
+
+        const protocoloCache = new Map<string, string>();
+        await Promise.all(
+          Array.from(uniqueProtocolIds).map(async (protoId) => {
+            const protoSnap = await getDoc(doc(db, 'protocolos', protoId));
+            if (protoSnap.exists()) {
+              const data = protoSnap.data();
+              protocoloCache.set(protoId, data.titulo ?? 'Protocolo sin título');
+            } else {
+              protocoloCache.set(protoId, 'Protocolo no disponible');
+            }
+          })
+        );
+
+        const serviciosDetallados: ServicioRelacionado[] = serviciosBase.map((servicio) => ({
+          id: servicio.id,
+          nombre: servicio.nombre,
+          estado: servicio.estado,
+          catalogoServicioId: servicio.catalogoServicioId,
+          protocolos: servicio.protocolosIds.map((protoId) => ({
+            id: protoId,
+            titulo: protocoloCache.get(protoId) ?? protoId
+          }))
+        }));
+
+        const protocolosDetallados: ProtocoloRelacionado[] = Array.from(uniqueProtocolIds).map(
+          (protoId) => ({
+            id: protoId,
+            titulo: protocoloCache.get(protoId) ?? protoId,
+            servicios: serviciosDetallados
+              .filter((servicio) => servicio.protocolos.some((proto) => proto.id === protoId))
+              .map((servicio) => servicio.nombre)
+          })
+        );
+
+        setServiciosRelacionados(serviciosDetallados);
+        setProtocolosRelacionados(protocolosDetallados);
+      } catch (err) {
+        console.error('Error cargando servicios relacionados', err);
+        setRelacionesError('No se pudieron vincular los servicios del grupo con sus protocolos.');
+        setServiciosRelacionados([]);
+        setProtocolosRelacionados([]);
+      } finally {
+        setRelacionesLoading(false);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -42,6 +177,8 @@ export default function PacienteDetallePage() {
         if (!pacienteSnap.exists()) {
           setError('No se encontró el paciente solicitado.');
           setPaciente(null);
+          setServiciosRelacionados([]);
+          setProtocolosRelacionados([]);
           setLoading(false);
           return;
         }
@@ -103,6 +240,7 @@ export default function PacienteDetallePage() {
         };
 
         setPaciente(pacienteData);
+        await fetchRelacionesGrupo(pacienteData.grupoPacienteId ?? null);
 
         const profesionalesSnap = await getDocs(
           query(collection(db, 'profesionales'), orderBy('apellidos'), limit(200))
@@ -163,13 +301,15 @@ export default function PacienteDetallePage() {
         const mensaje =
           err instanceof Error ? err.message : 'Error desconocido al cargar la ficha del paciente.';
         setError(mensaje);
+        setServiciosRelacionados([]);
+        setProtocolosRelacionados([]);
       } finally {
         setLoading(false);
       }
     };
 
     cargarDatos();
-  }, [pacienteId]);
+  }, [pacienteId, fetchRelacionesGrupo]);
 
   const profesionalReferente = useMemo(() => {
     if (!paciente?.profesionalReferenteId) return null;
@@ -349,6 +489,8 @@ export default function PacienteDetallePage() {
     );
   }
 
+  const seguimientoPendiente = hasActiveFollowUpInHistory(historial);
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
@@ -373,7 +515,15 @@ export default function PacienteDetallePage() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {seguimientoPendiente && (
+            <form action={resolverSeguimientoAction} className="inline-flex items-center">
+              <input type="hidden" name="pacienteId" value={pacienteId} />
+              <button className="rounded-lg border border-green-200 px-3 py-2 text-green-700 hover:bg-green-50 text-sm">
+                Marcar seguimiento resuelto
+              </button>
+            </form>
+          )}
           <Link
             href={`/dashboard/pacientes/${pacienteId}/editar`}
             className="rounded-lg border border-blue-200 px-3 py-2 text-blue-600 hover:bg-blue-50"
@@ -433,6 +583,88 @@ export default function PacienteDetallePage() {
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2 space-y-6">
                 <PacienteResumen paciente={paciente} profesionalReferente={profesionalReferente} />
+                {paciente.grupoPacienteId && (
+                  <section className="rounded-lg border border-indigo-100 bg-white p-5 shadow-sm">
+                    <div className="flex flex-col gap-2 border-b border-indigo-50 pb-3 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500">
+                          Servicios del grupo
+                        </p>
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          Protocolos asociados a {paciente.grupoPacienteId}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          Revisa qué servicios del grupo requieren protocolos específicos antes de continuar con nuevos seguimientos.
+                        </p>
+                      </div>
+                      <span className="rounded-full border border-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700">
+                        Grupo {paciente.grupoPacienteId}
+                      </span>
+                    </div>
+                    {relacionesLoading ? (
+                      <p className="py-4 text-sm text-gray-500">Analizando servicios y protocolos vinculados...</p>
+                    ) : relacionesError ? (
+                      <p className="py-4 text-sm text-red-600">{relacionesError}</p>
+                    ) : serviciosRelacionados.length === 0 ? (
+                      <p className="py-4 text-sm text-gray-500">
+                        No hay servicios asignados a este grupo actualmente, por lo que no existen protocolos asociados.
+                      </p>
+                    ) : (
+                      <>
+                        <ul className="mt-4 space-y-3">
+                          {serviciosRelacionados.map((servicio) => (
+                            <li key={servicio.id} className="rounded-lg border border-gray-100 p-3">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-semibold text-gray-900">{servicio.nombre}</p>
+                                <span className="text-xs uppercase tracking-wide text-gray-500">
+                                  {servicio.estado}
+                                </span>
+                              </div>
+                              {servicio.protocolos.length === 0 ? (
+                                <p className="mt-1 text-xs text-gray-500">Este servicio no exige protocolos específicos.</p>
+                              ) : (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {servicio.protocolos.map((protocolo) => (
+                                    <Link
+                                      key={protocolo.id}
+                                      href={`/dashboard/protocolos/${protocolo.id}`}
+                                      className="inline-flex items-center rounded-full border border-blue-200 px-3 py-1 text-xs text-blue-700 hover:bg-blue-50"
+                                    >
+                                      {protocolo.titulo}
+                                    </Link>
+                                  ))}
+                                </div>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                        {protocolosRelacionados.length > 0 && (
+                          <div className="mt-5 rounded-lg border border-dashed border-indigo-200 bg-indigo-50/60 p-4">
+                            <p className="text-sm font-semibold text-indigo-800">Protocolos clave para este grupo</p>
+                            <ul className="mt-3 space-y-2">
+                              {protocolosRelacionados.map((protocolo) => (
+                                <li key={protocolo.id}>
+                                  <div className="flex items-center justify-between text-sm text-gray-700">
+                                    <Link
+                                      href={`/dashboard/protocolos/${protocolo.id}`}
+                                      className="font-medium text-indigo-700 hover:underline"
+                                    >
+                                      {protocolo.titulo}
+                                    </Link>
+                                    <span className="text-xs text-gray-500">
+                                      {protocolo.servicios.length} servicio{protocolo.servicios.length === 1 ? '' : 's'}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-500">Usado en: {protocolo.servicios.join(', ')}</p>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </section>
+                )}
               </div>
               <div className="space-y-6">
                 <PacienteAlertas paciente={paciente} />
