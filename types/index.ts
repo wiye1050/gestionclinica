@@ -490,3 +490,137 @@ export interface EstadisticasInventario {
     ajustes: number;
   };
 }
+
+// ============================================
+// TIPOS PARA PACIENTES
+// ============================================
+
+export type GeneroPaciente = 'masculino' | 'femenino' | 'otro' | 'no-especificado';
+export type EstadoPaciente = 'activo' | 'inactivo' | 'egresado';
+
+export interface ContactoEmergencia {
+  nombre: string;
+  parentesco: string;
+  telefono: string;
+}
+
+export interface ConsentimientoPaciente {
+  tipo: string;
+  fecha: Date;
+  documentoId?: string;
+  firmadoPor?: string;
+}
+
+export interface Paciente {
+  id: string;
+  nombre: string;
+  apellidos: string;
+  fechaNacimiento: Date;
+  genero: GeneroPaciente;
+  documentoId?: string;
+  tipoDocumento?: string;
+  
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  ciudad?: string;
+  codigoPostal?: string;
+  
+  aseguradora?: string;
+  numeroPoliza?: string;
+  
+  alergias: string[];
+  alertasClinicas: string[];
+  diagnosticosPrincipales: string[];
+  riesgo: 'alto' | 'medio' | 'bajo';
+  
+  contactoEmergencia?: ContactoEmergencia;
+  consentimientos: ConsentimientoPaciente[];
+  
+  estado: EstadoPaciente;
+  profesionalReferenteId?: string;
+  grupoPacienteId?: string;
+  
+  notasInternas?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  creadoPor: string;
+  modificadoPor?: string;
+}
+
+export interface RegistroHistorialPaciente {
+  id: string;
+  pacienteId: string;
+  eventoAgendaId?: string;
+  servicioId?: string;
+  servicioNombre?: string;
+  profesionalId?: string;
+  profesionalNombre?: string;
+  fecha: Date;
+  tipo: 'consulta' | 'tratamiento' | 'seguimiento' | 'incidencia';
+  descripcion: string;
+  resultado?: string;
+  planesSeguimiento?: string;
+  adjuntos?: string[];
+  createdAt: Date;
+  creadoPor: string;
+}
+
+// ============================================
+// TIPOS PARA AGENDA Y SALAS
+// ============================================
+
+export type EstadoEventoAgenda = 'programada' | 'confirmada' | 'realizada' | 'cancelada';
+export type TipoEventoAgenda = 'clinico' | 'coordinacion' | 'reunion';
+
+export interface EventoAgenda {
+  id: string;
+  titulo: string;
+  tipo: TipoEventoAgenda;
+  pacienteId?: string;
+  grupoPacienteId?: string;
+  profesionalId: string;
+  salaId?: string;
+  servicioId?: string;
+  fechaInicio: Date;
+  fechaFin: Date;
+  duracion: number;
+  estado: EstadoEventoAgenda;
+  prioridad?: 'alta' | 'media' | 'baja';
+  motivo?: string;
+  notas?: string;
+  requiereSeguimiento?: boolean;
+  recordatoriosEnviados?: Array<{ tipo: 'email' | 'sms'; fecha: Date }>;
+  creadoPor: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BloqueAgenda {
+  id: string;
+  profesionalId: string;
+  salaId?: string;
+  diaSemana: number; // 0-6
+  horaInicio: string;
+  horaFin: string;
+  tipo: 'disponible' | 'bloqueado' | 'descanso';
+  vigenciaInicio: Date;
+  vigenciaFin?: Date;
+  motivo?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SalaClinica {
+  id: string;
+  nombre: string;
+  tipo: 'consulta' | 'quirurgica' | 'rehabilitacion' | 'diagnostico' | 'general';
+  capacidad: number;
+  equipamiento: string[];
+  estado: 'activa' | 'mantenimiento' | 'inactiva';
+  colorAgenda?: string;
+  notas?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  modificadoPor?: string;
+}
