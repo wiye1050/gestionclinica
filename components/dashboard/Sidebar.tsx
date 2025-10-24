@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  Home, 
-  FileText, 
-  BarChart3, 
-  CheckSquare, 
-  Users, 
-  Package, 
+import {
+  Home,
+  FileText,
+  BarChart3,
+  CheckSquare,
+  Users,
+  Package,
   FolderKanban,
   FileBarChart,
   UserCheck,
@@ -16,7 +16,9 @@ import {
   Layers,
   ClipboardList,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  CalendarDays,
+  UserCircle
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -26,6 +28,8 @@ export default function Sidebar() {
 
   const menuItems = [
     { name: 'Inicio', href: '/dashboard', icon: Home },
+    { name: 'Agenda', href: '/dashboard/agenda', icon: CalendarDays },
+    { name: 'Pacientes', href: '/dashboard/pacientes', icon: UserCircle },
     { name: 'Reporte Diario', href: '/dashboard/reporte-diario', icon: FileText },
     { name: 'KPIs', href: '/dashboard/kpis', icon: BarChart3 },
   ];
