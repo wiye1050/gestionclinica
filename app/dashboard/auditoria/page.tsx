@@ -22,7 +22,7 @@ const RANGE_IN_MS: Record<Exclude<TimeRange, 'all'>, number> = {
   '30d': 30 * 24 * 60 * 60 * 1000
 };
 
-interface AuditLogState extends AuditLogEntry {}
+type AuditLogState = AuditLogEntry;
 
 export default function AuditoriaPage() {
   const [logs, setLogs] = useState<AuditLogState[]>([]);
