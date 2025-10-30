@@ -57,3 +57,11 @@ ui-debug.log
 *.log
 # zips
 *.zip
+
+# Google Cloud credentials
+lib/google-cloud-key.json
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!next.config.json
