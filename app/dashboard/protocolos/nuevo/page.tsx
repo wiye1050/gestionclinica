@@ -1,14 +1,45 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { createProtocolAction } from '../actions';
+import { useRouter } from 'next/navigation';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function NuevoProtocoloPage() {
-  const [state, formAction, pending] = useActionState(createProtocolAction, {
-    success: false,
-    error: null as string | null
-  });
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>('');
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    const formData = new FormData(e.currentTarget);
+    
+    try {
+      await addDoc(collection(db, 'protocolos'), {
+        titulo: formData.get('titulo'),
+        area: formData.get('area'),
+        descripcion: formData.get('descripcion') || '',
+        requiereQuiz: formData.get('requiereQuiz') === 'on',
+        visiblePara: formData.getAll('visiblePara'),
+        estado: 'borrador',
+        creadoPor: 'dev-admin',
+        creadoPorNombre: 'Admin',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      router.push('/dashboard/protocolos');
+    } catch (err) {
+      console.error('Error:', err);
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -25,7 +56,7 @@ export default function NuevoProtocoloPage() {
         </Link>
       </header>
 
-      <form action={formAction} className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
+      <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
         <div>
           <label className="block text-sm font-medium text-gray-700">Título</label>
           <input
@@ -75,17 +106,17 @@ export default function NuevoProtocoloPage() {
             ))}
           </div>
         </div>
-        {state.error && (
+        {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            {state.error}
+            {error}
           </div>
         )}
         <button
           type="submit"
-          disabled={pending}
+          disabled={loading}
           className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
         >
-          {pending ? 'Guardando…' : 'Crear protocolo'}
+          {loading ? 'Guardando…' : 'Crear protocolo'}
         </button>
       </form>
     </div>

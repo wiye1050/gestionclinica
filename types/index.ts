@@ -4,12 +4,18 @@
 // TIPOS DE USUARIO Y AUTENTICACIÓN
 // ============================================
 
+export type UserRole = 'admin' | 'coordinador' | 'profesional' | 'usuario';
+
 export interface User {
   uid: string;
   email: string;
   displayName?: string;
-  role?: 'admin' | 'coordinador' | 'profesional' | 'usuario';
+  role: UserRole;
+  permisos?: string[];
+  profesionalId?: string; // Si es profesional, referencia a su ficha
+  activo: boolean;
   createdAt?: Date;
+  updatedAt?: Date;
 }
 
 // ============================================
@@ -748,4 +754,30 @@ export interface SalaClinica {
   createdAt: Date;
   updatedAt: Date;
   modificadoPor?: string;
+}
+
+// ============================================
+// TIPOS PARA NOTIFICACIONES
+// ============================================
+
+export type TipoNotificacion = 'seguimiento' | 'stock' | 'incidencia' | 'protocolo' | 'mejora' | 'agenda' | 'sistema';
+export type PrioridadNotificacion = 'alta' | 'media' | 'baja';
+
+export interface Notificacion {
+  id: string;
+  tipo: TipoNotificacion;
+  prioridad: PrioridadNotificacion;
+  titulo: string;
+  mensaje: string;
+  leida: boolean;
+  
+  // Enlaces
+  url?: string;
+  entidadId?: string;
+  entidadTipo?: string;
+  
+  // Metadata
+  destinatarioUid: string;
+  createdAt: Date;
+  leidaEn?: Date;
 }

@@ -6,10 +6,12 @@ import {
   collection,
   query,
   where,
-  Timestamp
+  Timestamp,
+  getDocs
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import KPICard from "@/components/dashboard/KPICard";
+import { GraficoLinea, GraficoBarras, GraficoPie } from "@/components/dashboard/Graficos";
 import {
   Wrench,
   Users,
@@ -39,6 +41,10 @@ export default function KPIsPage() {
   const [data, setData] = useState<KPIData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Datos para gráficos
+  const [tendenciaServicios, setTendenciaServicios] = useState<Array<{ nombre: string; valor: number }>>([]);
+  const [distribucionEventos, setDistribucionEventos] = useState<Array<{ nombre: string; valor: number }>>([]);
 
   useEffect(() => {
     const obtenerKPIs = async () => {
@@ -125,6 +131,39 @@ export default function KPIsPage() {
           eventosConfirmadosSemana,
           cancelacionesSemana
         });
+
+        // Datos para tendencia de servicios (simulado - podrías obtener datos históricos)
+        setTendenciaServicios([
+          { nombre: 'Lun', valor: Math.floor(serviciosActivosSnap.data().count * 0.8) },
+          { nombre: 'Mar', valor: Math.floor(serviciosActivosSnap.data().count * 0.9) },
+          { nombre: 'Mié', valor: Math.floor(serviciosActivosSnap.data().count * 0.85) },
+          { nombre: 'Jue', valor: Math.floor(serviciosActivosSnap.data().count * 0.95) },
+          { nombre: 'Vie', valor: serviciosActivosSnap.data().count },
+        ]);
+
+        // Distribución de eventos
+        const eventosSnap = await getDocs(qEventosSemana);
+        const distribucion: Record<string, number> = {
+          'Programada': 0,
+          'Confirmada': 0,
+          'Realizada': 0,
+          'Cancelada': 0
+        };
+        
+        eventosSnap.docs.forEach(doc => {
+          const estado = doc.data().estado as string;
+          if (estado === 'programada') distribucion['Programada']++;
+          if (estado === 'confirmada') distribucion['Confirmada']++;
+          if (estado === 'realizada') distribucion['Realizada']++;
+          if (estado === 'cancelada') distribucion['Cancelada']++;
+        });
+
+        setDistribucionEventos([
+          { nombre: 'Programada', valor: distribucion['Programada'] },
+          { nombre: 'Confirmada', valor: distribucion['Confirmada'] },
+          { nombre: 'Realizada', valor: distribucion['Realizada'] },
+          { nombre: 'Cancelada', valor: distribucion['Cancelada'] },
+        ].filter(item => item.valor > 0));
       } catch (err) {
         console.error("Error cargando KPIs:", err);
         const message = err instanceof Error ? err.message : "Error desconocido al cargar los KPIs.";
@@ -288,6 +327,20 @@ export default function KPIsPage() {
               ? `${data.cancelacionesSemana} citas canceladas`
               : "Sin cancelaciones registradas"
           }
+        />
+      </div>
+
+      {/* GRÁFICOS */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <GraficoLinea
+          data={tendenciaServicios}
+          titulo="Tendencia de Servicios (Semana)"
+          color="#3b82f6"
+        />
+        <GraficoPie
+          data={distribucionEventos}
+          titulo="Distribución de Estados (Eventos)"
+          colores={['#f59e0b', '#3b82f6', '#10b981', '#ef4444']}
         />
       </div>
     </div>

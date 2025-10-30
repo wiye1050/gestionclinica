@@ -1,31 +1,223 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: 210 20% 97%;
+  --card: 0 0% 100%;
+  --card-hover: 210 20% 95%;
+  --border: 210 15% 88%;
+  --muted: 210 20% 92%;
+  --text: 222 15% 18%;
+  --text-muted: 222 10% 45%;
+
+  --brand: 217 85% 58%;
+  --brand-fg: 217 90% 18%;
+  --brand-subtle: 217 90% 95%;
+
+  --success: 152 60% 38%;
+  --success-bg: 152 55% 92%;
+  --warn: 35 85% 48%;
+  --warn-bg: 35 90% 94%;
+  --danger: 0 78% 58%;
+  --danger-bg: 0 85% 95%;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+.dark {
+  --bg: 220 18% 12%;
+  --card: 220 20% 16%;
+  --card-hover: 220 20% 18%;
+  --border: 220 15% 28%;
+  --muted: 220 15% 20%;
+  --text: 0 0% 97%;
+  --text-muted: 220 12% 70%;
+
+  --brand: 217 90% 70%;
+  --brand-fg: 217 95% 90%;
+  --brand-subtle: 217 50% 22%;
+
+  --success-bg: 152 30% 18%;
+  --warn-bg: 35 35% 20%;
+  --danger-bg: 0 35% 20%;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  min-height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: hsl(var(--bg));
+  color: hsl(var(--text));
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
-input,
+
+.card {
+  background-color: hsl(var(--card));
+  color: hsl(var(--text));
+  border: 1px solid hsl(var(--border));
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.card-hover {
+  transition: background-color 0.15s ease;
+}
+.card-hover:hover {
+  background-color: hsl(var(--card-hover));
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  letter-spacing: 0.005em;
+  font-weight: 500;
+}
+.badge--success {
+  background-color: hsl(var(--success-bg));
+  color: hsl(var(--success));
+}
+.badge--warn {
+  background-color: hsl(var(--warn-bg));
+  color: hsl(var(--warn));
+}
+.badge--danger {
+  background-color: hsl(var(--danger-bg));
+  color: hsl(var(--danger));
+}
+.badge--muted {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--text-muted));
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1.25rem;
+  background-color: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+.stat__label {
+  font-size: 0.8125rem;
+  letter-spacing: 0.005em;
+  font-weight: 500;
+  color: hsl(var(--text-muted));
+}
+.stat__value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: hsl(var(--text));
+}
+.stat__delta-up {
+  color: hsl(var(--success));
+}
+.stat__delta-down {
+  color: hsl(var(--danger));
+}
+
+.focus-ring {
+  outline: none;
+  box-shadow: 0 0 0 3px hsl(var(--brand) / 0.35);
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--card)) 37%,
+    hsl(var(--muted)) 63%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  border: 1px solid hsl(var(--border));
+  font-size: 0.8125rem;
+  letter-spacing: 0.005em;
+  font-weight: 500;
+  color: hsl(var(--text-muted));
+}
+
+.dense {
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+/* ============================================ */
+/* SOLO ARREGLO DE TEXTO NEGRO EN INPUTS      */
+/* ============================================ */
+
+/* Inputs de texto - NEGRO pero sin romper nada más */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+input[type="search"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
 textarea,
 select {
-  color: #000000 !important;
+  color: #111827;
+}
+
+/* Placeholder visible */
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af;
+  opacity: 0.7;
+}
+
+/* Labels en negro */
+label {
+  color: #111827;
+}
+
+/* Dark mode - texto blanco en inputs */
+.dark input[type="text"],
+.dark input[type="email"],
+.dark input[type="password"],
+.dark input[type="number"],
+.dark input[type="tel"],
+.dark input[type="url"],
+.dark input[type="search"],
+.dark input[type="date"],
+.dark input[type="time"],
+.dark input[type="datetime-local"],
+.dark textarea,
+.dark select {
+  color: #f3f4f6;
+}
+
+.dark label {
+  color: #f3f4f6;
+}
+
+/* Animaciones suaves */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+button,
+a {
+  transition: all 0.2s ease;
 }

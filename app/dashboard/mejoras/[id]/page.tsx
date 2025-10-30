@@ -7,6 +7,7 @@ import { collection, doc, getDoc, getDocs, orderBy, query, where } from 'firebas
 import { db } from '@/lib/firebase';
 import { actualizarEstadoMejoraAction, agregarEvidenciaAction } from '../actions';
 import { Mejora, MejoraEvidencia } from '@/types';
+import { FileUpload } from '@/components/ui/FileUpload';
 
 const estadoOptions = [
   { value: 'idea', label: 'Idea' },
@@ -22,6 +23,7 @@ export default function MejoraDetallePage() {
   const [mejora, setMejora] = useState<Mejora | null>(null);
   const [evidencias, setEvidencias] = useState<MejoraEvidencia[]>([]);
   const [loading, setLoading] = useState(true);
+  const [evidenciaUrl, setEvidenciaUrl] = useState('');
 
   useEffect(() => {
     if (!mejoraId) return;
@@ -125,21 +127,32 @@ export default function MejoraDetallePage() {
       <section className="rounded-lg border border-gray-200 bg-white p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Evidencias</h2>
+        </div>
+        
+        <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 space-y-3">
+          <h3 className="text-sm font-medium text-gray-700">Añadir evidencia</h3>
+          <FileUpload
+            folder="mejoras"
+            onUpload={(url) => setEvidenciaUrl(url)}
+            accept="image/*,application/pdf"
+            maxSizeMB={10}
+          />
           <form action={agregarEvidenciaAction} className="flex flex-wrap items-center gap-2 text-sm">
             <input type="hidden" name="mejoraId" value={mejora.id} />
+            <input type="hidden" name="url" value={evidenciaUrl} />
             <select name="tipo" className="rounded-lg border border-gray-300 px-3 py-2">
               <option value="texto">Nota</option>
               <option value="enlace">Enlace</option>
               <option value="imagen">Imagen</option>
               <option value="documento">Documento</option>
             </select>
-            <input name="url" placeholder="URL (opcional)" className="rounded-lg border border-gray-300 px-3 py-2" />
-            <input name="descripcion" placeholder="Descripción" className="rounded-lg border border-gray-300 px-3 py-2" />
-            <button className="rounded-lg border border-green-200 px-3 py-2 text-green-700 hover:bg-green-50">
+            <input name="descripcion" placeholder="Descripción" className="flex-1 rounded-lg border border-gray-300 px-3 py-2" />
+            <button className="rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700">
               Añadir
             </button>
           </form>
         </div>
+        
         {evidencias.length === 0 ? (
           <p className="text-sm text-gray-500">Aún no se han añadido evidencias.</p>
         ) : (

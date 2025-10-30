@@ -1,0 +1,25 @@
+<svg width="180" height="70" viewBox="0 0 180 70" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title">
+  <title>Clinic Cloud by Doctoralia</title>
+  <defs>
+    <linearGradient id="cc-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00b5ad" />
+      <stop offset="60%" stop-color="#00a39d" />
+      <stop offset="100%" stop-color="#0f7b86" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="180" height="70" rx="14" fill="white"/>
+  <g transform="translate(18,20)" fill="url(#cc-gradient)">
+    <text font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="600" letter-spacing="1">
+      clinic
+    </text>
+    <text x="78" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="600" letter-spacing="1">
+      cloud
+    </text>
+  </g>
+  <g transform="translate(90,37)">
+    <path d="M-8 6h30a6 6 0 0 0 0-12h-0.7A8.5 8.5 0 0 0 14-13a8.5 8.5 0 0 0-8.05 5.4 7 7 0 0 0-3.45-.85A7 7 0 0 0 -4 0H-8a6 6 0 0 0 0 12h4" fill="none" stroke="#6b7a83" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="90" y="60" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#6b7a83">
+    by Doctoralia
+  </text>
+</svg>

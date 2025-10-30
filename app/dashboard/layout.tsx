@@ -4,9 +4,13 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Sidebar from '@/components/dashboard/Sidebar';
-import { Bell, LogOut } from 'lucide-react';
+import { LogOut, Search } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { GlobalSearch } from '@/components/ui/GlobalSearch';
+import { useGlobalSearch } from '@/lib/hooks/useGlobalSearch';
+import { NotificacionesDropdown } from '@/components/ui/NotificacionesDropdown';
+import { QueryProvider } from '@/lib/providers/QueryProvider';
 
 export default function DashboardLayout({
   children,
@@ -15,6 +19,7 @@ export default function DashboardLayout({
 }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const { isOpen, open, close } = useGlobalSearch();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -42,7 +47,8 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <QueryProvider>
+      <div className="min-h-screen bg-gray-50">
       {/* Header Superior */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="px-8 py-4 flex items-center justify-between">
@@ -54,11 +60,20 @@ export default function DashboardLayout({
 
           {/* Usuario y Acciones */}
           <div className="flex items-center space-x-6">
-            {/* Notificaciones */}
-            <button className="relative p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-              <Bell className="w-6 h-6" />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+            {/* Botón de Búsqueda */}
+            <button
+              onClick={open}
+              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            >
+              <Search className="w-5 h-5" />
+              <span className="text-sm hidden md:inline">Buscar</span>
+              <kbd className="hidden lg:inline-flex items-center gap-1 rounded border border-gray-200 px-2 py-0.5 text-xs font-sans text-gray-400">
+                ⌘K
+              </kbd>
             </button>
+
+            {/* Notificaciones */}
+            <NotificacionesDropdown userUid={user.uid} />
 
             {/* Usuario */}
             <div className="flex items-center space-x-3">
@@ -92,6 +107,10 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
+
+      {/* Búsqueda Global */}
+      <GlobalSearch isOpen={isOpen} onClose={close} />
     </div>
+    </QueryProvider>
   );
 }

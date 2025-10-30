@@ -1,17 +1,23 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import Link from 'next/link';
 import { createProtocolVersionAction } from '../../actions';
+import { FileUpload } from '@/components/ui/FileUpload';
 
 export default function NuevaVersionPage() {
   const params = useParams<{ id: string }>();
   const protocoloId = params?.id ?? '';
+  const [anexos, setAnexos] = useState<string[]>([]);
   const [state, formAction, pending] = useActionState(createProtocolVersionAction, {
     success: false,
     error: null as string | null
   });
+
+  const handleAddAnexo = (url: string) => {
+    setAnexos([...anexos, url]);
+  };
 
   return (
     <div className="space-y-6">
@@ -30,10 +36,28 @@ export default function NuevaVersionPage() {
 
       <form action={formAction} className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
         <input type="hidden" name="protocoloId" value={protocoloId} />
+        <input type="hidden" name="anexos" value={JSON.stringify(anexos)} />
+        
         <div>
           <label className="block text-sm font-medium text-gray-700">Contenido (Markdown/HTML)</label>
           <textarea name="contenido" className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" rows={12} required />
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Anexos (PDFs, imágenes)</label>
+          <FileUpload
+            folder="protocolos"
+            onUpload={handleAddAnexo}
+            accept="application/pdf,image/*"
+            maxSizeMB={10}
+          />
+          {anexos.length > 0 && (
+            <div className="mt-2 text-sm text-gray-600">
+              {anexos.length} archivo{anexos.length > 1 ? 's' : ''} adjunto{anexos.length > 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
+
         {state.error && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             {state.error}
