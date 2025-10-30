@@ -316,7 +316,7 @@ function AgendaContent() {
           </div>
 
           {/* Filtro Profesional - Multi-select */}
-          <div className="relative">
+          <div className="relative z-50">
             <details className="group">
               <summary className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors list-none flex items-center justify-between">
                 <span className="text-gray-900">
@@ -326,7 +326,7 @@ function AgendaContent() {
                 </span>
                 <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
               </summary>
-              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              <div className="absolute z-50 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                 <div className="p-2 space-y-1">
                   <label className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded cursor-pointer">
                     <input

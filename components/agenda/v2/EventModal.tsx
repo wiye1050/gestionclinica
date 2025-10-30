@@ -77,21 +77,38 @@ export default function EventModal({
       const sala = salas.find(s => s.id === formData.salaId);
       const paciente = pacientes.find(p => p.id === formData.pacienteId);
 
-      const eventData: Partial<AgendaEvent> = {
+      // Construir objeto solo con campos que tienen valor (Firebase no acepta undefined)
+      const eventData: any = {
         titulo: formData.titulo,
         tipo: formData.tipo,
         fechaInicio,
         fechaFin,
-        profesionalId: formData.profesionalId || undefined,
-        profesionalNombre: profesional ? `${profesional.nombre} ${profesional.apellidos}` : undefined,
-        salaId: formData.salaId || undefined,
-        salaNombre: sala?.nombre,
-        pacienteId: formData.pacienteId || undefined,
-        pacienteNombre: paciente ? `${paciente.nombre} ${paciente.apellidos}` : undefined,
         prioridad: formData.prioridad,
-        notas: formData.notas,
+        notas: formData.notas || '',
         estado: event?.estado || 'programada',
       };
+
+      // Solo agregar campos opcionales si tienen valor
+      if (formData.profesionalId) {
+        eventData.profesionalId = formData.profesionalId;
+        if (profesional) {
+          eventData.profesionalNombre = `${profesional.nombre} ${profesional.apellidos}`;
+        }
+      }
+
+      if (formData.salaId) {
+        eventData.salaId = formData.salaId;
+        if (sala) {
+          eventData.salaNombre = sala.nombre;
+        }
+      }
+
+      if (formData.pacienteId) {
+        eventData.pacienteId = formData.pacienteId;
+        if (paciente) {
+          eventData.pacienteNombre = `${paciente.nombre} ${paciente.apellidos}`;
+        }
+      }
 
       await onSave(eventData);
       onClose();
