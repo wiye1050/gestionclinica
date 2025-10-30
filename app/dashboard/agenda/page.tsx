@@ -28,6 +28,7 @@ import AgendaWeekViewV2 from '@/components/agenda/v2/AgendaWeekViewV2';
 import AgendaResourceView from '@/components/agenda/v2/AgendaResourceView';
 import EventModal from '@/components/agenda/v2/EventModal';
 import MiniCalendar from '@/components/agenda/v2/MiniCalendar';
+import AgendaSearch from '@/components/agenda/v2/AgendaSearch';
 import { AgendaEvent } from '@/components/agenda/v2/agendaHelpers';
 import { 
   Calendar, 
@@ -271,19 +272,44 @@ function AgendaContent() {
       <ModuleHeader
         title="Agenda"
         actions={
-          <button
-            onClick={() => {
-              setModalInitialDate(new Date());
-              setEventToEdit(null);
-              setIsModalOpen(true);
-            }}
-            className="px-3 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition-colors flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Nueva Cita
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Búsqueda - desktop */}
+            <div className="hidden md:block w-64">
+              <AgendaSearch
+                events={eventos}
+                onEventSelect={handleEventClick}
+                onDateSelect={(date) => {
+                  setCurrentDate(date);
+                  setVista('dia');
+                }}
+              />
+            </div>
+            <button
+              onClick={() => {
+                setModalInitialDate(new Date());
+                setEventToEdit(null);
+                setIsModalOpen(true);
+              }}
+              className="px-3 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Nueva Cita</span>
+            </button>
+          </div>
         }
       />
+
+      {/* Búsqueda móvil */}
+      <div className="md:hidden">
+        <AgendaSearch
+          events={eventos}
+          onEventSelect={handleEventClick}
+          onDateSelect={(date) => {
+            setCurrentDate(date);
+            setVista('dia');
+          }}
+        />
+      </div>
 
       {/* Filtros y Navegación */}
       <div className="bg-white rounded-lg shadow p-4">
@@ -395,22 +421,41 @@ function AgendaContent() {
 
       {/* Layout principal con MiniCalendar y vistas */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Mini Calendario - Sidebar */}
+        {/* Mini Calendario - Sidebar - Colapsable en móvil */}
         <div className="lg:col-span-3">
-          <MiniCalendar
-            currentDate={currentDate}
-            onDateSelect={(date) => {
-              setCurrentDate(date);
-              setVista('dia'); // Cambiar a vista día al seleccionar
-            }}
-            onMonthChange={setCurrentDate}
-            events={eventosFiltrados}
-          />
+          <details className="lg:hidden mb-4" open>
+            <summary className="cursor-pointer bg-white p-3 rounded-lg shadow text-sm font-medium text-gray-900 flex items-center justify-between">
+              <span>📅 Calendario</span>
+              <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
+            </summary>
+            <div className="mt-2">
+              <MiniCalendar
+                currentDate={currentDate}
+                onDateSelect={(date) => {
+                  setCurrentDate(date);
+                  setVista('dia');
+                }}
+                onMonthChange={setCurrentDate}
+                events={eventosFiltrados}
+              />
+            </div>
+          </details>
+          <div className="hidden lg:block">
+            <MiniCalendar
+              currentDate={currentDate}
+              onDateSelect={(date) => {
+                setCurrentDate(date);
+                setVista('dia');
+              }}
+              onMonthChange={setCurrentDate}
+              events={eventosFiltrados}
+            />
+          </div>
         </div>
 
         {/* Vista Seleccionada */}
         <div className="lg:col-span-9">
-          <div className="bg-white rounded-lg shadow" style={{ height: 'calc(100vh - 500px)' }}>
+          <div className="bg-white rounded-lg shadow" style={{ height: 'calc(100vh - 350px)', minHeight: '400px' }}>
         {vista === 'dia' && (
           <AgendaDayView
             day={currentDate}
