@@ -27,6 +27,7 @@ import AgendaDayView from '@/components/agenda/v2/AgendaDayView';
 import AgendaWeekViewV2 from '@/components/agenda/v2/AgendaWeekViewV2';
 import AgendaResourceView from '@/components/agenda/v2/AgendaResourceView';
 import EventModal from '@/components/agenda/v2/EventModal';
+import MiniCalendar from '@/components/agenda/v2/MiniCalendar';
 import { AgendaEvent } from '@/components/agenda/v2/agendaHelpers';
 import { 
   Calendar, 
@@ -392,8 +393,24 @@ function AgendaContent() {
         onViewChange={(v) => setVista(v as VistaAgenda)}
       />
 
-      {/* Vista Seleccionada */}
-      <div className="bg-white rounded-lg shadow" style={{ height: 'calc(100vh - 500px)' }}>
+      {/* Layout principal con MiniCalendar y vistas */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Mini Calendario - Sidebar */}
+        <div className="lg:col-span-3">
+          <MiniCalendar
+            currentDate={currentDate}
+            onDateSelect={(date) => {
+              setCurrentDate(date);
+              setVista('dia'); // Cambiar a vista día al seleccionar
+            }}
+            onMonthChange={setCurrentDate}
+            events={eventosFiltrados}
+          />
+        </div>
+
+        {/* Vista Seleccionada */}
+        <div className="lg:col-span-9">
+          <div className="bg-white rounded-lg shadow" style={{ height: 'calc(100vh - 500px)' }}>
         {vista === 'dia' && (
           <AgendaDayView
             day={currentDate}
@@ -430,6 +447,8 @@ function AgendaContent() {
             onCreateEvent={handleCreateEvent}
           />
         )}
+          </div>
+        </div>
       </div>
 
       {/* Modal de Nueva Cita */}
