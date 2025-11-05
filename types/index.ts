@@ -93,6 +93,56 @@ export interface Profesional {
   updatedAt: Date;
 }
 
+// Pacientes individuales
+export interface Paciente {
+  id: string;
+  nombre: string;
+  apellidos: string;
+  fechaNacimiento: Date;
+  genero: 'masculino' | 'femenino' | 'otro';
+
+  // Contacto
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  ciudad?: string;
+  codigoPostal?: string;
+
+  // Información clínica
+  alergias: string[];
+  alertasClinicas: string[];
+  diagnosticosPrincipales: string[];
+
+  // Asignaciones
+  profesionalReferenteId?: string;
+  grupoPacienteId?: string;
+
+  // Contacto de emergencia
+  contactoEmergencia?: {
+    nombre: string;
+    telefono: string;
+    parentesco: string;
+  };
+
+  // Seguro
+  aseguradora?: string;
+  numeroPoliza?: string;
+
+  // Estado
+  estado: 'activo' | 'inactivo';
+
+  // Consentimientos
+  consentimientos: Array<{
+    tipo: string;
+    fecha: Date;
+    aceptado: boolean;
+  }>;
+
+  // Metadata
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Grupos de pacientes
 export interface GrupoPaciente {
   id: string;
@@ -100,12 +150,12 @@ export interface GrupoPaciente {
   pacientes: string[];
   color: string;
   activo: boolean;
-  
+
   // Profesionales asignados por defecto
   medicinaPrincipal?: string;
   fisioterapiaPrincipal?: string;
   enfermeriaPrincipal?: string;
-  
+
   notas?: string;
   createdAt: Date;
   updatedAt: Date;
