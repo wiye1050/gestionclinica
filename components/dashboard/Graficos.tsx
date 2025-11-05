@@ -1,6 +1,6 @@
 'use client';
 
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface GraficoTendenciaProps {
   data: Array<{ nombre: string; valor: number }>;
@@ -10,8 +10,8 @@ interface GraficoTendenciaProps {
 
 export function GraficoLinea({ data, titulo, color = '#3b82f6' }: GraficoTendenciaProps) {
   return (
-    <div className="rounded-xl bg-white dark:bg-gray-800 p-6 shadow">
-      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{titulo}</h3>
+    <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+      <h3 className="mb-4 text-lg font-semibold text-text">{titulo}</h3>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -19,9 +19,9 @@ export function GraficoLinea({ data, titulo, color = '#3b82f6' }: GraficoTendenc
           <YAxis stroke="#6b7280" />
           <Tooltip
             contentStyle={{
-              backgroundColor: '#fff',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px'
+              backgroundColor: 'hsl(var(--card))',
+              border: '1px solid hsl(var(--border))',
+              borderRadius: '12px'
             }}
           />
           <Line type="monotone" dataKey="valor" stroke={color} strokeWidth={2} dot={{ r: 4 }} />
@@ -33,8 +33,8 @@ export function GraficoLinea({ data, titulo, color = '#3b82f6' }: GraficoTendenc
 
 export function GraficoBarras({ data, titulo, color = '#3b82f6' }: GraficoTendenciaProps) {
   return (
-    <div className="rounded-xl bg-white dark:bg-gray-800 p-6 shadow">
-      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{titulo}</h3>
+    <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+      <h3 className="mb-4 text-lg font-semibold text-text">{titulo}</h3>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -42,9 +42,9 @@ export function GraficoBarras({ data, titulo, color = '#3b82f6' }: GraficoTenden
           <YAxis stroke="#6b7280" />
           <Tooltip
             contentStyle={{
-              backgroundColor: '#fff',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px'
+              backgroundColor: 'hsl(var(--card))',
+              border: '1px solid hsl(var(--border))',
+              borderRadius: '12px'
             }}
           />
           <Bar dataKey="valor" fill={color} radius={[8, 8, 0, 0]} />
@@ -62,8 +62,8 @@ interface GraficoPieProps {
 
 export function GraficoPie({ data, titulo, colores = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'] }: GraficoPieProps) {
   return (
-    <div className="rounded-xl bg-white dark:bg-gray-800 p-6 shadow">
-      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{titulo}</h3>
+    <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+      <h3 className="mb-4 text-lg font-semibold text-text">{titulo}</h3>
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>
           <Pie

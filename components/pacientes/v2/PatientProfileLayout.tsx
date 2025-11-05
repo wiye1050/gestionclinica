@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, ReactNode } from 'react';
-import { Paciente } from '@/types';
+import { ReactNode } from 'react';
+import type { PacienteV2 as Paciente } from '@/types/paciente-v2';
 import PatientHeader from './PatientHeader';
 import PatientTimeline, { Activity } from './PatientTimeline';
 import {
@@ -14,10 +14,10 @@ import {
   Activity as ActivityIcon
 } from 'lucide-react';
 
-export type PatientTab = 
-  | 'resumen' 
-  | 'historial-clinico' 
-  | 'citas' 
+export type PatientTab =
+  | 'resumen'
+  | 'historial-clinico'
+  | 'citas'
   | 'tratamientos'
   | 'documentos'
   | 'facturacion'
@@ -66,7 +66,7 @@ export default function PatientProfileLayout({
   const tabsToShow = tabs || defaultTabs;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <div className="max-w-[1600px] mx-auto p-4 md:p-6 space-y-6">
         {/* Header */}
         <PatientHeader
@@ -77,7 +77,7 @@ export default function PatientProfileLayout({
         />
 
         {/* Tabs de navegación */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-card rounded-2xl shadow-sm border border-border">
           <div className="flex overflow-x-auto">
             {tabsToShow.map((tab) => {
               const isActive = tab.key === activeTab;
@@ -87,8 +87,8 @@ export default function PatientProfileLayout({
                   onClick={() => onTabChange(tab.key)}
                   className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                     isActive
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                      ? 'border-brand text-brand'
+                      : 'border-transparent text-text-muted hover:text-text hover:border-border'
                   }`}
                 >
                   {tab.icon}
@@ -96,8 +96,8 @@ export default function PatientProfileLayout({
                   {typeof tab.count === 'number' && (
                     <span className={`px-2 py-0.5 rounded-full text-xs ${
                       isActive
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-gray-100 text-gray-600'
+                        ? 'bg-brand-subtle text-brand'
+                        : 'bg-muted text-text-muted'
                     }`}>
                       {tab.count}
                     </span>

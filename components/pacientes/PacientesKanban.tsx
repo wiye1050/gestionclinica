@@ -1,7 +1,7 @@
 'use client';
 
 import { Paciente, Profesional } from '@/types';
-import { User, Calendar, AlertTriangle } from 'lucide-react';
+import { User, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
 interface PacientesKanbanProps {
@@ -11,15 +11,15 @@ interface PacientesKanbanProps {
 }
 
 const COLUMNAS = [
-  { estado: 'activo', titulo: 'Activos', color: 'bg-green-100 border-green-300' },
-  { estado: 'inactivo', titulo: 'Inactivos', color: 'bg-gray-100 border-gray-300' },
-  { estado: 'egresado', titulo: 'Egresados', color: 'bg-blue-100 border-blue-300' },
+  { estado: 'activo', titulo: 'Activos', headerClass: 'border border-success bg-success-bg text-success' },
+  { estado: 'inactivo', titulo: 'Inactivos', headerClass: 'border border-border bg-cardHover text-text-muted' },
+  { estado: 'egresado', titulo: 'Egresados', headerClass: 'border border-brand bg-brand-subtle text-brand' },
 ];
 
 const COLORES_RIESGO = {
-  alto: 'border-l-4 border-l-red-500',
-  medio: 'border-l-4 border-l-yellow-500',
-  bajo: 'border-l-4 border-l-green-500',
+  alto: 'border-l-4 border-l-danger',
+  medio: 'border-l-4 border-l-warn',
+  bajo: 'border-l-4 border-l-success',
 };
 
 export default function PacientesKanban({ pacientes, profesionales, pacientesSeguimiento }: PacientesKanbanProps) {
@@ -32,7 +32,7 @@ export default function PacientesKanban({ pacientes, profesionales, pacientesSeg
   }, {});
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-400px)]">
+    <div className="flex h-[calc(100vh-400px)] gap-4 overflow-x-auto pb-4">
       {COLUMNAS.map((columna) => {
         const pacientesColumna = pacientesPorEstado(columna.estado);
         
@@ -42,19 +42,19 @@ export default function PacientesKanban({ pacientes, profesionales, pacientesSeg
             className="flex-shrink-0 w-80 flex flex-col"
           >
             {/* Header de columna */}
-            <div className={`p-3 rounded-t-lg border-2 ${columna.color}`}>
+            <div className={`rounded-t-2xl px-3 py-3 ${columna.headerClass}`}>
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-gray-800">
+                <h3 className="font-semibold text-text">
                   {columna.titulo}
                 </h3>
-                <span className="bg-white px-2 py-1 rounded-full text-xs font-medium">
+                <span className="rounded-full bg-card px-2 py-1 text-xs font-medium text-text">
                   {pacientesColumna.length}
                 </span>
               </div>
             </div>
 
             {/* Cards */}
-            <div className="flex-1 bg-gray-50 border-2 border-t-0 border-gray-200 rounded-b-lg p-2 space-y-2 overflow-y-auto">
+            <div className="flex-1 space-y-2 overflow-y-auto rounded-b-2xl border border-border border-t-0 bg-cardHover p-2">
               {pacientesColumna.map((paciente) => {
                 const requiereSeguimiento = pacientesSeguimiento.has(paciente.id);
                 const riesgoClass = paciente.riesgo ? COLORES_RIESGO[paciente.riesgo] : '';
@@ -63,18 +63,15 @@ export default function PacientesKanban({ pacientes, profesionales, pacientesSeg
                   <Link
                     key={paciente.id}
                     href={`/dashboard/pacientes/${paciente.id}`}
-                    className={`
-                      bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all cursor-pointer block
-                      ${riesgoClass}
-                    `}
+                    className={`block rounded-2xl border border-border bg-card p-3 shadow-sm transition-all hover:shadow-md ${riesgoClass}`}
                   >
                     {/* Nombre */}
                     <div className="mb-2">
-                      <h4 className="font-medium text-sm text-gray-900 line-clamp-1">
+                      <h4 className="text-sm font-medium text-text line-clamp-1">
                         {paciente.nombre} {paciente.apellidos}
                       </h4>
                       {paciente.documentoId && (
-                        <p className="text-xs text-gray-500">{paciente.documentoId}</p>
+                        <p className="text-xs text-text-muted">{paciente.documentoId}</p>
                       )}
                     </div>
 
@@ -100,7 +97,7 @@ export default function PacientesKanban({ pacientes, profesionales, pacientesSeg
                     )}
 
                     {/* Footer */}
-                    <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
+                    <div className="flex items-center justify-between border-t border-border/40 pt-2 text-xs text-text-muted">
                       {paciente.profesionalReferenteId && (
                         <div className="flex items-center gap-1 truncate">
                           <User className="w-3 h-3 flex-shrink-0" />
@@ -118,7 +115,7 @@ export default function PacientesKanban({ pacientes, profesionales, pacientesSeg
               })}
 
               {pacientesColumna.length === 0 && (
-                <div className="text-center py-8 text-gray-500 text-sm">
+                <div className="text-center py-8 text-text-muted text-sm">
                   No hay pacientes {columna.titulo.toLowerCase()}
                 </div>
               )}

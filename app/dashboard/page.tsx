@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -19,7 +19,8 @@ import {
   Sun,
   Moon,
   Activity,
-  TrendingUp
+  TrendingUp,
+  CalendarDays
 } from 'lucide-react';
 
 // Skeleton para loading
@@ -125,207 +126,251 @@ function DashboardContent() {
   const loading = loadingKPIs || loadingActivity;
 
   return (
-    <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 p-8 text-white shadow-xl">
-        <div className="relative z-10 flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold">Bienvenido a Instituto Ordóñez</h1>
-            <p className="mt-2 text-lg text-blue-100">{formattedDate}</p>
-            <div className="mt-4 flex gap-6 text-sm">
-              <div>
-                <span className="font-semibold">{stats.serviciosActivos}</span> servicios activos
+    <div className="space-y-8">
+      <section className="rounded-3xl border border-border bg-card px-8 py-7 shadow-sm">
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-3">
+            <span className="inline-flex items-center gap-2 rounded-pill border border-border bg-cardHover px-3 py-1 text-[13px] font-medium text-text-muted">
+              <span className="h-2 w-2 rounded-full bg-brand"></span>
+              Instituto Ordóñez
+            </span>
+            <div>
+              <h1 className="text-3xl font-semibold text-text">Panel Operativo</h1>
+              <p className="text-sm text-text-muted">{formattedDate}</p>
+            </div>
+            <div className="flex flex-wrap gap-6 text-sm text-text-muted">
+              <div className="space-y-1">
+                <p className="text-text-muted">Servicios activos</p>
+                <p className="text-2xl font-semibold text-text">{stats.serviciosActivos}</p>
               </div>
-              <div>
-                <span className="font-semibold">{stats.seguimientosPendientes}</span> eventos esta semana
+              <div className="space-y-1">
+                <p className="text-text-muted">Eventos esta semana</p>
+                <p className="text-2xl font-semibold text-text">{stats.seguimientosPendientes}</p>
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="rounded-full bg-white/20 p-3 backdrop-blur-sm transition-all hover:bg-white/30"
-            aria-label="Cambiar tema"
-          >
-            <ThemeIcon className="h-6 w-6" />
-          </button>
+          <div className="flex items-center gap-3 rounded-2xl border border-border bg-cardHover px-4 py-3">
+            <p className="text-sm font-medium text-text">Modo {isDark ? 'oscuro' : 'claro'}</p>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
+              aria-label="Cambiar tema"
+            >
+              <ThemeIcon className="h-5 w-5" />
+            </button>
+          </div>
         </div>
-        <div className="absolute right-0 top-0 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <a
           href="https://email.ionos.es/appsuite/#!!&app=io.ox/mail&folder=default0/INBOX"
           target="_blank"
           rel="noopener noreferrer"
-          className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 p-6 text-white shadow-lg transition-transform hover:-translate-y-1 hover:shadow-xl"
+          className="group rounded-2xl border border-border bg-card p-5 transition-colors hover:bg-cardHover focus-visible:focus-ring"
         >
-          <div className="flex items-center justify-between mb-3">
-            <Mail className="w-5 h-5" />
-            <ExternalLink className="w-4 h-4 opacity-0 transition-opacity group-hover:opacity-100" />
+          <div className="mb-4 flex items-center justify-between">
+            <div className="rounded-full bg-brand-subtle p-2 text-brand">
+              <Mail className="h-4 w-4" />
+            </div>
+            <ExternalLink className="h-4 w-4 text-text-muted transition-transform group-hover:translate-x-0.5" />
           </div>
-          <h3 className="text-xl font-semibold">Correo Corporativo</h3>
-          <p className="mt-1 text-sm text-blue-100">Acceder al email</p>
+          <h3 className="text-lg font-semibold text-text">Correo corporativo</h3>
+          <p className="mt-1 text-sm text-text-muted">Abrir bandeja de entrada</p>
         </a>
 
         <a
           href="https://app.clinic-cloud.com/"
           target="_blank"
           rel="noopener noreferrer"
-          className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-teal-500 to-teal-700 p-6 text-white shadow-lg transition-transform hover:-translate-y-1 hover:shadow-xl"
+          className="group rounded-2xl border border-border bg-card p-5 transition-colors hover:bg-cardHover focus-visible:focus-ring"
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="rounded-lg bg-white/90 px-2 py-1">
-              <Image src="/cliniccloud-logo.svg" alt="ClinicCloud" width={90} height={28} priority={false} />
+          <div className="mb-4 flex items-center justify-between">
+            <div className="rounded-full bg-brand-subtle p-2 text-brand">
+              <Activity className="h-4 w-4" />
             </div>
-            <ExternalLink className="w-4 h-4 opacity-0 transition-opacity group-hover:opacity-100" />
+            <ExternalLink className="h-4 w-4 text-text-muted transition-transform group-hover:translate-x-0.5" />
+          </div>
+          <div className="rounded-xl border border-border bg-cardHover px-3 py-2">
+            <Image src="/cliniccloud-logo.svg" alt="ClinicCloud" width={96} height={28} priority={false} />
           </div>
         </a>
 
         <Link
           href="/dashboard/kpis"
-          className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 text-white shadow-lg transition-transform hover:-translate-y-1 hover:shadow-xl"
+          className="group rounded-2xl border border-border bg-card p-5 transition-colors hover:bg-cardHover focus-visible:focus-ring"
         >
-          <div className="flex items-center justify-between mb-3">
-            <BarChart3 className="w-5 h-5" />
-            <ArrowRight className="w-4 h-4 opacity-0 transition-opacity group-hover:opacity-100" />
+          <div className="mb-4 flex items-center justify-between">
+            <div className="rounded-full bg-brand-subtle p-2 text-brand">
+              <BarChart3 className="h-4 w-4" />
+            </div>
+            <ArrowRight className="h-4 w-4 text-text-muted transition-transform group-hover:translate-x-0.5" />
           </div>
-          <h3 className="text-xl font-semibold">KPIs y Métricas</h3>
-          <p className="mt-1 text-sm text-emerald-100">Ver estadísticas</p>
+          <h3 className="text-lg font-semibold text-text">KPIs y métricas</h3>
+          <p className="mt-1 text-sm text-text-muted">Ver estadísticas en tiempo real</p>
         </Link>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <button
+          type="button"
           onClick={() => router.push('/dashboard/servicios?estado=activo')}
-          className="cursor-pointer rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-5 shadow transition-transform hover:-translate-y-1 hover:shadow-lg"
+          className="rounded-2xl border border-border bg-card p-5 text-left transition-colors hover:bg-cardHover focus-visible:focus-ring"
         >
-          <div className="flex items-center justify-between mb-2">
-            <Wrench className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-brand-subtle text-brand">
+            <Wrench className="h-4 w-4" />
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Servicios Activos</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">{loadingKPIs ? '—' : stats.serviciosActivos}</p>
-        </div>
+          <p className="text-sm text-text-muted">Servicios activos</p>
+          <p className="mt-2 text-3xl font-semibold text-text">{loadingKPIs ? '—' : stats.serviciosActivos}</p>
+        </button>
 
-        <div
+        <button
+          type="button"
           onClick={() => router.push('/dashboard/reporte-diario?tipo=incidencia&prioridad=alta&estado=abierta')}
-          className="cursor-pointer rounded-xl bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 p-5 shadow transition-transform hover:-translate-y-1 hover:shadow-lg"
+          className="rounded-2xl border border-border bg-card p-5 text-left transition-colors hover:bg-cardHover focus-visible:focus-ring"
         >
-          <div className="flex items-center justify-between mb-2">
-            <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-danger-bg text-danger">
+            <AlertTriangle className="h-4 w-4" />
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Reportes Pendientes</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">{loadingKPIs ? '—' : stats.incidenciasPendientes}</p>
-        </div>
+          <p className="text-sm text-text-muted">Reportes pendientes</p>
+          <p className="mt-2 text-3xl font-semibold text-text">{loadingKPIs ? '—' : stats.incidenciasPendientes}</p>
+        </button>
 
-        <div
+        <button
+          type="button"
           onClick={() => router.push('/dashboard/inventario?critico=true')}
-          className="cursor-pointer rounded-xl bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 p-5 shadow transition-transform hover:-translate-y-1 hover:shadow-lg"
+          className="rounded-2xl border border-border bg-card p-5 text-left transition-colors hover:bg-cardHover focus-visible:focus-ring"
         >
-          <div className="flex items-center justify-between mb-2">
-            <Package className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-warn-bg text-warn">
+            <Package className="h-4 w-4" />
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Stock Bajo</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">{loading ? '—' : stats.productosStockBajo}</p>
-        </div>
+          <p className="text-sm text-text-muted">Stock bajo</p>
+          <p className="mt-2 text-3xl font-semibold text-text">{loading ? '—' : stats.productosStockBajo}</p>
+        </button>
 
-        <div
+        <button
+          type="button"
           onClick={() => router.push('/dashboard/profesionales')}
-          className="cursor-pointer rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-5 shadow transition-transform hover:-translate-y-1 hover:shadow-lg"
+          className="rounded-2xl border border-border bg-card p-5 text-left transition-colors hover:bg-cardHover focus-visible:focus-ring"
         >
-          <div className="flex items-center justify-between mb-2">
-            <BookOpen className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-brand-subtle text-brand">
+            <BookOpen className="h-4 w-4" />
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Profesionales Activos</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">{loadingKPIs ? '—' : kpisData?.profesionalesActivos ?? 0}</p>
-        </div>
-      </div>
+          <p className="text-sm text-text-muted">Profesionales activos</p>
+          <p className="mt-2 text-3xl font-semibold text-text">{loadingKPIs ? '—' : kpisData?.profesionalesActivos ?? 0}</p>
+        </button>
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 space-y-5">
-          {/* Alertas */}
-          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 p-6 text-white shadow-lg">
-            <h3 className="text-lg font-bold mb-4">Alertas Prioritarias</h3>
-            <div className="space-y-3">
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-text">Alertas prioritarias</h3>
+              <span className="rounded-pill bg-danger-bg px-3 py-1 text-xs font-medium text-danger">
+                {stats.incidenciasPendientes + stats.productosStockBajo + stats.seguimientosPendientes} pendientes
+              </span>
+            </div>
+            <div className="mt-4 space-y-2">
               {stats.incidenciasPendientes > 0 && (
-                <div className="rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-3 text-sm">
-                  ⚠️ {stats.incidenciasPendientes} reporte{stats.incidenciasPendientes > 1 ? 's' : ''} pendiente{stats.incidenciasPendientes > 1 ? 's' : ''}
+                <div className="flex items-center gap-3 rounded-2xl border border-border bg-cardHover px-4 py-3 text-sm text-text">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-danger-bg text-danger">
+                    <AlertTriangle className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <p className="font-medium">Reportes pendientes</p>
+                    <p className="text-text-muted">{stats.incidenciasPendientes} en seguimiento</p>
+                  </div>
                 </div>
               )}
               {stats.productosStockBajo > 0 && (
-                <div className="rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-3 text-sm">
-                  ⚠️ {stats.productosStockBajo} producto{stats.productosStockBajo > 1 ? 's' : ''} con stock bajo
+                <div className="flex items-center gap-3 rounded-2xl border border-border bg-cardHover px-4 py-3 text-sm text-text">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-warn-bg text-warn">
+                    <Package className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <p className="font-medium">Productos con stock bajo</p>
+                    <p className="text-text-muted">{stats.productosStockBajo} referencias críticas</p>
+                  </div>
                 </div>
               )}
               {stats.seguimientosPendientes > 0 && (
-                <div className="rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-3 text-sm">
-                  📅 {stats.seguimientosPendientes} evento{stats.seguimientosPendientes > 1 ? 's' : ''} esta semana
+                <div className="flex items-center gap-3 rounded-2xl border border-border bg-cardHover px-4 py-3 text-sm text-text">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-subtle text-brand">
+                    <CalendarDays className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <p className="font-medium">Eventos agendados</p>
+                    <p className="text-text-muted">{stats.seguimientosPendientes} pendientes esta semana</p>
+                  </div>
                 </div>
               )}
               {stats.incidenciasPendientes === 0 && stats.productosStockBajo === 0 && stats.seguimientosPendientes === 0 && (
-                <div className="rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-3 text-sm">
+                <div className="rounded-2xl border border-border bg-success-bg px-4 py-3 text-sm text-success">
                   ✅ No hay alertas críticas
                 </div>
               )}
             </div>
           </div>
 
-          {/* Actividad reciente */}
-          <div className="rounded-xl bg-white dark:bg-gray-800 p-6 shadow">
-            <div className="flex items-center gap-2 mb-4">
-              <Activity className="w-5 h-5 text-blue-600" />
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Última actividad</h3>
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+            <div className="mb-4 flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-subtle text-brand">
+                <Activity className="h-4 w-4" />
+              </span>
+              <h3 className="text-lg font-semibold text-text">Última actividad</h3>
             </div>
             {loadingActivity ? (
-              <p className="text-sm text-gray-500">Cargando...</p>
+              <p className="text-sm text-text-muted">Cargando actividad reciente…</p>
             ) : recentActivity.length === 0 ? (
-              <p className="text-sm text-gray-500">No hay actividad reciente</p>
+              <p className="text-sm text-text-muted">No hay actividad registrada.</p>
             ) : (
               <div className="space-y-3">
                 {recentActivity.map((item) => (
-                  <div key={item.id} className="flex items-start gap-3 pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                    <div className="rounded-full bg-blue-100 dark:bg-blue-900 p-2">
-                      <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <div key={item.id} className="flex items-start gap-3 border-b border-border pb-3 last:border-0">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-cardHover text-brand">
+                      <TrendingUp className="h-4 w-4" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">{item.descripcion}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-gray-500">{item.tipo}</span>
-                        <span className="text-xs text-gray-400">•</span>
-                        <span className="text-xs text-gray-500">{item.fecha.toLocaleString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+                      <p className="text-sm font-medium text-text">{item.descripcion}</p>
+                      <div className="mt-1 flex items-center gap-2 text-xs text-text-muted">
+                        <span>{item.tipo}</span>
+                        <span>•</span>
+                        <span>{item.fecha.toLocaleString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-            <Link href="/dashboard/auditoria" className="mt-4 inline-flex items-center gap-2 text-sm text-blue-600 hover:underline">
+            <Link href="/dashboard/auditoria" className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-brand hover:text-brand/80">
               Ver historial completo
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
 
-        {/* Sidebar derecho - Métricas */}
-        <div className="space-y-5">
-          <div className="rounded-xl bg-white dark:bg-gray-800 p-6 shadow">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Métricas clave</h3>
-            <div className="space-y-4">
+        <aside className="space-y-6">
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-text">Métricas clave</h3>
+            <p className="mt-1 text-sm text-text-muted">Resumen rápido del rendimiento operativo.</p>
+            <div className="mt-5 space-y-4">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Servicios activos</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.serviciosActivos}</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-text-muted">Servicios</p>
+                <p className="mt-1 text-3xl font-semibold text-text">{stats.serviciosActivos}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Profesionales activos</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">{kpisData?.profesionalesActivos ?? 0}</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-text-muted">Profesionales</p>
+                <p className="mt-1 text-3xl font-semibold text-text">{kpisData?.profesionalesActivos ?? 0}</p>
               </div>
-              <Link href="/dashboard/kpis" className="mt-4 inline-flex items-center gap-2 text-sm text-blue-600 hover:underline">
+              <Link href="/dashboard/kpis" className="inline-flex items-center gap-2 text-sm font-medium text-brand hover:text-brand/80">
                 Ver todas las métricas
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           </div>
-        </div>
-      </div>
+        </aside>
+      </section>
     </div>
   );
 }

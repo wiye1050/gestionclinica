@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bell, X, CheckCircle, AlertTriangle, Package, FileText, Clock } from 'lucide-react';
-import { collection, query, where, orderBy, onSnapshot, updateDoc, doc, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Notificacion } from '@/types';
 import { getPendingFollowUpPatientIds } from '@/lib/utils/followUps';

@@ -1,7 +1,7 @@
 'use client';
 
 import { EstadisticasProyectos } from '@/types/proyectos';
-import { TrendingUp, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
+import { TrendingUp, CheckCircle } from 'lucide-react';
 
 interface KPIsProyectosProps {
   estadisticas: EstadisticasProyectos;

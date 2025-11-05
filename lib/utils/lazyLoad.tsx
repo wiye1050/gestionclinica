@@ -1,37 +1,42 @@
-import { Suspense, lazy, ComponentType } from 'react';
+import { Suspense, lazy } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { LoadingSpinner, LoadingCard } from '@/components/ui/Loading';
 
 /**
  * Wrapper para lazy loading con fallback automático
  */
-export function lazyLoad<T extends ComponentType<any>>(
-  importFunc: () => Promise<{ default: T }>,
-  fallback?: React.ReactNode
+export function lazyLoad<P>(
+  importFunc: () => Promise<{ default: ComponentType<P> }>,
+  fallback?: ReactNode
 ) {
   const LazyComponent = lazy(importFunc);
 
-  return (props: React.ComponentProps<T>) => (
+  const LazyWrapper = (props: P) => (
     <Suspense fallback={fallback || <LoadingCard />}>
       <LazyComponent {...props} />
     </Suspense>
   );
+
+  LazyWrapper.displayName = `LazyLoaded(${LazyComponent.displayName ?? LazyComponent.name ?? 'Component'})`;
+
+  return LazyWrapper;
 }
 
 /**
  * Lazy loading de páginas completas
  */
-export function lazyLoadPage<T extends ComponentType<any>>(
-  importFunc: () => Promise<{ default: T }>
+export function lazyLoadPage<P>(
+  importFunc: () => Promise<{ default: ComponentType<P> }>
 ) {
   const LazyComponent = lazy(importFunc);
 
-  return (props: React.ComponentProps<T>) => (
+  const LazyWrapper = (props: P) => (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="flex flex-col items-center gap-3 text-center">
             <LoadingSpinner size="lg" />
-            <p className="mt-4 text-gray-600">Cargando...</p>
+            <p className="text-sm text-text-muted">Cargando…</p>
           </div>
         </div>
       }
@@ -39,12 +44,16 @@ export function lazyLoadPage<T extends ComponentType<any>>(
       <LazyComponent {...props} />
     </Suspense>
   );
+
+  LazyWrapper.displayName = `LazyLoadedPage(${LazyComponent.displayName ?? LazyComponent.name ?? 'Component'})`;
+
+  return LazyWrapper;
 }
 
 /**
  * Preload de componentes para cargarlos antes de necesitarlos
  */
-export function preloadComponent<T extends ComponentType<any>>(
+export function preloadComponent<T extends ComponentType<unknown>>(
   importFunc: () => Promise<{ default: T }>
 ) {
   // Ejecutar la importación pero no hacer nada con ella

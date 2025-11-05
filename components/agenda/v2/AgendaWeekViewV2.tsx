@@ -4,7 +4,6 @@ import { useMemo } from 'react';
 import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd';
 import { format, addDays, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import AgendaTimeline from './AgendaTimeline';
 import AgendaEventCard from './AgendaEventCard';
 import {
   AgendaEvent,
@@ -23,7 +22,6 @@ interface AgendaWeekViewV2Props {
   onEventResize?: (eventId: string, newDuration: number) => void;
   onEventClick?: (event: AgendaEvent) => void;
   onQuickAction?: (event: AgendaEvent, action: 'confirm' | 'complete' | 'cancel') => void;
-  onCreateEvent?: (start: Date) => void;
   onEdit?: (event: AgendaEvent) => void;
   onDelete?: (event: AgendaEvent) => void;
 }
@@ -35,7 +33,6 @@ export default function AgendaWeekViewV2({
   onEventResize,
   onEventClick,
   onQuickAction,
-  onCreateEvent,
   onEdit,
   onDelete,
 }: AgendaWeekViewV2Props) {
@@ -113,11 +110,11 @@ export default function AgendaWeekViewV2({
     <div className="h-full flex flex-col">
       {/* Timeline con columnas de días */}
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="flex h-full bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="flex h-full overflow-hidden rounded-3xl border border-border bg-card">
           {/* Columna de horas */}
-          <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200">
-            <div className="h-14 border-b border-gray-200 flex items-center justify-center sticky top-0 z-10 bg-gray-50">
-              <span className="text-xs font-semibold text-gray-500 uppercase">Hora</span>
+          <div className="w-20 flex-shrink-0 bg-cardHover border-r border-border">
+            <div className="h-14 border-b border-border flex items-center justify-center sticky top-0 z-10 bg-cardHover">
+              <span className="text-xs font-semibold text-text-muted uppercase">Hora</span>
             </div>
             <div 
               className="relative"
@@ -138,7 +135,7 @@ export default function AgendaWeekViewV2({
                       height: `${AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR}px`,
                     }}
                   >
-                    <span className="text-xs font-medium text-gray-600">
+                    <span className="text-xs font-medium text-text-muted">
                       {String(hour).padStart(2, '0')}:00
                     </span>
                   </div>
@@ -148,7 +145,7 @@ export default function AgendaWeekViewV2({
           </div>
 
           {/* Columnas de días */}
-          <div className="flex-1 flex overflow-x-auto">
+          <div className="flex flex-1 overflow-x-auto">
             {weekDays.map((day, dayIndex) => {
               const dayKey = format(day, 'yyyy-MM-dd');
               const dayEvents = eventsByDay.get(dayKey) || [];
@@ -158,28 +155,28 @@ export default function AgendaWeekViewV2({
               return (
                 <div
                   key={dayKey}
-                  className={`flex-1 min-w-[180px] border-r border-gray-200 last:border-r-0 ${
-                    isToday ? 'bg-blue-50 bg-opacity-20' : ''
+                  className={`flex-1 min-w-[180px] border-r border-border last:border-r-0 ${
+                    isToday ? 'bg-brand-subtle/20' : ''
                   }`}
                 >
                   {/* Header del día */}
-                  <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-2 h-14">
+                  <div className="sticky top-0 z-10 bg-card border-b border-border p-2 h-14">
                     <div className="text-center">
-                      <p className={`text-sm font-bold ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>
+                      <p className={`text-sm font-bold ${isToday ? 'text-brand' : 'text-text'}`}>
                         {format(day, 'EEE', { locale: es }).toUpperCase()}
                       </p>
                       <div className="flex items-center justify-center gap-1 mt-0.5">
-                        <span className={`text-lg font-bold ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
+                        <span className={`text-lg font-bold ${isToday ? 'text-brand' : 'text-text-muted'}`}>
                           {format(day, 'd')}
                         </span>
                         {isToday && (
-                          <div className="w-1.5 h-1.5 bg-blue-600 rounded-full" />
+                          <div className="w-1.5 h-1.5 bg-brand rounded-full" />
                         )}
                       </div>
                       <div className="flex items-center justify-center gap-1 text-xs mt-0.5">
-                        <span className="text-gray-500">{dayEvents.length}</span>
-                        <span className="text-gray-400">•</span>
-                        <span className={`${occupancy > 70 ? 'text-red-600' : 'text-gray-500'}`}>
+                        <span className="text-text-muted">{dayEvents.length}</span>
+                        <span className="text-text-muted">•</span>
+                        <span className={`${occupancy > 70 ? 'text-danger' : 'text-text-muted'}`}>
                           {occupancy}%
                         </span>
                       </div>
@@ -193,7 +190,7 @@ export default function AgendaWeekViewV2({
                         ref={provided.innerRef}
                         {...provided.droppableProps}
                         className={`relative ${
-                          snapshot.isDraggingOver ? 'bg-blue-100 bg-opacity-20' : ''
+                          snapshot.isDraggingOver ? 'bg-brand-subtle/30' : ''
                         }`}
                         style={{
                           height: `${AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR * (AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR)}px`,
@@ -205,7 +202,7 @@ export default function AgendaWeekViewV2({
                         }).map((_, index) => (
                           <div
                             key={index}
-                            className="absolute w-full border-t border-gray-200"
+                            className="absolute w-full border-t border-border"
                             style={{
                               top: `${index * AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR}px`,
                               height: `${AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR}px`,

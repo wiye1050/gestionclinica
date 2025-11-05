@@ -48,11 +48,11 @@ export function useThrottle<T>(value: T, interval: number = 500): T {
 /**
  * Hook para debounce de callbacks
  */
-export function useDebouncedCallback<T extends (...args: any[]) => any>(
+export function useDebouncedCallback<T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number = 500
 ): (...args: Parameters<T>) => void {
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     return () => {
@@ -79,12 +79,12 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
 /**
  * Hook para throttle de callbacks
  */
-export function useThrottledCallback<T extends (...args: any[]) => any>(
+export function useThrottledCallback<T extends (...args: unknown[]) => unknown>(
   callback: T,
   interval: number = 500
 ): (...args: Parameters<T>) => void {
   const lastRan = useRef<number>(Date.now());
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     return () => {

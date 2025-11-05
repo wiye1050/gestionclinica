@@ -48,69 +48,65 @@ export default function DashboardLayout({
 
   return (
     <QueryProvider>
-      <div className="min-h-screen bg-gray-50">
-      {/* Header Superior */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="px-8 py-4 flex items-center justify-between">
-          {/* Logo e Identidad */}
-          <div>
-            <h1 className="text-2xl font-bold text-blue-700">INSTITUTO ORDÓÑEZ</h1>
-            <p className="text-sm text-gray-600">Medicina Regenerativa y Traumatología</p>
-          </div>
-
-          {/* Usuario y Acciones */}
-          <div className="flex items-center space-x-6">
-            {/* Botón de Búsqueda */}
-            <button
-              onClick={open}
-              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-            >
-              <Search className="w-5 h-5" />
-              <span className="text-sm hidden md:inline">Buscar</span>
-              <kbd className="hidden lg:inline-flex items-center gap-1 rounded border border-gray-200 px-2 py-0.5 text-xs font-sans text-gray-400">
-                ⌘K
-              </kbd>
-            </button>
-
-            {/* Notificaciones */}
-            <NotificacionesDropdown userUid={user.uid} />
-
-            {/* Usuario */}
-            <div className="flex items-center space-x-3">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">
-                  {user.displayName || user.email}
-                </p>
-                <p className="text-xs text-gray-500">Administrador</p>
-              </div>
-              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                {(user.displayName || user.email || 'U')[0].toUpperCase()}
-              </div>
+      <div className="min-h-screen bg-bg text-text">
+        <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/70">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.4em] text-text-muted">Instituto Ordóñez</p>
+              <h1 className="text-xl font-semibold text-text">Panel operativo</h1>
             </div>
 
-            {/* Botón Cerrar Sesión */}
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            >
-              <LogOut className="w-5 h-5" />
-              <span className="text-sm font-medium">Salir</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={open}
+                className="inline-flex items-center gap-2 rounded-pill border border-border bg-card px-3 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-cardHover focus-visible:focus-ring md:hidden"
+                aria-label="Abrir búsqueda"
+              >
+                <Search className="h-4 w-4" />
+              </button>
+              <button
+                onClick={open}
+                className="hidden items-center gap-2 rounded-pill border border-border bg-card px-3 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-cardHover focus-visible:focus-ring md:inline-flex"
+              >
+                <Search className="h-4 w-4" />
+                <span>Buscar</span>
+                <kbd className="hidden items-center gap-1 rounded-pill border border-border px-2 py-0.5 text-[11px] text-text-muted md:flex">
+                  ⌘K
+                </kbd>
+              </button>
+
+              <NotificacionesDropdown userUid={user.uid} />
+
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <p className="text-sm font-semibold text-text">{user.displayName || user.email}</p>
+                  <p className="text-xs text-text-muted">Administrador</p>
+                </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand/60 text-sm font-semibold text-white">
+                  {(user.displayName || user.email || 'U')[0]?.toUpperCase()}
+                </div>
+              </div>
+
+              <button
+                onClick={handleLogout}
+                className="inline-flex items-center gap-2 rounded-pill border border-border px-3 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-danger-bg hover:text-danger focus-visible:focus-ring"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Salir</span>
+              </button>
+            </div>
           </div>
+        </header>
+
+        <div className="flex">
+          <Sidebar />
+          <main className="flex-1 px-6 py-8 lg:px-8">
+            {children}
+          </main>
         </div>
-      </header>
 
-      {/* Contenido Principal */}
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 p-8">
-          {children}
-        </main>
+        <GlobalSearch isOpen={isOpen} onClose={close} />
       </div>
-
-      {/* Búsqueda Global */}
-      <GlobalSearch isOpen={isOpen} onClose={close} />
-    </div>
     </QueryProvider>
   );
 }

@@ -1,168 +1,147 @@
 'use client';
 
-import { Suspense, lazy, useMemo } from "react";
-import { useInventario } from "@/lib/hooks/useQueries";
-import { ExportColumn } from "@/lib/utils/export";
-import { Package, AlertTriangle, CheckCircle } from "lucide-react";
-import { LoadingTable } from "@/components/ui/Loading";
+import { Suspense, lazy, useMemo } from 'react';
+import Card from '@/components/ui/Card';
+import Stat from '@/components/ui/Stat';
+import { Badge } from '@/components/ui/Badge';
+import { useInventario } from '@/lib/hooks/useQueries';
+import { ExportColumn } from '@/lib/utils/export';
+import { LoadingTable } from '@/components/ui/Loading';
 
-// Lazy loading
-const ExportButton = lazy(() => import("@/components/ui/ExportButton").then(m => ({ default: m.ExportButton })));
+const ExportButton = lazy(() => import('@/components/ui/ExportButton').then((m) => ({ default: m.ExportButton })));
 
 function InventarioSkeleton() {
   return (
-    <div className="space-y-6 animate-pulse">
-      <div className="h-20 bg-gray-200 rounded-lg"></div>
-      <div className="grid grid-cols-3 gap-4">
-        {[1,2,3].map(i => <div key={i} className="h-28 bg-gray-200 rounded-lg"></div>)}
+    <div className="space-y-4 animate-pulse">
+      <div className="card h-20" />
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        {[1, 2, 3].map((key) => (
+          <div key={key} className="card h-28" />
+        ))}
       </div>
-      <LoadingTable rows={10} />
+      <LoadingTable rows={8} />
     </div>
   );
 }
 
 function InventarioContent() {
-  // React Query hook - caché de 5 min
   const { data, isLoading, error } = useInventario();
   const items = data?.productos ?? [];
   const stockBajo = data?.stockBajo ?? 0;
 
-  // Columnas para exportar (memoizado)
-  const exportColumns: ExportColumn[] = useMemo(() => [
-    { header: 'Nombre', key: 'nombre', width: 30 },
-    { header: 'Categoría', key: 'categoria', width: 20 },
-    { header: 'Stock', key: 'stock', width: 12 },
-    { header: 'Stock Mínimo', key: 'stockMinimo', width: 15 },
-    { header: 'Proveedor', key: 'proveedor', width: 25 },
-    { header: 'Precio', key: 'precio', width: 12 },
-  ], []);
+  const exportColumns: ExportColumn[] = useMemo(
+    () => [
+      { header: 'Nombre', key: 'nombre', width: 30 },
+      { header: 'Categoría', key: 'categoria', width: 20 },
+      { header: 'Stock', key: 'stock', width: 12 },
+      { header: 'Stock mínimo', key: 'stockMinimo', width: 15 },
+      { header: 'Proveedor', key: 'proveedor', width: 25 },
+      { header: 'Precio', key: 'precio', width: 12 }
+    ],
+    []
+  );
 
   if (error) {
     return (
-      <div className="rounded-lg bg-red-50 border border-red-200 p-6">
-        <div className="flex items-center gap-3">
-          <AlertTriangle className="w-6 h-6 text-red-600" />
-          <div>
-            <h3 className="font-semibold text-red-900">Error al cargar inventario</h3>
-            <p className="text-sm text-red-700">{String(error)}</p>
-          </div>
+      <Card title="Inventario" subtitle="Control de productos y stock">
+        <div className="rounded-pill bg-danger-bg px-3 py-2 text-sm text-danger">
+          Error al cargar inventario: {String(error)}
         </div>
-      </div>
+      </Card>
     );
   }
 
+  const stats = [
+    { label: 'Total productos', value: isLoading ? '—' : items.length },
+    { label: 'Stock bajo', value: isLoading ? '—' : stockBajo },
+    { label: 'Stock normal', value: isLoading ? '—' : Math.max(items.length - stockBajo, 0) }
+  ];
+
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Inventario</h1>
-          <p className="text-gray-600 mt-1">Control de productos y stock</p>
-        </div>
-        <Suspense fallback={<div className="w-32 h-10 bg-gray-200 rounded animate-pulse" />}>
-          <ExportButton
-            data={items}
-            columns={exportColumns}
-            filename={`inventario-${new Date().toISOString().split('T')[0]}`}
-            format="excel"
-            disabled={isLoading}
-          />
-        </Suspense>
-      </header>
+      <Card
+        title="Inventario"
+        subtitle="Gestiona existencias, proveedores y alertas de stock"
+        action={
+          <Suspense fallback={<div className="h-9 w-32 rounded-pill bg-muted" />}>
+            <ExportButton
+              data={items}
+              columns={exportColumns}
+              filename={`inventario-${new Date().toISOString().split('T')[0]}`}
+              format="excel"
+              disabled={isLoading}
+            />
+          </Suspense>
+        }
+      >
+        <p className="text-sm text-text-muted">
+          Mantén al día los niveles de stock y detecta incidencias antes de quedarte sin material.
+        </p>
+      </Card>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-lg bg-white dark:bg-gray-800 p-5 shadow">
-          <div className="flex items-center gap-2 mb-2">
-            <Package className="w-5 h-5 text-blue-600" />
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Total Productos</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">
-            {isLoading ? '—' : items.length}
-          </p>
-        </div>
-
-        <div className="rounded-lg bg-white dark:bg-gray-800 p-5 shadow">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="w-5 h-5 text-yellow-600" />
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Stock Bajo</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">
-            {isLoading ? '—' : stockBajo}
-          </p>
-        </div>
-
-        <div className="rounded-lg bg-white dark:bg-gray-800 p-5 shadow">
-          <div className="flex items-center gap-2 mb-2">
-            <CheckCircle className="w-5 h-5 text-green-600" />
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Stock Normal</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">
-            {isLoading ? '—' : items.length - stockBajo}
-          </p>
-        </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {stats.map((stat) => (
+          <Stat key={stat.label} label={stat.label} value={stat.value} />
+        ))}
       </div>
 
-      {/* Tabla */}
       {isLoading ? (
         <LoadingTable rows={10} />
       ) : items.length === 0 ? (
-        <div className="rounded-lg bg-white dark:bg-gray-800 p-8 text-center shadow">
-          <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-600 dark:text-gray-400">No hay productos registrados en el inventario.</p>
-        </div>
+        <Card>
+          <div className="py-8 text-center text-text-muted">
+            No hay productos registrados en el inventario.
+          </div>
+        </Card>
       ) : (
-        <div className="rounded-lg bg-white dark:bg-gray-800 shadow overflow-hidden">
+        <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Producto</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Categoría</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Stock</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Stock Mín</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Proveedor</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Precio</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Estado</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
+                    Producto
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
+                    Categoría
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
+                    Stock
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
+                    Stock mín.
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
+                    Proveedor
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
+                    Precio
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
+                    Estado
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="divide-y divide-border">
                 {items.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                      {item.nombre}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                      {item.categoria || '-'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                      {item.stock ?? '-'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                      {item.stockMinimo ?? '-'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                      {item.proveedor || '-'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                      {item.precio ? `€${item.precio.toFixed(2)}` : '-'}
+                  <tr key={item.id} className="hover:bg-cardHover">
+                    <td className="px-4 py-3 text-sm font-semibold text-text">{item.nombre}</td>
+                    <td className="px-4 py-3 text-sm text-text-muted">{item.categoria ?? '—'}</td>
+                    <td className="px-4 py-3 text-sm text-text-muted">{item.stock ?? '—'}</td>
+                    <td className="px-4 py-3 text-sm text-text-muted">{item.stockMinimo ?? '—'}</td>
+                    <td className="px-4 py-3 text-sm text-text-muted">{item.proveedor ?? '—'}</td>
+                    <td className="px-4 py-3 text-sm text-text-muted">
+                      {typeof item.precio === 'number' ? `€${item.precio.toFixed(2)}` : '—'}
                     </td>
                     <td className="px-4 py-3">
-                      {item.alertaStockBajo ? (
-                        <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
-                          Stock Bajo
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                          Normal
-                        </span>
-                      )}
+                      {item.alertaStockBajo ? <Badge tone="warn">Stock bajo</Badge> : <Badge tone="success">Normal</Badge>}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );

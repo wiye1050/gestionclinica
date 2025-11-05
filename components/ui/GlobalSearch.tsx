@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, FileText, Users, Package, Lightbulb, ClipboardList, ArrowRight } from 'lucide-react';
-import { collection, getDocs, query, limit, where } from 'firebase/firestore';
+import { collection, getDocs, query, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface SearchResult {
@@ -15,20 +15,7 @@ interface SearchResult {
   icon: React.ReactNode;
 }
 
-interface GlobalSearchProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
-  const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-
-  // Enlaces de navegación rápida
-  const navigationLinks: SearchResult[] = [
+const NAVIGATION_LINKS: SearchResult[] = [
     {
       id: 'nav-pacientes',
       type: 'navegacion',
@@ -77,12 +64,29 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
       url: '/dashboard/pacientes/nuevo',
       icon: <Users className="w-5 h-5 text-blue-600" />
     }
-  ];
+  ]
+
+interface GlobalSearchProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
+  const router = useRouter();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const handleSelect = useCallback((result: SearchResult) => {
+    router.push(result.url);
+    onClose();
+  }, [onClose, router]);
 
   // Buscar en Firestore
   const performSearch = useCallback(async (term: string) => {
     if (term.length < 2) {
-      setResults(navigationLinks);
+      setResults(NAVIGATION_LINKS);
       return;
     }
 
@@ -165,7 +169,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
       });
 
       // Agregar enlaces de navegación que coincidan
-      const matchingNav = navigationLinks.filter(link =>
+      const matchingNav = NAVIGATION_LINKS.filter(link =>
         link.title.toLowerCase().includes(lowerTerm) ||
         link.subtitle?.toLowerCase().includes(lowerTerm)
       );
@@ -184,7 +188,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
       if (searchTerm) {
         performSearch(searchTerm);
       } else {
-        setResults(navigationLinks);
+        setResults(NAVIGATION_LINKS);
       }
     }, 300);
 
@@ -220,21 +224,16 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, results, selectedIndex, onClose]);
+  }, [handleSelect, isOpen, onClose, results, selectedIndex]);
 
   // Resetear al abrir
   useEffect(() => {
     if (isOpen) {
       setSearchTerm('');
-      setResults(navigationLinks);
+      setResults(NAVIGATION_LINKS);
       setSelectedIndex(0);
     }
   }, [isOpen]);
-
-  const handleSelect = (result: SearchResult) => {
-    router.push(result.url);
-    onClose();
-  };
 
   if (!isOpen) return null;
 

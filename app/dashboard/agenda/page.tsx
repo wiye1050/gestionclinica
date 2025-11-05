@@ -1,24 +1,21 @@
 'use client';
 
 import { Suspense, useMemo, useState } from 'react';
-import { 
-  addDays, 
-  addWeeks, 
-  startOfWeek, 
-  startOfMonth,
-  subWeeks,
-  format 
+import {
+  addDays,
+  addWeeks,
+  startOfWeek,
+  format
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { doc, updateDoc, addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { 
-  useEventosAgenda, 
-  useProfesionales, 
+import {
+  useEventosAgenda,
+  useProfesionales,
   useSalas,
-  usePacientes 
+  usePacientes
 } from '@/lib/hooks/useQueries';
 import ModuleHeader from '@/components/shared/ModuleHeader';
 import ViewSelector from '@/components/shared/ViewSelector';
@@ -30,20 +27,19 @@ import EventModal from '@/components/agenda/v2/EventModal';
 import MiniCalendar from '@/components/agenda/v2/MiniCalendar';
 import AgendaSearch from '@/components/agenda/v2/AgendaSearch';
 import { AgendaEvent } from '@/components/agenda/v2/agendaHelpers';
-import { 
-  Calendar, 
-  List, 
-  Users as UsersIcon, 
+import {
+  Calendar,
+  List,
+  Users as UsersIcon,
   Plus,
   ChevronLeft,
   ChevronRight,
-  ArrowLeft,
 } from 'lucide-react';
 
 type VistaAgenda = 'dia' | 'semana' | 'recursos';
+type AgendaResource = { id: string; nombre: string; tipo: 'profesional' | 'sala' };
 
 function AgendaContent() {
-  const { user } = useAuth();
   const [vista, setVista] = useState<VistaAgenda>('semana');
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [selectedProfesionales, setSelectedProfesionales] = useState<string[]>([]);
@@ -58,34 +54,27 @@ function AgendaContent() {
   );
 
   // React Query hooks
-  const { data: eventosData = [], isLoading: loadingEventos } = useEventosAgenda(weekStart);
+  const { data: eventosData, isLoading: loadingEventos } = useEventosAgenda(weekStart);
   const { data: profesionales = [], isLoading: loadingProfesionales } = useProfesionales();
   const { data: salas = [], isLoading: loadingSalas } = useSalas();
   const { data: pacientes = [], isLoading: loadingPacientes } = usePacientes();
 
   const loading = loadingEventos || loadingProfesionales || loadingSalas || loadingPacientes;
 
-  // Convertir eventos al formato de la nueva agenda
-  const eventos: AgendaEvent[] = useMemo(() => {
-    return eventosData.map((e: any) => ({
-      id: e.id,
-      titulo: e.titulo || 'Sin título',
-      fechaInicio: e.fechaInicio instanceof Date ? e.fechaInicio : e.fechaInicio.toDate(),
-      fechaFin: e.fechaFin instanceof Date ? e.fechaFin : e.fechaFin.toDate(),
-      estado: e.estado || 'programada',
-      tipo: e.tipo || 'consulta',
-      pacienteId: e.pacienteId,
-      pacienteNombre: e.pacienteNombre,
-      profesionalId: e.profesionalId,
-      profesionalNombre: e.profesionalNombre,
-      salaId: e.salaId,
-      salaNombre: e.salaNombre,
-      prioridad: e.prioridad || 'media',
-      notas: e.notas,
-    }));
-  }, [eventosData]);
+  const eventos: AgendaEvent[] = useMemo(
+    () => eventosData ?? [],
+    [eventosData]
+  );
 
   // Filtrar eventos
+  const pacienteOptions = useMemo((): Array<{ id: string; nombre: string; apellidos: string }> => {
+    return pacientes.map((paciente) => ({
+      id: paciente.id,
+      nombre: paciente.nombre ?? 'Sin nombre',
+      apellidos: paciente.apellidos ?? ''
+    }));
+  }, [pacientes]);
+
   const eventosFiltrados = useMemo(() => {
     return eventos.filter((evento) => {
       const matchProfesional =
@@ -96,21 +85,18 @@ function AgendaContent() {
   }, [eventos, selectedProfesionales, selectedSala]);
 
   // Recursos para vista de recursos
-  const recursos = useMemo(() => {
-    if (selectedProfesionales.length > 0) {
-      return selectedProfesionales
-        .map(id => profesionales.find(p => p.id === id))
-        .filter(Boolean)
-        .map(p => ({
-          id: p!.id,
-          nombre: `${p!.nombre} ${p!.apellidos}`,
-          tipo: 'profesional' as const,
-        }));
-    }
-    return profesionales.slice(0, 3).map(p => ({
-      id: p.id,
-      nombre: `${p.nombre} ${p.apellidos}`,
-      tipo: 'profesional' as const,
+  const recursos = useMemo<AgendaResource[]>(() => {
+    const baseProfesionales =
+      selectedProfesionales.length > 0
+        ? selectedProfesionales
+            .map((id) => profesionales.find((p) => p.id === id))
+            .filter((prof): prof is typeof profesionales[number] => Boolean(prof))
+        : profesionales.slice(0, 3);
+
+    return baseProfesionales.map((prof) => ({
+      id: prof.id,
+      nombre: `${prof.nombre} ${prof.apellidos}`,
+      tipo: 'profesional',
     }));
   }, [profesionales, selectedProfesionales]);
 
@@ -144,7 +130,13 @@ function AgendaContent() {
       const duration = evento.fechaFin.getTime() - evento.fechaInicio.getTime();
       const newEnd = new Date(newStart.getTime() + duration);
 
-      const updateData: any = {
+      const updateData: {
+        fechaInicio: Timestamp;
+        fechaFin: Timestamp;
+        updatedAt: Timestamp;
+        profesionalId?: string;
+        profesionalNombre?: string;
+      } = {
         fechaInicio: Timestamp.fromDate(newStart),
         fechaFin: Timestamp.fromDate(newEnd),
         updatedAt: Timestamp.now(),
@@ -226,6 +218,11 @@ function AgendaContent() {
 
   const handleSaveEvent = async (eventData: Partial<AgendaEvent>) => {
     try {
+      if (!eventData.fechaInicio || !eventData.fechaFin) {
+        toast.error('Faltan datos de fecha para la cita');
+        return;
+      }
+
       if (eventToEdit) {
         // Actualizar evento existente
         await updateDoc(doc(db, 'agenda-eventos', eventToEdit.id), {
@@ -271,10 +268,11 @@ function AgendaContent() {
     <div className="space-y-4">
       <ModuleHeader
         title="Agenda"
+        description="Planifica y gestiona citas, recursos y disponibilidad del equipo"
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {/* Búsqueda - desktop */}
-            <div className="hidden md:block w-64">
+            <div className="hidden w-64 md:block">
               <AgendaSearch
                 events={eventos}
                 onEventSelect={handleEventClick}
@@ -290,10 +288,10 @@ function AgendaContent() {
                 setEventToEdit(null);
                 setIsModalOpen(true);
               }}
-              className="px-3 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition-colors flex items-center gap-2"
+              className="inline-flex items-center gap-2 rounded-pill bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand/90 focus-visible:focus-ring"
             >
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Nueva Cita</span>
+              <span className="hidden sm:inline">Nueva cita</span>
             </button>
           </div>
         }
@@ -312,72 +310,75 @@ function AgendaContent() {
       </div>
 
       {/* Filtros y Navegación */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+      <div className="rounded-3xl border border-border bg-card p-4 shadow-sm">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
           {/* Navegación temporal */}
-          <div className="md:col-span-2 flex items-center gap-2">
+          <div className="flex items-center gap-2 md:col-span-2">
             <button
               onClick={handleToday}
-              className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              className="rounded-pill border border-border bg-card px-3 py-2 text-sm font-medium text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
             >
               Hoy
             </button>
             <button
               onClick={handlePrev}
-              className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="rounded-full border border-border bg-card p-2 text-text hover:bg-cardHover focus-visible:focus-ring"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <div className="flex-1 text-center">
-              <span className="text-sm font-semibold text-gray-900 capitalize">
+              <span className="text-sm font-semibold capitalize text-text">
                 {dateLabel}
               </span>
             </div>
             <button
               onClick={handleNext}
-              className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="rounded-full border border-border bg-card p-2 text-text hover:bg-cardHover focus-visible:focus-ring"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
           {/* Filtro Profesional - Multi-select */}
-          <div className="relative z-50">
+          <div className="relative z-40">
             <details className="group">
-              <summary className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors list-none flex items-center justify-between">
-                <span className="text-gray-900">
+              <summary className="flex w-full list-none items-center justify-between rounded-2xl border border-border bg-card px-3 py-2 text-sm font-medium text-text transition-colors hover:bg-cardHover">
+                <span className="text-text">
                   {selectedProfesionales.length === 0
                     ? 'Todos los profesionales'
                     : `${selectedProfesionales.length} seleccionado${selectedProfesionales.length > 1 ? 's' : ''}`}
                 </span>
                 <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
               </summary>
-              <div className="absolute z-50 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                <div className="p-2 space-y-1">
-                  <label className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded cursor-pointer">
+              <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-2xl border border-border bg-card shadow-lg">
+                <div className="space-y-1 p-2">
+                  <label className="flex items-center gap-2 rounded-2xl px-3 py-2 text-sm text-text transition-colors hover:bg-cardHover cursor-pointer">
                     <input
                       type="checkbox"
                       checked={selectedProfesionales.length === 0}
                       onChange={() => setSelectedProfesionales([])}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="h-4 w-4 rounded border-border text-brand focus-visible:ring-2 focus-visible:ring-brand/50"
                     />
-                    <span className="text-sm text-gray-900">Todos</span>
+                    <span>Todos</span>
                   </label>
                   {profesionales.map((prof) => (
-                    <label key={prof.id} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded cursor-pointer">
+                    <label
+                      key={prof.id}
+                      className="flex items-center gap-2 rounded-2xl px-3 py-2 text-sm text-text transition-colors hover:bg-cardHover cursor-pointer"
+                    >
                       <input
                         type="checkbox"
                         checked={selectedProfesionales.includes(prof.id)}
                         onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedProfesionales([...selectedProfesionales, prof.id]);
-                          } else {
-                            setSelectedProfesionales(selectedProfesionales.filter(id => id !== prof.id));
-                          }
+                          setSelectedProfesionales((prev) =>
+                            e.target.checked
+                              ? [...prev, prof.id]
+                              : prev.filter((id) => id !== prof.id)
+                          );
                         }}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        className="h-4 w-4 rounded border-border text-brand focus-visible:ring-2 focus-visible:ring-brand/50"
                       />
-                      <span className="text-sm text-gray-900">{prof.nombre} {prof.apellidos}</span>
+                      <span>{prof.nombre} {prof.apellidos}</span>
                     </label>
                   ))}
                 </div>
@@ -390,10 +391,10 @@ function AgendaContent() {
             <select
               value={selectedSala}
               onChange={(e) => setSelectedSala(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full rounded-2xl border border-border bg-card px-3 py-2 text-sm text-text focus-visible:focus-ring"
             >
               <option value="todas">Todas las salas</option>
-              {salas.map((sala: any) => (
+              {salas.map((sala) => (
                 <option key={sala.id} value={sala.id}>
                   {sala.nombre}
                 </option>
@@ -402,7 +403,7 @@ function AgendaContent() {
           </div>
 
           {/* Contador */}
-          <div className="flex items-center justify-center text-sm text-gray-600 font-medium">
+          <div className="flex items-center justify-center rounded-2xl border border-border bg-cardHover px-3 py-2 text-sm font-medium text-text-muted">
             {eventosFiltrados.length} eventos
           </div>
         </div>
@@ -420,11 +421,11 @@ function AgendaContent() {
       />
 
       {/* Layout principal con MiniCalendar y vistas */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         {/* Mini Calendario - Sidebar - Colapsable en móvil */}
         <div className="lg:col-span-3">
-          <details className="lg:hidden mb-4" open>
-            <summary className="cursor-pointer bg-white p-3 rounded-lg shadow text-sm font-medium text-gray-900 flex items-center justify-between">
+          <details className="group mb-4 lg:hidden" open>
+            <summary className="flex cursor-pointer items-center justify-between rounded-2xl border border-border bg-card px-3 py-2 text-sm font-medium text-text shadow-sm">
               <span>📅 Calendario</span>
               <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
             </summary>
@@ -455,43 +456,46 @@ function AgendaContent() {
 
         {/* Vista Seleccionada */}
         <div className="lg:col-span-9">
-          <div className="bg-white rounded-lg shadow" style={{ height: 'calc(100vh - 350px)', minHeight: '400px' }}>
-        {vista === 'dia' && (
-          <AgendaDayView
-            day={currentDate}
-            events={eventosFiltrados}
-            onEventMove={handleEventMove}
-            onEventResize={handleEventResize}
-            onEventClick={handleEventClick}
-            onQuickAction={handleQuickAction}
-            onCreateEvent={handleCreateEvent}
-          />
-        )}
+          <div
+            className="rounded-3xl border border-border bg-card shadow-sm"
+            style={{ height: 'calc(100vh - 350px)', minHeight: '400px' }}
+          >
+            {vista === 'dia' && (
+              <AgendaDayView
+                day={currentDate}
+                events={eventosFiltrados}
+                onEventMove={handleEventMove}
+                onEventResize={handleEventResize}
+                onEventClick={handleEventClick}
+                onQuickAction={handleQuickAction}
+                onCreateEvent={handleCreateEvent}
+              />
+            )}
 
-        {vista === 'semana' && (
-          <AgendaWeekViewV2
-            weekStart={weekStart}
-            events={eventosFiltrados}
-            onEventMove={handleEventMove}
-            onEventResize={handleEventResize}
-            onEventClick={handleEventClick}
-            onQuickAction={handleQuickAction}
-            onCreateEvent={handleCreateEvent}
-          />
-        )}
+            {vista === 'semana' && (
+              <AgendaWeekViewV2
+                weekStart={weekStart}
+                events={eventosFiltrados}
+                onEventMove={handleEventMove}
+                onEventResize={handleEventResize}
+                onEventClick={handleEventClick}
+                onQuickAction={handleQuickAction}
+                onCreateEvent={handleCreateEvent}
+              />
+            )}
 
-        {vista === 'recursos' && (
-          <AgendaResourceView
-            day={currentDate}
-            events={eventosFiltrados}
-            resources={recursos}
-            onEventMove={handleEventMove}
-            onEventResize={handleEventResize}
-            onEventClick={handleEventClick}
-            onQuickAction={handleQuickAction}
-            onCreateEvent={handleCreateEvent}
-          />
-        )}
+            {vista === 'recursos' && (
+              <AgendaResourceView
+                day={currentDate}
+                events={eventosFiltrados}
+                resources={recursos}
+                onEventMove={handleEventMove}
+                onEventResize={handleEventResize}
+                onEventClick={handleEventClick}
+                onQuickAction={handleQuickAction}
+                onCreateEvent={handleCreateEvent}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -509,7 +513,7 @@ function AgendaContent() {
         initialDate={modalInitialDate}
         profesionales={profesionales}
         salas={salas}
-        pacientes={pacientes}
+        pacientes={pacienteOptions as Array<{ id: string; nombre: string; apellidos: string }>}
       />
     </div>
   );

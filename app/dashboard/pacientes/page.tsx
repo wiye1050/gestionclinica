@@ -3,7 +3,6 @@
 import { Suspense, lazy, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Paciente } from '@/types';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { usePacientes } from '@/lib/hooks/usePacientes';
 import { useProfesionales } from '@/lib/hooks/useQueries';
@@ -128,12 +127,15 @@ function PacientesContent() {
   const stats = useMemo(() => {
     const activos = pacientes.filter(p => p.estado === 'activo').length;
     const riesgoAlto = pacientes.filter(p => p.riesgo === 'alto').length;
+    const total = pacientes.length;
+    const activosPct = total > 0 ? Math.round((activos / total) * 100) : 0;
     
     return {
-      total: pacientes.length,
+      total,
       activos,
       riesgoAlto,
-      seguimiento: pacientesSeguimiento.size
+      seguimiento: pacientesSeguimiento.size,
+      activosPct,
     };
   }, [pacientes, pacientesSeguimiento]);
 
@@ -178,22 +180,22 @@ function PacientesContent() {
         title="Pacientes"
         description="Gestiona las fichas, alertas y seguimientos de los pacientes"
         actions={
-          <>
+          <div className="flex items-center gap-2">
             <button
               onClick={handleExportar}
-              className="px-3 py-2 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg font-medium transition-colors flex items-center gap-2"
+              className="inline-flex items-center gap-2 rounded-pill border border-border bg-card px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
             >
-              <Download className="w-4 h-4" />
+              <Download className="h-4 w-4" />
               Exportar
             </button>
             <Link
               href="/dashboard/pacientes/nuevo"
-              className="px-3 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition-colors flex items-center gap-2"
+              className="inline-flex items-center gap-2 rounded-pill bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand/90 focus-visible:focus-ring"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
               Nuevo
             </Link>
-          </>
+          </div>
         }
         stats={
           <>
@@ -209,7 +211,7 @@ function PacientesContent() {
               value={stats.activos}
               icon={UserCheck}
               color="green"
-              subtitle={`${Math.round((stats.activos / stats.total) * 100)}% del total`}
+              subtitle={`${stats.activosPct}% del total`}
             />
             <StatCard
               title="Riesgo Alto"

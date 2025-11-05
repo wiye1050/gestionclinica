@@ -11,27 +11,22 @@ interface ModuleHeaderProps {
 
 export default function ModuleHeader({ title, description, actions, stats }: ModuleHeaderProps) {
   return (
-    <div className="space-y-4">
-      {/* Header Principal */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-          <p className="text-sm text-gray-600 mt-0.5">{description}</p>
-        </div>
-
-        {actions && (
-          <div className="flex items-center gap-2">
-            {actions}
+    <section className="space-y-4">
+      <div className="rounded-3xl border border-border bg-card px-6 py-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-text">{title}</h1>
+            <p className="mt-1 text-sm text-text-muted">{description}</p>
           </div>
-        )}
+          {actions && <div className="flex items-center gap-3">{actions}</div>}
+        </div>
       </div>
 
-      {/* Stats opcionales */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           {stats}
         </div>
       )}
-    </div>
+    </section>
   );
 }

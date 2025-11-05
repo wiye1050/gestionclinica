@@ -1,8 +1,18 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { useQuery } from '@tanstack/react-query';
+import { collection, getDocs, query, where, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { startOfWeek, addDays } from 'date-fns';
-import type { Paciente, ServicioAsignado, Profesional, GrupoPaciente, CatalogoServicio } from '@/types';
+import type {
+  Paciente,
+  ServicioAsignado,
+  Profesional,
+  GrupoPaciente,
+  CatalogoServicio,
+  Mejora,
+  Protocolo,
+  Sala
+} from '@/types';
+import type { AgendaEvent } from '@/components/agenda/v2/agendaHelpers';
 
 // Hook para KPIs con caché agresivo (datos que no cambian tanto)
 export function useKPIs() {
@@ -45,23 +55,40 @@ export function useKPIs() {
 }
 
 // Hook para inventario con alertas de stock
+type InventarioItem = {
+  id: string;
+  nombre: string;
+  categoria?: string;
+  stock: number;
+  stockMinimo: number;
+  proveedor?: string;
+  precio?: number;
+  alertaStockBajo: boolean;
+};
+
 export function useInventario() {
-  return useQuery({
+  return useQuery<{ productos: InventarioItem[]; stockBajo: number; total: number }>({
     queryKey: ['inventario'],
     queryFn: async () => {
       const snapshot = await getDocs(
         query(collection(db, 'inventario-productos'), orderBy('nombre'), limit(200))
       );
 
-      const productos = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.() ?? new Date(),
-        updatedAt: doc.data().updatedAt?.toDate?.() ?? new Date(),
-      }));
+      const productos: InventarioItem[] = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data() ?? {};
+        return {
+          id: docSnap.id,
+          nombre: data.nombre ?? 'Sin nombre',
+          categoria: data.categoria ?? 'general',
+          stock: data.cantidadActual ?? data.stock ?? 0,
+          stockMinimo: data.cantidadMinima ?? data.stockMinimo ?? 0,
+          proveedor: data.proveedorNombre ?? data.proveedor ?? '',
+          precio: typeof data.precio === 'number' ? data.precio : undefined,
+          alertaStockBajo: Boolean(data.alertaStockBajo)
+        };
+      });
 
-      const stockBajo = productos.filter((p: any) => p.alertaStockBajo === true).length;
-
+      const stockBajo = productos.filter((p) => p.alertaStockBajo).length;
       return {
         productos,
         stockBajo,
@@ -74,29 +101,46 @@ export function useInventario() {
 
 // Hook para mejoras con ordenamiento por RICE
 export function useMejoras(filtros?: { estado?: string; area?: string }) {
-  return useQuery({
+  return useQuery<Mejora[]>({
     queryKey: ['mejoras', filtros],
     queryFn: async () => {
-      let q = query(collection(db, 'mejoras'), orderBy('updatedAt', 'desc'), limit(100));
+      const q = query(collection(db, 'mejoras'), orderBy('updatedAt', 'desc'), limit(100));
 
       const snapshot = await getDocs(q);
-      let mejoras = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.() ?? new Date(),
-        updatedAt: doc.data().updatedAt?.toDate?.() ?? new Date(),
-      }));
+      let mejoras = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data() ?? {};
+        return {
+          id: docSnap.id,
+          titulo: data.titulo ?? 'Sin título',
+          descripcion: data.descripcion ?? '',
+          area: (data.area ?? 'otro') as Mejora['area'],
+          estado: (data.estado ?? 'idea') as Mejora['estado'],
+          responsableUid: data.responsableUid,
+          responsableNombre: data.responsableNombre,
+          rice: {
+            reach: Number(data.rice?.reach ?? 0),
+            impact: Number(data.rice?.impact ?? 0),
+            confidence: Number(data.rice?.confidence ?? 0),
+            effort: Number(data.rice?.effort ?? 1),
+            score: Number(data.rice?.score ?? 0)
+          },
+          evidenciasCount: data.evidenciasCount ?? 0,
+          creadoPor: data.creadoPor ?? 'desconocido',
+          createdAt: data.createdAt?.toDate?.() ?? new Date(),
+          updatedAt: data.updatedAt?.toDate?.() ?? new Date()
+        } satisfies Mejora;
+      });
 
       // Filtros en cliente
       if (filtros?.estado) {
-        mejoras = mejoras.filter((m: any) => m.estado === filtros.estado);
+        mejoras = mejoras.filter((m) => m.estado === filtros.estado);
       }
       if (filtros?.area) {
-        mejoras = mejoras.filter((m: any) => m.area === filtros.area);
+        mejoras = mejoras.filter((m) => m.area === filtros.area);
       }
 
       // Ordenar por RICE score descendente
-      mejoras.sort((a: any, b: any) => (b.rice?.score || 0) - (a.rice?.score || 0));
+      mejoras.sort((a, b) => (b.rice?.score || 0) - (a.rice?.score || 0));
 
       return mejoras;
     },
@@ -106,19 +150,32 @@ export function useMejoras(filtros?: { estado?: string; area?: string }) {
 
 // Hook para protocolos
 export function useProtocolos() {
-  return useQuery({
+  return useQuery<Protocolo[]>({
     queryKey: ['protocolos'],
     queryFn: async () => {
       const snapshot = await getDocs(
         query(collection(db, 'protocolos'), orderBy('titulo'), limit(100))
       );
 
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.() ?? new Date(),
-        updatedAt: doc.data().updatedAt?.toDate?.() ?? new Date(),
-      }));
+      return snapshot.docs.map((docSnap) => {
+        const data = docSnap.data() ?? {};
+        return {
+          id: docSnap.id,
+          titulo: data.titulo ?? 'Sin título',
+          area: (data.area ?? 'medicina') as Protocolo['area'],
+          estado: (data.estado ?? 'borrador') as Protocolo['estado'],
+          descripcion: data.descripcion,
+          ultimaVersionId: data.ultimaVersionId,
+          requiereQuiz: Boolean(data.requiereQuiz),
+          visiblePara: Array.isArray(data.visiblePara) ? data.visiblePara : ['admin'],
+          checklistBasica: data.checklistBasica ?? [],
+          creadoPor: data.creadoPor ?? 'desconocido',
+          creadoPorNombre: data.creadoPorNombre,
+          createdAt: data.createdAt?.toDate?.() ?? new Date(),
+          updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
+          modificadoPor: data.modificadoPor
+        } satisfies Protocolo;
+      });
     },
     staleTime: 10 * 60 * 1000, // 10 minutos - protocolos casi no cambian
   });
@@ -235,8 +292,8 @@ export function useReportes() {
 // Hook para eventos de agenda
 export function useEventosAgenda(weekStart: Date) {
   const weekEnd = addDays(weekStart, 7);
-  
-  return useQuery({
+
+  return useQuery<AgendaEvent[]>({
     queryKey: ['agenda-eventos', weekStart.toISOString()],
     queryFn: async () => {
       const snapshot = await getDocs(
@@ -249,12 +306,29 @@ export function useEventosAgenda(weekStart: Date) {
         )
       );
 
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        fechaInicio: doc.data().fechaInicio?.toDate?.() ?? new Date(),
-        fechaFin: doc.data().fechaFin?.toDate?.() ?? new Date(),
-      }));
+      return snapshot.docs.map((docSnap) => {
+        const data = docSnap.data() ?? {};
+        const fechaInicio = data.fechaInicio?.toDate?.() ?? new Date();
+        const fechaFin = data.fechaFin?.toDate?.() ?? new Date();
+
+        return {
+          id: docSnap.id,
+          titulo: data.titulo ?? 'Sin título',
+          fechaInicio,
+          fechaFin,
+          estado: data.estado ?? 'programada',
+          tipo: data.tipo ?? 'consulta',
+          pacienteId: data.pacienteId,
+          pacienteNombre: data.pacienteNombre,
+          profesionalId: data.profesionalId,
+          profesionalNombre: data.profesionalNombre,
+          salaId: data.salaId,
+          salaNombre: data.salaNombre,
+          prioridad: data.prioridad ?? 'media',
+          notas: data.notas ?? '',
+          color: data.color,
+        } satisfies AgendaEvent;
+      });
     },
     staleTime: 3 * 60 * 1000, // 3 minutos
   });
@@ -280,19 +354,27 @@ export function useBloquesAgenda() {
 
 // Hook para salas
 export function useSalas() {
-  return useQuery({
+  return useQuery<Sala[]>({
     queryKey: ['salas'],
     queryFn: async () => {
       const snapshot = await getDocs(
         query(collection(db, 'salas'), orderBy('nombre'), limit(50))
       );
 
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.() ?? new Date(),
-        updatedAt: doc.data().updatedAt?.toDate?.() ?? new Date(),
-      }));
+      return snapshot.docs.map((docSnap) => {
+        const data = docSnap.data() ?? {};
+        return {
+          id: docSnap.id,
+          nombre: data.nombre ?? 'Sin nombre',
+          tipo: data.tipo ?? 'general',
+          capacidad: data.capacidad ?? 0,
+          equipamiento: Array.isArray(data.equipamiento) ? data.equipamiento : [],
+          activa: data.activa ?? true,
+          ocupacionActual: data.ocupacionActual ?? 0,
+          createdAt: data.createdAt?.toDate?.() ?? new Date(),
+          updatedAt: data.updatedAt?.toDate?.() ?? new Date()
+        } as Sala;
+      });
     },
     staleTime: 10 * 60 * 1000, // 10 minutos - salas muy estáticas
   });
@@ -300,19 +382,68 @@ export function useSalas() {
 
 // Hook para pacientes
 export function usePacientes() {
-  return useQuery({
+  return useQuery<Paciente[]>({
     queryKey: ['pacientes'],
     queryFn: async () => {
       const snapshot = await getDocs(
         query(collection(db, 'pacientes'), orderBy('apellidos'), limit(500))
       );
 
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.() ?? new Date(),
-        updatedAt: doc.data().updatedAt?.toDate?.() ?? new Date(),
-      })) as Paciente[];
+      type ConsentimientoSnapshot = {
+        tipo?: string;
+        fecha?: { toDate?: () => Date };
+        documentoId?: string;
+        firmadoPor?: string;
+      };
+
+      return snapshot.docs.map((docSnap) => {
+        const data = docSnap.data() ?? {};
+        return {
+          id: docSnap.id,
+          nombre: data.nombre ?? 'Sin nombre',
+          apellidos: data.apellidos ?? '',
+          fechaNacimiento: data.fechaNacimiento?.toDate?.() ?? new Date('1970-01-01'),
+          genero: data.genero ?? 'no-especificado',
+          documentoId: data.documentoId,
+          tipoDocumento: data.tipoDocumento,
+          telefono: data.telefono,
+          email: data.email,
+          direccion: data.direccion,
+          ciudad: data.ciudad,
+          codigoPostal: data.codigoPostal,
+          aseguradora: data.aseguradora,
+          numeroPoliza: data.numeroPoliza,
+          alergias: Array.isArray(data.alergias) ? data.alergias : [],
+          alertasClinicas: Array.isArray(data.alertasClinicas) ? data.alertasClinicas : [],
+          diagnosticosPrincipales: Array.isArray(data.diagnosticosPrincipales)
+            ? data.diagnosticosPrincipales
+            : [],
+          riesgo: data.riesgo ?? 'medio',
+          contactoEmergencia: data.contactoEmergencia
+            ? {
+                nombre: data.contactoEmergencia.nombre ?? '',
+                parentesco: data.contactoEmergencia.parentesco ?? '',
+                telefono: data.contactoEmergencia.telefono ?? ''
+              }
+            : undefined,
+          consentimientos: Array.isArray(data.consentimientos)
+            ? (data.consentimientos as ConsentimientoSnapshot[]).map((item) => ({
+                tipo: item?.tipo ?? 'general',
+                fecha: item?.fecha?.toDate?.() ?? new Date(),
+                documentoId: item?.documentoId,
+                firmadoPor: item?.firmadoPor
+              }))
+            : [],
+          estado: data.estado ?? 'activo',
+          profesionalReferenteId: data.profesionalReferenteId,
+          grupoPacienteId: data.grupoPacienteId,
+          notasInternas: data.notasInternas,
+          creadoPor: data.creadoPor ?? 'desconocido',
+          createdAt: data.createdAt?.toDate?.() ?? new Date(),
+          updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
+          modificadoPor: data.modificadoPor
+        } as Paciente;
+      });
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
   });

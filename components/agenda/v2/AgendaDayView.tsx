@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd';
-import { format, addMinutes } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import AgendaTimeline from './AgendaTimeline';
 import AgendaEventCard from './AgendaEventCard';
@@ -16,7 +16,7 @@ import {
   calculateFreeSlots,
   calculateOccupancyRate,
 } from './agendaHelpers';
-import { Clock, Plus } from 'lucide-react';
+import { Clock } from 'lucide-react';
 
 interface AgendaDayViewProps {
   day: Date;
@@ -41,8 +41,6 @@ export default function AgendaDayView({
   onEdit,
   onDelete,
 }: AgendaDayViewProps) {
-  const [hoveredSlot, setHoveredSlot] = useState<{ hour: number; minute: number } | null>(null);
-
   // Eventos del día
   const dayEvents = useMemo(() => getEventsForDay(events, day), [events, day]);
 
@@ -111,20 +109,20 @@ export default function AgendaDayView({
   const dayLabel = format(day, "EEEE, d 'de' MMMM", { locale: es });
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex h-full flex-col">
       {/* Header con estadísticas */}
-      <div className="bg-white border-b border-gray-200 p-4 rounded-t-lg">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold text-gray-900 capitalize">{dayLabel}</h2>
+      <div className="rounded-t-3xl border-b border-border bg-card px-6 py-4">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-text capitalize">{dayLabel}</h2>
           <div className="flex items-center gap-2 text-sm">
-            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded font-medium">
+            <span className="rounded-pill bg-brand-subtle px-2 py-1 font-medium text-brand">
               {stats.totalEvents} eventos
             </span>
-            <span className="px-2 py-1 bg-green-100 text-green-700 rounded font-medium">
+            <span className="rounded-pill bg-success-bg px-2 py-1 font-medium text-success">
               {stats.occupancy}% ocupación
             </span>
             {stats.conflicts > 0 && (
-              <span className="px-2 py-1 bg-red-100 text-red-700 rounded font-medium">
+              <span className="rounded-pill bg-danger-bg px-2 py-1 font-medium text-danger">
                 {stats.conflicts} conflictos
               </span>
             )}
@@ -132,28 +130,28 @@ export default function AgendaDayView({
         </div>
 
         {/* Mini stats */}
-        <div className="grid grid-cols-4 gap-3 text-xs">
+        <div className="grid grid-cols-1 gap-2 text-xs text-text-muted sm:grid-cols-2 lg:grid-cols-4">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-400 rounded-full" />
-            <span className="text-gray-600">Programadas: {dayEvents.filter(e => e.estado === 'programada').length}</span>
+            <div className="h-2 w-2 rounded-full bg-brand" />
+            <span>Programadas: {dayEvents.filter(e => e.estado === 'programada').length}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-400 rounded-full" />
-            <span className="text-gray-600">Confirmadas: {stats.confirmed}</span>
+            <div className="h-2 w-2 rounded-full bg-success" />
+            <span>Confirmadas: {stats.confirmed}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-gray-400 rounded-full" />
-            <span className="text-gray-600">Realizadas: {stats.completed}</span>
+            <div className="h-2 w-2 rounded-full bg-muted" />
+            <span>Realizadas: {stats.completed}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-red-400 rounded-full" />
-            <span className="text-gray-600">Canceladas: {stats.cancelled}</span>
+            <div className="h-2 w-2 rounded-full bg-danger" />
+            <span>Canceladas: {stats.cancelled}</span>
           </div>
         </div>
       </div>
 
       {/* Timeline con eventos */}
-      <div className="flex-1 relative">
+      <div className="relative flex-1">
         <DragDropContext onDragEnd={handleDragEnd}>
           <AgendaTimeline showNowIndicator={true} onSlotClick={handleSlotClick}>
             <Droppable droppableId="day-timeline" type="EVENT">
@@ -161,7 +159,7 @@ export default function AgendaDayView({
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className={`absolute inset-0 ${snapshot.isDraggingOver ? 'bg-blue-50 bg-opacity-50' : ''}`}
+                  className={`absolute inset-0 ${snapshot.isDraggingOver ? 'bg-brand-subtle/60' : ''}`}
                 >
                   {/* Eventos */}
                   {dayEvents.map((event, index) => {
@@ -199,9 +197,9 @@ export default function AgendaDayView({
 
       {/* Footer con huecos libres (opcional) */}
       {stats.freeSlots > 0 && (
-        <div className="bg-gray-50 border-t border-gray-200 p-2 text-xs text-gray-600">
+        <div className="rounded-b-3xl border-t border-border bg-card px-4 py-2 text-xs text-text-muted">
           <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4" />
+            <Clock className="h-4 w-4 text-brand" />
             <span>{stats.freeSlots} huecos libres disponibles</span>
           </div>
         </div>

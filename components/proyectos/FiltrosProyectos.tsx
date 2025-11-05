@@ -11,12 +11,12 @@ interface FiltrosProyectosProps {
     prioridad: PrioridadProyecto | 'todos';
     responsable: string;
   };
-  onFiltroChange: (filtros: any) => void;
+  onFiltroChange: (filtros: FiltrosProyectosProps['filtros']) => void;
   responsables: Array<{ uid: string; nombre: string }>;
 }
 
 export default function FiltrosProyectos({ filtros, onFiltroChange, responsables }: FiltrosProyectosProps) {
-  const actualizarFiltro = (campo: string, valor: any) => {
+  const actualizarFiltro = <K extends keyof FiltrosProyectosProps['filtros']>(campo: K, valor: FiltrosProyectosProps['filtros'][K]) => {
     onFiltroChange({ ...filtros, [campo]: valor });
   };
 
@@ -38,34 +38,34 @@ export default function FiltrosProyectos({ filtros, onFiltroChange, responsables
     filtros.responsable !== 'todos';
 
   return (
-    <div className="bg-white rounded-lg shadow p-4">
+    <div className="bg-card rounded-2xl shadow-sm p-4">
       <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
         {/* Búsqueda */}
         <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-medium text-text mb-1">
             Buscar
           </label>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
             <input
               type="text"
               value={filtros.busqueda}
               onChange={(e) => actualizarFiltro('busqueda', e.target.value)}
               placeholder="Nombre, descripción..."
-              className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full rounded-xl border border-border bg-card py-2 pl-10 pr-3 text-sm focus-visible:focus-ring"
             />
           </div>
         </div>
 
         {/* Estado */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-medium text-text mb-1">
             Estado
           </label>
           <select
             value={filtros.estado}
-            onChange={(e) => actualizarFiltro('estado', e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            onChange={(e) => actualizarFiltro('estado', e.target.value as FiltrosProyectosProps['filtros']['estado'])}
+            className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm focus-visible:focus-ring"
           >
             <option value="todos">Todos</option>
             <option value="propuesta">Propuesta</option>
@@ -79,13 +79,13 @@ export default function FiltrosProyectos({ filtros, onFiltroChange, responsables
 
         {/* Tipo */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-medium text-text mb-1">
             Tipo
           </label>
           <select
             value={filtros.tipo}
-            onChange={(e) => actualizarFiltro('tipo', e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            onChange={(e) => actualizarFiltro('tipo', e.target.value as FiltrosProyectosProps['filtros']['tipo'])}
+            className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm focus-visible:focus-ring"
           >
             <option value="todos">Todos</option>
             <option value="desarrollo">Desarrollo</option>
@@ -99,13 +99,13 @@ export default function FiltrosProyectos({ filtros, onFiltroChange, responsables
 
         {/* Prioridad */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-medium text-text mb-1">
             Prioridad
           </label>
           <select
             value={filtros.prioridad}
-            onChange={(e) => actualizarFiltro('prioridad', e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-blue-500 focus:border-transparent"
+            onChange={(e) => actualizarFiltro('prioridad', e.target.value as FiltrosProyectosProps['filtros']['prioridad'])}
+            className="w-full px-3 py-2 text-sm border border-border rounded-2xl focus:ring-2 focus:ring-blue-blue-500 focus:border-transparent"
           >
             <option value="todos">Todas</option>
             <option value="critica">Crítica</option>
@@ -117,13 +117,13 @@ export default function FiltrosProyectos({ filtros, onFiltroChange, responsables
 
         {/* Responsable */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-medium text-text mb-1">
             Responsable
           </label>
           <select
             value={filtros.responsable}
             onChange={(e) => actualizarFiltro('responsable', e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm focus-visible:focus-ring"
           >
             <option value="todos">Todos</option>
             {responsables.map((r) => (
@@ -140,7 +140,7 @@ export default function FiltrosProyectos({ filtros, onFiltroChange, responsables
         <div className="mt-3 flex justify-end">
           <button
             onClick={limpiarFiltros}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center gap-2"
+            className="inline-flex items-center gap-2 rounded-pill border border-border bg-card px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-cardHover"
           >
             <X className="w-4 h-4" />
             Limpiar Filtros

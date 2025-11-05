@@ -16,7 +16,7 @@ export default function AgendaTimeline({
 }: AgendaTimelineProps) {
   const timeSlots = useMemo(() => generateTimeSlots(), []);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [nowPosition, setNowPosition] = useState(getCurrentTimePosition());
+  const [nowPosition, setNowPosition] = useState(() => getCurrentTimePosition());
 
   // Actualizar posición del indicador "ahora" cada minuto
   useEffect(() => {
@@ -26,33 +26,45 @@ export default function AgendaTimeline({
       setNowPosition(getCurrentTimePosition());
     };
 
-    const interval = setInterval(updateNowPosition, 60000); // cada minuto
+    updateNowPosition();
+    const interval = setInterval(updateNowPosition, 60000);
     return () => clearInterval(interval);
   }, [showNowIndicator]);
 
   // Scroll automático a la hora actual al montar
   useEffect(() => {
     if (containerRef.current && showNowIndicator) {
-      const scrollPosition = nowPosition - 200; // Centrar aprox
+      const scrollPosition = nowPosition - 200;
       containerRef.current.scrollTop = Math.max(0, scrollPosition);
     }
-  }, []);
+  }, [nowPosition, showNowIndicator]);
 
-  const handleSlotClick = (hour: number, minute: number) => {
-    if (onSlotClick) {
-      onSlotClick(hour, minute);
-    }
+  const handleTimelineClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!onSlotClick || !containerRef.current) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const offsetY = event.clientY - rect.top;
+    const minutesFromStart = Math.max(
+      0,
+      (offsetY / AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR) * 60
+    );
+    const hour = Math.min(
+      AGENDA_CONFIG.END_HOUR - 1,
+      AGENDA_CONFIG.START_HOUR + Math.floor(minutesFromStart / 60)
+    );
+    const minute = Math.max(0, Math.floor(minutesFromStart % 60));
+
+    onSlotClick(hour, minute);
   };
 
   const now = new Date();
-  const isToday = true; // Esto debería venir de props si estamos viendo otro día
 
   return (
-    <div className="flex h-full bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div className="flex h-full overflow-hidden rounded-3xl border border-border bg-card">
       {/* Columna de horas */}
-      <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200">
-        <div className="h-12 border-b border-gray-200 flex items-center justify-center">
-          <span className="text-xs font-semibold text-gray-500 uppercase">Hora</span>
+      <div className="w-20 flex-shrink-0 bg-cardHover border-r border-border">
+        <div className="h-12 border-b border-border flex items-center justify-center">
+          <span className="text-xs font-semibold text-text-muted uppercase">Hora</span>
         </div>
         <div className="relative" style={{ height: `${AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR * (AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR)}px` }}>
           {timeSlots.filter((_, index) => index % 4 === 0).map((slot) => (
@@ -64,16 +76,16 @@ export default function AgendaTimeline({
                 height: `${AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR}px`,
               }}
             >
-              <span className="text-xs font-medium text-gray-600">{slot.time}</span>
+              <span className="text-xs font-medium text-text-muted">{slot.time}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Área de contenido con scroll */}
-      <div ref={containerRef} className="flex-1 overflow-y-auto relative">
+      <div ref={containerRef} className="relative flex-1 overflow-y-auto">
         {/* Header sticky (días de la semana, profesionales, etc.) */}
-        <div className="sticky top-0 z-10 h-12 bg-white border-b border-gray-200">
+        <div className="sticky top-0 z-10 h-12 bg-card border-b border-border">
           {/* Este contenido vendrá de las vistas específicas */}
         </div>
 
@@ -83,12 +95,13 @@ export default function AgendaTimeline({
           style={{ 
             height: `${AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR * (AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR)}px`,
           }}
+          onClick={handleTimelineClick}
         >
           {/* Líneas horizontales cada hora */}
           {Array.from({ length: AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR }).map((_, index) => (
             <div
               key={index}
-              className="absolute w-full border-t border-gray-200"
+              className="absolute w-full border-t border-border"
               style={{
                 top: `${index * AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR}px`,
                 height: `${AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR}px`,
@@ -98,7 +111,7 @@ export default function AgendaTimeline({
               {[1, 2, 3].map((quarter) => (
                 <div
                   key={quarter}
-                  className="absolute w-full border-t border-gray-100"
+                  className="absolute w-full border-t border-border/40"
                   style={{
                     top: `${quarter * (AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR / 4)}px`,
                   }}
@@ -108,16 +121,16 @@ export default function AgendaTimeline({
           ))}
 
           {/* Indicador de "ahora" */}
-          {showNowIndicator && isToday && nowPosition >= 0 && (
+          {showNowIndicator && nowPosition >= 0 && (
             <div
-              className="absolute w-full z-20 pointer-events-none"
+              className="pointer-events-none absolute z-20 w-full"
               style={{ top: `${nowPosition}px` }}
             >
               <div className="flex items-center">
-                <div className="w-3 h-3 bg-red-500 rounded-full -ml-1.5" />
-                <div className="flex-1 h-0.5 bg-red-500" />
+                <div className="-ml-1.5 h-3 w-3 rounded-full bg-danger" />
+                <div className="h-0.5 flex-1 bg-danger" />
               </div>
-              <div className="absolute left-4 -top-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded">
+              <div className="absolute -top-2 left-4 rounded bg-danger px-2 py-0.5 text-xs text-white">
                 {now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>

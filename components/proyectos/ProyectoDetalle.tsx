@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Proyecto, ProyectoHito, ProyectoTarea, ProyectoActualizacion } from '@/types/proyectos';
+import { Proyecto } from '@/types/proyectos';
 import { 
   X, Calendar, Users, Tag, DollarSign, Clock, Link as LinkIcon,
   Target, CheckCircle, AlertCircle, TrendingUp, MessageSquare,
-  Edit, Trash2, Plus, FileText
+  Edit, Trash2, Plus
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';

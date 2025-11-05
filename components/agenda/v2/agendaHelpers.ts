@@ -1,4 +1,4 @@
-import { format, addMinutes, differenceInMinutes, isSameDay, startOfDay, endOfDay } from 'date-fns';
+import { format, differenceInMinutes, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export interface AgendaEvent {
@@ -188,9 +188,6 @@ export function calculateFreeSlots(
   day: Date,
   profesionalId?: string
 ): Array<{ start: Date; end: Date }> {
-  const dayStart = startOfDay(day);
-  const dayEnd = endOfDay(day);
-  
   let filteredEvents = getEventsForDay(events, day);
   if (profesionalId) {
     filteredEvents = filteredEvents.filter(e => e.profesionalId === profesionalId);

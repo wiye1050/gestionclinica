@@ -78,7 +78,7 @@ export default function EventModal({
       const paciente = pacientes.find(p => p.id === formData.pacienteId);
 
       // Construir objeto solo con campos que tienen valor (Firebase no acepta undefined)
-      const eventData: any = {
+      const eventData: Partial<AgendaEvent> = {
         titulo: formData.titulo,
         tipo: formData.tipo,
         fechaInicio,
@@ -122,26 +122,26 @@ export default function EventModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="rounded-3xl border border-border bg-card shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
-          <h2 className="text-xl font-semibold text-gray-900">
+        <div className="flex items-center justify-between p-4 sticky top-0 border-b border-border bg-card">
+          <h2 className="text-xl font-semibold text-text">
             {event ? 'Editar Cita' : 'Nueva Cita'}
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 rounded-full transition-colors hover:bg-cardHover"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 p-4">
           {/* Título */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">
+            <label className="block text-sm font-medium text-text mb-1">
               Título de la cita *
             </label>
             <input
@@ -149,21 +149,21 @@ export default function EventModal({
               required
               value={formData.titulo}
               onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
               placeholder="Ej: Consulta inicial"
             />
           </div>
 
           {/* Tipo */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">
+            <label className="block text-sm font-medium text-text mb-1">
               Tipo de cita *
             </label>
             <select
               required
               value={formData.tipo}
               onChange={(e) => setFormData({ ...formData, tipo: e.target.value as AgendaEvent['tipo'] })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
             >
               <option value="consulta">Consulta</option>
               <option value="seguimiento">Seguimiento</option>
@@ -177,7 +177,7 @@ export default function EventModal({
           {/* Fecha y Hora */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
+              <label className="block text-sm font-medium text-text mb-1">
                 <Calendar className="w-4 h-4 inline mr-1" />
                 Fecha *
               </label>
@@ -186,11 +186,11 @@ export default function EventModal({
                 required
                 value={formData.fechaInicio}
                 onChange={(e) => setFormData({ ...formData, fechaInicio: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
+              <label className="block text-sm font-medium text-text mb-1">
                 <Clock className="w-4 h-4 inline mr-1" />
                 Hora *
               </label>
@@ -199,21 +199,21 @@ export default function EventModal({
                 required
                 value={formData.horaInicio}
                 onChange={(e) => setFormData({ ...formData, horaInicio: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
               />
             </div>
           </div>
 
           {/* Duración */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">
+            <label className="block text-sm font-medium text-text mb-1">
               Duración (minutos) *
             </label>
             <select
               required
               value={formData.duracion}
               onChange={(e) => setFormData({ ...formData, duracion: Number(e.target.value) })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
             >
               <option value={15}>15 minutos</option>
               <option value={30}>30 minutos</option>
@@ -227,14 +227,14 @@ export default function EventModal({
           {/* Profesional y Sala */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
+              <label className="block text-sm font-medium text-text mb-1">
                 <User className="w-4 h-4 inline mr-1" />
                 Profesional
               </label>
               <select
                 value={formData.profesionalId}
                 onChange={(e) => setFormData({ ...formData, profesionalId: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
               >
                 <option value="">Sin asignar</option>
                 {profesionales.map((prof) => (
@@ -245,14 +245,14 @@ export default function EventModal({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
+              <label className="block text-sm font-medium text-text mb-1">
                 <MapPin className="w-4 h-4 inline mr-1" />
                 Sala
               </label>
               <select
                 value={formData.salaId}
                 onChange={(e) => setFormData({ ...formData, salaId: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
               >
                 <option value="">Sin asignar</option>
                 {salas.map((sala) => (
@@ -267,13 +267,13 @@ export default function EventModal({
           {/* Paciente */}
           {pacientes.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
+              <label className="block text-sm font-medium text-text mb-1">
                 Paciente
               </label>
               <select
                 value={formData.pacienteId}
                 onChange={(e) => setFormData({ ...formData, pacienteId: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
               >
                 <option value="">Sin asignar</option>
                 {pacientes.map((pac) => (
@@ -287,14 +287,14 @@ export default function EventModal({
 
           {/* Prioridad */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">
+            <label className="block text-sm font-medium text-text mb-1">
               <AlertCircle className="w-4 h-4 inline mr-1" />
               Prioridad
             </label>
             <select
               value={formData.prioridad}
               onChange={(e) => setFormData({ ...formData, prioridad: e.target.value as AgendaEvent['prioridad'] })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
             >
               <option value="baja">Baja</option>
               <option value="media">Media</option>
@@ -304,31 +304,31 @@ export default function EventModal({
 
           {/* Notas */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">
+            <label className="block text-sm font-medium text-text mb-1">
               Notas
             </label>
             <textarea
               value={formData.notas}
               onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
               placeholder="Información adicional..."
             />
           </div>
 
           {/* Botones */}
-          <div className="flex gap-3 pt-4 border-t">
+          <div className="flex gap-3 border-t border-border pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-900 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 rounded-pill border border-border px-4 py-2 text-sm font-medium text-text hover:bg-cardHover transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="flex-1 rounded-pill bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
             >
               {loading ? 'Guardando...' : (event ? 'Actualizar' : 'Crear Cita')}
             </button>

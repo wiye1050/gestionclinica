@@ -5,8 +5,7 @@ import {
   Calendar, 
   FileText, 
   Pill, 
-  CheckCircle, 
-  XCircle,
+  CheckCircle,
   Clock,
   User,
   DollarSign
@@ -67,24 +66,24 @@ export default function PatientTimeline({ actividades, maxItems = 10 }: PatientT
   };
 
   const getColor = (tipo: ActivityType, estado?: Activity['estado']) => {
-    if (estado === 'error') return 'bg-red-100 text-red-600 border-red-200';
-    if (estado === 'warning') return 'bg-yellow-100 text-yellow-600 border-yellow-200';
-    if (estado === 'success') return 'bg-green-100 text-green-600 border-green-200';
+    if (estado === 'error') return 'bg-danger-bg text-danger border-danger';
+    if (estado === 'warning') return 'bg-warn-bg text-warn border-warn';
+    if (estado === 'success') return 'bg-success-bg text-success border-success';
 
     switch (tipo) {
       case 'cita':
-        return 'bg-blue-100 text-blue-600 border-blue-200';
+        return 'bg-brand-subtle text-brand border-brand/50';
       case 'documento':
-        return 'bg-purple-100 text-purple-600 border-purple-200';
+        return 'bg-muted text-text border-border';
       case 'receta':
-        return 'bg-pink-100 text-pink-600 border-pink-200';
+        return 'bg-success-bg text-success border-success/50';
       case 'tratamiento':
-        return 'bg-green-100 text-green-600 border-green-200';
+        return 'bg-brand-subtle text-brand border-brand/40';
       case 'factura':
       case 'pago':
-        return 'bg-emerald-100 text-emerald-600 border-emerald-200';
+        return 'bg-success-bg text-success border-success/40';
       default:
-        return 'bg-gray-100 text-gray-600 border-gray-200';
+        return 'bg-muted text-text-muted border-border';
     }
   };
 
@@ -105,52 +104,52 @@ export default function PatientTimeline({ actividades, maxItems = 10 }: PatientT
 
   if (actividadesRecientes.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Actividad Reciente</h3>
-        <div className="text-center py-8 text-gray-500 text-sm">
-          <Clock className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-          <p>No hay actividad reciente</p>
+      <div className="card p-6">
+        <h3 className="mb-4 text-lg font-semibold text-text">Actividad reciente</h3>
+        <div className="py-8 text-center text-sm text-text-muted">
+          <Clock className="mx-auto mb-2 h-8 w-8 text-text-muted" />
+          No hay actividad reciente
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Actividad Reciente</h3>
+    <div className="card p-6">
+      <h3 className="mb-4 text-lg font-semibold text-text">Actividad reciente</h3>
       
       <div className="relative">
         {/* Línea vertical */}
-        <div className="absolute left-4 top-0 bottom-0 w-px bg-gray-200" />
+        <div className="absolute left-4 top-0 bottom-0 w-px bg-border" />
 
         {/* Actividades */}
         <div className="space-y-4">
-          {actividadesRecientes.map((actividad, index) => (
+          {actividadesRecientes.map((actividad) => (
             <div key={actividad.id} className="relative flex gap-3 pl-10">
               {/* Icono */}
-              <div className={`absolute left-0 w-8 h-8 rounded-full border-2 flex items-center justify-center ${getColor(actividad.tipo, actividad.estado)}`}>
+              <div className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-full border ${getColor(actividad.tipo, actividad.estado)}`}>
                 {getIcon(actividad.tipo)}
               </div>
 
               {/* Contenido */}
               <div className="flex-1 pb-4">
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <p className="text-sm font-medium text-gray-900">
+                <div className="mb-1 flex items-start justify-between gap-2">
+                  <p className="text-sm font-medium text-text">
                     {actividad.titulo}
                   </p>
-                  <span className="text-xs text-gray-500 whitespace-nowrap">
+                  <span className="text-xs text-text-muted whitespace-nowrap">
                     {getRelativeTime(actividad.fecha)}
                   </span>
                 </div>
 
                 {actividad.descripcion && (
-                  <p className="text-sm text-gray-600 mb-1">
+                  <p className="mb-1 text-sm text-text-muted">
                     {actividad.descripcion}
                   </p>
                 )}
 
                 {actividad.usuario && (
-                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                  <div className="flex items-center gap-1 text-xs text-text-muted">
                     <User className="w-3 h-3" />
                     <span>{actividad.usuario}</span>
                   </div>
@@ -162,7 +161,7 @@ export default function PatientTimeline({ actividades, maxItems = 10 }: PatientT
       </div>
 
       {actividades.length > maxItems && (
-        <button className="w-full mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium">
+        <button className="mt-4 w-full text-sm font-semibold text-brand hover:underline">
           Ver toda la actividad ({actividades.length})
         </button>
       )}

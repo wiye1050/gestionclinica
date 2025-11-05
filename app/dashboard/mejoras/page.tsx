@@ -2,15 +2,17 @@
 
 import { Suspense, lazy, useMemo } from 'react';
 import Link from 'next/link';
+import Card from '@/components/ui/Card';
+import Stat from '@/components/ui/Stat';
+import { Badge } from '@/components/ui/Badge';
 import { useMejoras } from '@/lib/hooks/useQueries';
 import { ExportColumn } from '@/lib/utils/export';
-import { Lightbulb, TrendingUp, Clock } from 'lucide-react';
 import { LoadingTable } from '@/components/ui/Loading';
+import type { Mejora } from '@/types';
 
-// Lazy loading
-const ExportButton = lazy(() => import('@/components/ui/ExportButton').then(m => ({ default: m.ExportButton })));
+const ExportButton = lazy(() => import('@/components/ui/ExportButton').then((m) => ({ default: m.ExportButton })));
 
-const estadoLabels: Record<string, string> = {
+const estadoLabels: Record<Mejora['estado'], string> = {
   idea: 'Idea',
   'en-analisis': 'En análisis',
   planificada: 'Planificada',
@@ -18,20 +20,22 @@ const estadoLabels: Record<string, string> = {
   completada: 'Completada'
 };
 
-const estadoColors: Record<string, string> = {
-  idea: 'bg-gray-100 text-gray-700',
-  'en-analisis': 'bg-blue-100 text-blue-700',
-  planificada: 'bg-yellow-100 text-yellow-700',
-  'en-progreso': 'bg-purple-100 text-purple-700',
-  completada: 'bg-green-100 text-green-700'
+const estadoTone: Record<Mejora['estado'], 'muted' | 'warn' | 'success' | 'danger'> = {
+  idea: 'muted',
+  'en-analisis': 'warn',
+  planificada: 'warn',
+  'en-progreso': 'warn',
+  completada: 'success'
 };
 
 function MejorasSkeleton() {
   return (
-    <div className="space-y-6 animate-pulse">
-      <div className="h-20 bg-gray-200 rounded-lg"></div>
-      <div className="grid grid-cols-3 gap-4">
-        {[1,2,3].map(i => <div key={i} className="h-24 bg-gray-200 rounded-lg"></div>)}
+    <div className="space-y-4 animate-pulse">
+      <div className="card h-20" />
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        {[1, 2, 3].map((key) => (
+          <div key={key} className="card h-24" />
+        ))}
       </div>
       <LoadingTable rows={8} />
     </div>
@@ -39,171 +43,140 @@ function MejorasSkeleton() {
 }
 
 function MejorasContent() {
-  // React Query hook - caché de 3 min
   const { data: mejoras = [], isLoading } = useMejoras();
 
-  // Columnas para exportar (memoizado)
-  const exportColumns: ExportColumn[] = useMemo(() => [
-    { header: 'Título', key: 'titulo', width: 35 },
-    { header: 'Área', key: 'area', width: 20 },
-    { header: 'Estado', key: 'estado', width: 15 },
-    { header: 'RICE Score', key: 'riceScore', width: 12 },
-    { header: 'Reach', key: 'riceReach', width: 10 },
-    { header: 'Impact', key: 'riceImpact', width: 10 },
-    { header: 'Confidence', key: 'riceConfidence', width: 12 },
-    { header: 'Effort', key: 'riceEffort', width: 10 },
-    { header: 'Responsable', key: 'responsableNombre', width: 25 },
-  ], []);
+  const exportColumns: ExportColumn[] = useMemo(
+    () => [
+      { header: 'Título', key: 'titulo', width: 35 },
+      { header: 'Área', key: 'area', width: 20 },
+      { header: 'Estado', key: 'estado', width: 15 },
+      { header: 'RICE', key: 'riceScore', width: 12 },
+      { header: 'Reach', key: 'riceReach', width: 10 },
+      { header: 'Impact', key: 'riceImpact', width: 10 },
+      { header: 'Confidence', key: 'riceConfidence', width: 12 },
+      { header: 'Effort', key: 'riceEffort', width: 10 },
+      { header: 'Responsable', key: 'responsableNombre', width: 25 }
+    ],
+    []
+  );
 
-  // Preparar datos para exportar (memoizado)
-  const mejorasParaExportar = useMemo(() => mejoras.map(m => ({
-    ...m,
-    estado: estadoLabels[m.estado] ?? m.estado,
-    riceScore: m.rice?.score?.toFixed(1) ?? 'N/A',
-    riceReach: m.rice?.reach ?? 0,
-    riceImpact: m.rice?.impact ?? 0,
-    riceConfidence: m.rice?.confidence ?? 0,
-    riceEffort: m.rice?.effort ?? 0
-  })), [mejoras]);
+  const mejorasParaExportar = useMemo(
+    () =>
+      mejoras.map((mejora) => ({
+        titulo: mejora.titulo ?? 'Sin título',
+        area: mejora.area,
+        estado: estadoLabels[mejora.estado] ?? mejora.estado,
+        riceScore: mejora.rice?.score ?? 0,
+        riceReach: mejora.rice?.reach ?? 0,
+        riceImpact: mejora.rice?.impact ?? 0,
+        riceConfidence: mejora.rice?.confidence ?? 0,
+        riceEffort: mejora.rice?.effort ?? 0,
+        responsableNombre: mejora.responsableNombre ?? 'Sin asignar'
+      })),
+    [mejoras]
+  );
 
-  // Stats (memoizado)
-  const stats = useMemo(() => ({
-    total: mejoras.length,
-    enProgreso: mejoras.filter(m => m.estado === 'en-progreso').length,
-    completadas: mejoras.filter(m => m.estado === 'completada').length,
-  }), [mejoras]);
+  const stats = useMemo(
+    () => [
+      { label: 'Total mejoras', value: isLoading ? '—' : mejoras.length },
+      { label: 'En progreso', value: isLoading ? '—' : mejoras.filter((m) => m.estado === 'en-progreso').length },
+      { label: 'Completadas', value: isLoading ? '—' : mejoras.filter((m) => m.estado === 'completada').length }
+    ],
+    [isLoading, mejoras]
+  );
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Mejoras</h1>
-          <p className="text-gray-600 mt-1">
-            Propuestas de mejora para salas, equipos, procedimientos y software
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Suspense fallback={<div className="w-32 h-10 bg-gray-200 rounded animate-pulse" />}>
-            <ExportButton
-              data={mejorasParaExportar}
-              columns={exportColumns}
-              filename={`mejoras-${new Date().toISOString().split('T')[0]}`}
-              format="excel"
-              disabled={isLoading}
-            />
-          </Suspense>
-          <Link
-            href="/dashboard/mejoras/nueva"
-            className="inline-flex items-center space-x-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-          >
-            <span>Nueva mejora</span>
-          </Link>
-        </div>
-      </header>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-lg bg-white dark:bg-gray-800 p-5 shadow">
-          <div className="flex items-center gap-2 mb-2">
-            <Lightbulb className="w-5 h-5 text-blue-600" />
+      <Card
+        title="Mejoras"
+        subtitle="Propuestas para optimizar salas, equipos, procedimientos y software"
+        action={
+          <div className="flex items-center gap-2">
+            <Suspense fallback={<div className="h-9 w-32 rounded-pill bg-muted" />}>
+              <ExportButton
+                data={mejorasParaExportar}
+                columns={exportColumns}
+                filename={`mejoras-${new Date().toISOString().split('T')[0]}`}
+                format="excel"
+                disabled={isLoading}
+              />
+            </Suspense>
+            <Link
+              href="/dashboard/mejoras/nueva"
+              className="rounded-pill bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+            >
+              Nueva mejora
+            </Link>
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Total Mejoras</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">
-            {isLoading ? '—' : stats.total}
-          </p>
-        </div>
+        }
+      >
+        <p className="text-sm text-text-muted">
+          Prioriza iniciativas por impacto y esfuerzo para mantener un ciclo de mejora continua.
+        </p>
+      </Card>
 
-        <div className="rounded-lg bg-white dark:bg-gray-800 p-5 shadow">
-          <div className="flex items-center gap-2 mb-2">
-            <Clock className="w-5 h-5 text-purple-600" />
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">En Progreso</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">
-            {isLoading ? '—' : stats.enProgreso}
-          </p>
-        </div>
-
-        <div className="rounded-lg bg-white dark:bg-gray-800 p-5 shadow">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="w-5 h-5 text-green-600" />
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Completadas</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">
-            {isLoading ? '—' : stats.completadas}
-          </p>
-        </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {stats.map((stat) => (
+          <Stat key={stat.label} label={stat.label} value={stat.value} />
+        ))}
       </div>
 
-      {/* Tabla */}
       {isLoading ? (
         <LoadingTable rows={8} />
       ) : mejoras.length === 0 ? (
-        <div className="rounded-lg bg-white dark:bg-gray-800 p-8 text-center shadow">
-          <Lightbulb className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-600 dark:text-gray-400">No hay mejoras registradas.</p>
-          <Link 
-            href="/dashboard/mejoras/nueva"
-            className="mt-4 inline-flex text-blue-600 hover:underline"
-          >
-            Crear la primera mejora
-          </Link>
-        </div>
+        <Card>
+          <div className="py-8 text-center text-text-muted">
+            No hay mejoras registradas.
+            <Link href="/dashboard/mejoras/nueva" className="ml-2 text-brand hover:underline">
+              Crear la primera mejora
+            </Link>
+          </div>
+        </Card>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
                     Mejora
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
                     Área
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
                     Estado
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                    RICE Score
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
+                    RICE
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-text-muted">
                     Acciones
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              <tbody className="divide-y divide-border">
                 {mejoras.map((mejora) => (
-                  <tr key={mejora.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <tr key={mejora.id} className="hover:bg-cardHover">
                     <td className="px-6 py-4">
-                      <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                        {mejora.titulo}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className="text-sm font-semibold text-text">{mejora.titulo}</div>
+                      <div className="text-xs text-text-muted">
                         Actualizado {mejora.updatedAt?.toLocaleDateString('es-ES') ?? 'N/A'}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                      {mejora.area}
-                    </td>
+                    <td className="px-6 py-4 text-sm text-text-muted">{mejora.area}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${estadoColors[mejora.estado] ?? 'bg-gray-100 text-gray-700'}`}>
-                        {estadoLabels[mejora.estado] ?? mejora.estado}
-                      </span>
+                      <Badge tone={estadoTone[mejora.estado]}>{estadoLabels[mejora.estado]}</Badge>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-gray-900 dark:text-white">
-                          {mejora.rice?.score?.toFixed(1) ?? 'N/A'}
-                        </span>
-                        <TrendingUp className="w-4 h-4 text-blue-500" />
-                      </div>
+                    <td className="px-6 py-4 text-sm font-semibold text-text">
+                      {mejora.rice?.score?.toFixed(1) ?? 'N/A'}
                     </td>
-                    <td className="px-6 py-4 text-right text-sm font-medium">
-                      <Link 
-                        href={`/dashboard/mejoras/${mejora.id}`} 
-                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                    <td className="px-6 py-4 text-right text-sm">
+                      <Link
+                        href={`/dashboard/mejoras/${mejora.id}`}
+                        className="text-brand hover:underline"
                       >
-                        Ver detalles
+                        Ver detalle
                       </Link>
                     </td>
                   </tr>
@@ -211,7 +184,7 @@ function MejorasContent() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );

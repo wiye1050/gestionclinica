@@ -5,10 +5,12 @@ import { Proyecto, TipoProyecto, EstadoProyecto, PrioridadProyecto } from '@/typ
 import { X, Save, Calendar, Users, DollarSign, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 
+type ProyectoDraft = Omit<Proyecto, 'id'> & { id?: string };
+
 interface ProyectoFormProps {
   proyecto?: Proyecto | null;
   onClose: () => void;
-  onGuardar: (proyecto: Omit<Proyecto, 'id'> | { id: string; [key: string]: any }) => void;
+  onGuardar: (proyecto: ProyectoDraft) => void;
   profesionales: Array<{ uid: string; nombre: string }>;
 }
 
@@ -53,10 +55,10 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
     }
   }, [proyecto]);
 
-  const handleChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+  const handleChange = <K extends keyof typeof formData>(field: K, value: (typeof formData)[K]) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field as string]) {
+      setErrors((prev) => ({ ...prev, [field as string]: '' }));
     }
   };
 
@@ -96,7 +98,7 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
       .map(t => t.trim())
       .filter(t => t.length > 0);
 
-    const proyectoData: any = {
+    const proyectoData: ProyectoDraft = {
       nombre: formData.nombre,
       descripcion: formData.descripcion,
       tipo: formData.tipo,
@@ -136,8 +138,8 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-card rounded-3xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 flex items-center justify-between">
           <h2 className="text-2xl font-bold">
@@ -145,7 +147,7 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-blue-700 rounded-lg transition-colors"
+            className="rounded-full p-2 transition-colors hover:bg-brand/90"
           >
             <X className="w-5 h-5" />
           </button>
@@ -155,20 +157,20 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Información Básica */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+            <h3 className="text-lg font-semibold text-text border-b border-border pb-2">
               Información Básica
             </h3>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-text-muted mb-1">
                 Nombre del Proyecto *
               </label>
               <input
                 type="text"
                 value={formData.nombre}
                 onChange={(e) => handleChange('nombre', e.target.value)}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.nombre ? 'border-red-500' : 'border-gray-300'
+                className={`w-full px-4 py-2 border rounded-lg focus-visible:focus-ring ${
+                  errors.nombre ? 'border-red-500' : 'border-b border-borderorder'
                 }`}
                 placeholder="Ej: Implementación Portal Paciente"
               />
@@ -178,15 +180,15 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-text-muted mb-1">
                 Descripción *
               </label>
               <textarea
                 value={formData.descripcion}
                 onChange={(e) => handleChange('descripcion', e.target.value)}
                 rows={3}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.descripcion ? 'border-red-500' : 'border-gray-300'
+                className={`w-full px-4 py-2 border rounded-lg focus-visible:focus-ring ${
+                  errors.descripcion ? 'border-red-500' : 'border-b border-borderorder'
                 }`}
                 placeholder="Describe el objetivo y alcance del proyecto..."
               />
@@ -197,13 +199,13 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-text-muted mb-1">
                   Tipo
                 </label>
                 <select
                   value={formData.tipo}
                   onChange={(e) => handleChange('tipo', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-b border-borderorder rounded-lg focus-visible:focus-ring"
                 >
                   <option value="desarrollo">Desarrollo</option>
                   <option value="operacional">Operacional</option>
@@ -215,13 +217,13 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-text-muted mb-1">
                   Estado
                 </label>
                 <select
                   value={formData.estado}
                   onChange={(e) => handleChange('estado', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-b border-borderorder rounded-lg focus-visible:focus-ring"
                 >
                   <option value="propuesta">Propuesta</option>
                   <option value="planificacion">Planificación</option>
@@ -235,13 +237,13 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-text-muted mb-1">
                   Prioridad
                 </label>
                 <select
                   value={formData.prioridad}
                   onChange={(e) => handleChange('prioridad', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-b border-borderorder rounded-lg focus-visible:focus-ring"
                 >
                   <option value="baja">Baja</option>
                   <option value="media">Media</option>
@@ -251,14 +253,14 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-text-muted mb-1">
                   Color
                 </label>
                 <input
                   type="color"
                   value={formData.color}
                   onChange={(e) => handleChange('color', e.target.value)}
-                  className="w-full h-10 px-2 border border-gray-300 rounded-lg cursor-pointer"
+                  className="w-full h-10 px-2 border border-b border-borderorder rounded-lg cursor-pointer"
                 />
               </div>
             </div>
@@ -266,21 +268,21 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
 
           {/* Responsable y Fechas */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+            <h3 className="text-lg font-semibold text-text border-b border-border pb-2">
               Responsable y Fechas
             </h3>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-text-muted mb-1">
                 Responsable *
               </label>
               <div className="relative">
-                <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
                 <select
                   value={formData.responsableUid}
                   onChange={(e) => handleResponsableChange(e.target.value)}
-                  className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.responsableUid ? 'border-red-500' : 'border-gray-300'
+                  className={`w-full pl-10 pr-4 py-2 border rounded-lg focus-visible:focus-ring ${
+                    errors.responsableUid ? 'border-red-500' : 'border-b border-borderorder'
                   }`}
                 >
                   <option value="">Selecciona un responsable</option>
@@ -298,31 +300,31 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-text-muted mb-1">
                   Fecha de Inicio
                 </label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
                   <input
                     type="date"
                     value={formData.fechaInicio}
                     onChange={(e) => handleChange('fechaInicio', e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 border border-b border-borderorder rounded-lg focus-visible:focus-ring"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-text-muted mb-1">
                   Fecha Estimada Fin
                 </label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
                   <input
                     type="date"
                     value={formData.fechaFinEstimada}
                     onChange={(e) => handleChange('fechaFinEstimada', e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 border border-b border-borderorder rounded-lg focus-visible:focus-ring"
                   />
                 </div>
               </div>
@@ -331,13 +333,13 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
 
           {/* Recursos */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+            <h3 className="text-lg font-semibold text-text border-b border-border pb-2">
               Recursos
             </h3>
 
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-text-muted mb-1">
                   Progreso (%)
                 </label>
                 <input
@@ -346,38 +348,38 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
                   max="100"
                   value={formData.progreso}
                   onChange={(e) => handleChange('progreso', parseInt(e.target.value) || 0)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-b border-borderorder rounded-lg focus-visible:focus-ring"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-text-muted mb-1">
                   Presupuesto (€)
                 </label>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
                   <input
                     type="number"
                     min="0"
                     value={formData.presupuesto}
                     onChange={(e) => handleChange('presupuesto', parseFloat(e.target.value) || 0)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 border border-b border-borderorder rounded-lg focus-visible:focus-ring"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-text-muted mb-1">
                   Horas Estimadas
                 </label>
                 <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
                   <input
                     type="number"
                     min="0"
                     value={formData.horasEstimadas}
                     onChange={(e) => handleChange('horasEstimadas', parseInt(e.target.value) || 0)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 border border-b border-borderorder rounded-lg focus-visible:focus-ring"
                   />
                 </div>
               </div>
@@ -386,17 +388,17 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
 
           {/* Etiquetas */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-text-muted mb-1">
               Etiquetas
             </label>
             <input
               type="text"
               value={formData.tags}
               onChange={(e) => handleChange('tags', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-b border-borderorder rounded-lg focus-visible:focus-ring"
               placeholder="Separadas por comas: frontend, urgent, v2.0"
             />
-            <p className="text-sm text-gray-500 mt-1">Separa las etiquetas con comas</p>
+            <p className="text-sm text-text-muted mt-1">Separa las etiquetas con comas</p>
           </div>
         </form>
 
@@ -405,13 +407,13 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg font-medium transition-colors"
+            className="px-6 py-2 border border-b border-borderorder text-text-muted hover:bg-cardHover rounded-lg font-medium transition-colors"
           >
             Cancelar
           </button>
           <button
             onClick={handleSubmit}
-            className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition-colors flex items-center gap-2"
+            className="px-6 py-2 bg-brand text-white hover:bg-brand/90 rounded-lg font-medium transition-colors flex items-center gap-2"
           >
             <Save className="w-4 h-4" />
             {proyecto ? 'Guardar Cambios' : 'Crear Proyecto'}

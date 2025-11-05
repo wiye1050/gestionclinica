@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import KPICard from "@/components/dashboard/KPICard";
-import { GraficoLinea, GraficoBarras, GraficoPie } from "@/components/dashboard/Graficos";
+import { GraficoLinea, GraficoPie } from "@/components/dashboard/Graficos";
 import {
   Wrench,
   Users,
@@ -178,7 +178,7 @@ export default function KPIsPage() {
 
   if (loading) {
     return (
-      <div className="p-4 text-gray-600">
+      <div className="rounded-2xl border border-border bg-card p-6 text-sm text-text-muted">
         Cargando KPIs...
       </div>
     );
@@ -186,7 +186,7 @@ export default function KPIsPage() {
 
   if (error) {
     return (
-      <div className="p-4 text-red-600">
+      <div className="rounded-2xl border border-border bg-danger-bg p-6 text-sm text-danger">
         {error}
       </div>
     );
@@ -194,17 +194,17 @@ export default function KPIsPage() {
 
   if (!data) {
     return (
-      <div className="p-4 text-gray-600">
+      <div className="rounded-2xl border border-border bg-card p-6 text-sm text-text-muted">
         No se pudieron cargar los KPIs.
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-4">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Indicadores Clave</h1>
-        <p className="text-gray-600 mt-1">
+    <div className="space-y-8">
+      <div className="rounded-3xl border border-border bg-card px-6 py-5 shadow-sm">
+        <h1 className="text-2xl font-semibold text-text">Indicadores clave</h1>
+        <p className="mt-1 text-sm text-text-muted">
           Panorama general del rendimiento operativo de la clínica.
         </p>
       </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { Proyecto } from '@/types/proyectos';
-import { Calendar, User, BarChart3, Clock, Tag } from 'lucide-react';
+import { Calendar, User, BarChart3, Tag } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 

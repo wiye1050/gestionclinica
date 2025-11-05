@@ -1,7 +1,6 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { X } from 'lucide-react';
 
 interface ViewSelectorProps {
   views: Array<{
@@ -19,17 +18,17 @@ interface ViewSelectorProps {
 
 export default function ViewSelector({ views, currentView, onViewChange, counter }: ViewSelectorProps) {
   return (
-    <div className="bg-white rounded-lg shadow p-2 flex items-center justify-between">
-      <div className="flex items-center gap-1">
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-2 shadow-sm">
+      <div className="flex items-center gap-2">
         {views.map((view) => (
           <button
             key={view.id}
             onClick={() => onViewChange(view.id)}
             className={`
-              flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg font-medium transition-colors
+              inline-flex items-center gap-1.5 rounded-pill px-3.5 py-2 text-sm font-medium transition-colors focus-visible:focus-ring
               ${currentView === view.id
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-700 hover:bg-gray-100'
+                ? 'bg-brand text-white shadow-sm'
+                : 'text-text-muted hover:bg-cardHover'
               }
             `}
           >
@@ -40,7 +39,7 @@ export default function ViewSelector({ views, currentView, onViewChange, counter
       </div>
 
       {counter && (
-        <div className="text-sm text-gray-600 font-medium">
+        <div className="text-sm font-medium text-text-muted">
           {counter.current} de {counter.total}
         </div>
       )}

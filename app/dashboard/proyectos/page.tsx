@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useProyectos } from '@/lib/hooks/useProyectos';
 import { useProfesionales } from '@/lib/hooks/useQueries';
-import { Proyecto } from '@/types/proyectos';
+import type { Proyecto, EstadoProyecto, TipoProyecto, PrioridadProyecto } from '@/types/proyectos';
 import KanbanView from '@/components/proyectos/KanbanView';
 import ListView from '@/components/proyectos/ListView';
 import GanttView from '@/components/proyectos/GanttView';
@@ -14,8 +14,24 @@ import ProyectoForm from '@/components/proyectos/ProyectoForm';
 import { LayoutGrid, List, GanttChart, Plus, Download, BarChart3 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
+import ModuleHeader from '@/components/shared/ModuleHeader';
+import ViewSelector from '@/components/shared/ViewSelector';
+import { LoadingSpinner } from '@/components/ui/Loading';
 
 type VistaProyecto = 'kanban' | 'lista' | 'gantt';
+type EstadoFiltro = EstadoProyecto | 'todos';
+type TipoFiltro = TipoProyecto | 'todos';
+type PrioridadFiltro = PrioridadProyecto | 'todos';
+
+type FiltrosProyectosState = {
+  busqueda: string;
+  estado: EstadoFiltro;
+  tipo: TipoFiltro;
+  prioridad: PrioridadFiltro;
+  responsable: string;
+};
+
+type ProyectoPayload = Partial<Proyecto> & { id?: string };
 
 export default function ProyectosPage() {
   const { proyectos, estadisticas, isLoading, crearProyecto, actualizarProyecto, eliminarProyecto } = useProyectos();
@@ -25,11 +41,11 @@ export default function ProyectosPage() {
   const [proyectoSeleccionado, setProyectoSeleccionado] = useState<Proyecto | null>(null);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [proyectoEditar, setProyectoEditar] = useState<Proyecto | null>(null);
-  const [filtros, setFiltros] = useState({
+  const [filtros, setFiltros] = useState<FiltrosProyectosState>({
     busqueda: '',
-    estado: 'todos' as any,
-    tipo: 'todos' as any,
-    prioridad: 'todos' as any,
+    estado: 'todos',
+    tipo: 'todos',
+    prioridad: 'todos',
     responsable: 'todos',
   });
 
@@ -93,7 +109,7 @@ export default function ProyectosPage() {
     setMostrarForm(true);
   };
 
-  const handleGuardarProyecto = async (datos: any) => {
+  const handleGuardarProyecto = async (datos: ProyectoPayload) => {
     try {
       if (datos.id) {
         // Editar
@@ -101,7 +117,7 @@ export default function ProyectosPage() {
         toast.success('Proyecto actualizado correctamente');
       } else {
         // Crear
-        await crearProyecto.mutateAsync(datos);
+        await crearProyecto.mutateAsync(datos as Omit<Proyecto, 'id'>);
         toast.success('Proyecto creado correctamente');
       }
       setMostrarForm(false);
@@ -158,61 +174,46 @@ export default function ProyectosPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-200px)]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Cargando proyectos...</p>
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <LoadingSpinner size="lg" />
+          <p className="text-sm text-text-muted">Cargando proyectos…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Proyectos</h1>
-          <p className="text-sm text-gray-600 mt-0.5">
-            Gestión completa de proyectos del instituto
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Toggle KPIs */}
-          <button
-            onClick={() => setMostrarKPIs(!mostrarKPIs)}
-            className={`
-              px-3 py-2 text-sm rounded-lg font-medium transition-colors flex items-center gap-2
-              ${mostrarKPIs 
-                ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }
-            `}
-          >
-            <BarChart3 className="w-4 h-4" />
-            KPIs
-          </button>
-
-          {/* Exportar */}
-          <button
-            onClick={handleExportar}
-            className="px-3 py-2 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg font-medium transition-colors flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Exportar
-          </button>
-
-          {/* Nuevo Proyecto */}
-          <button
-            onClick={handleNuevoProyecto}
-            className="px-3 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition-colors flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Nuevo
-          </button>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <ModuleHeader
+        title="Proyectos"
+        description="Gestión completa de proyectos del instituto"
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setMostrarKPIs(!mostrarKPIs)}
+              className={`inline-flex items-center gap-2 rounded-pill px-4 py-2 text-sm font-medium transition-colors focus-visible:focus-ring ${mostrarKPIs ? 'border border-brand bg-brand text-white shadow-sm' : 'border border-border bg-card text-text hover:bg-cardHover'}`}
+            >
+              <BarChart3 className="h-4 w-4" />
+              KPIs
+            </button>
+            <button
+              onClick={handleExportar}
+              className="inline-flex items-center gap-2 rounded-pill border border-border bg-card px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
+            >
+              <Download className="h-4 w-4" />
+              Exportar
+            </button>
+            <button
+              onClick={handleNuevoProyecto}
+              className="inline-flex items-center gap-2 rounded-pill bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand/90 focus-visible:focus-ring"
+            >
+              <Plus className="h-4 w-4" />
+              Nuevo
+            </button>
+          </div>
+        }
+      />
 
       {/* KPIs */}
       {mostrarKPIs && (
@@ -227,55 +228,16 @@ export default function ProyectosPage() {
       />
 
       {/* Selector de Vista */}
-      <div className="bg-white rounded-lg shadow p-2 flex items-center justify-between">
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setVista('kanban')}
-            className={`
-              flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg font-medium transition-colors
-              ${vista === 'kanban' 
-                ? 'bg-blue-600 text-white' 
-                : 'text-gray-700 hover:bg-gray-100'
-              }
-            `}
-          >
-            <LayoutGrid className="w-4 h-4" />
-            Kanban
-          </button>
-
-          <button
-            onClick={() => setVista('lista')}
-            className={`
-              flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg font-medium transition-colors
-              ${vista === 'lista' 
-                ? 'bg-blue-600 text-white' 
-                : 'text-gray-700 hover:bg-gray-100'
-              }
-            `}
-          >
-            <List className="w-4 h-4" />
-            Lista
-          </button>
-
-          <button
-            onClick={() => setVista('gantt')}
-            className={`
-              flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg font-medium transition-colors
-              ${vista === 'gantt' 
-                ? 'bg-blue-600 text-white' 
-                : 'text-gray-700 hover:bg-gray-100'
-              }
-            `}
-          >
-            <GanttChart className="w-4 h-4" />
-            Gantt
-          </button>
-        </div>
-
-        <div className="text-sm text-gray-600 font-medium">
-          {proyectosFiltrados.length} de {proyectos.length}
-        </div>
-      </div>
+      <ViewSelector
+        views={[
+          { id: 'kanban', label: 'Kanban', icon: <LayoutGrid className="h-4 w-4" /> },
+          { id: 'lista', label: 'Lista', icon: <List className="h-4 w-4" /> },
+          { id: 'gantt', label: 'Gantt', icon: <GanttChart className="h-4 w-4" /> },
+        ]}
+        currentView={vista}
+        onViewChange={(v) => setVista(v as VistaProyecto)}
+        counter={{ current: proyectosFiltrados.length, total: proyectos.length }}
+      />
 
       {/* Vista Seleccionada */}
       {vista === 'kanban' && (

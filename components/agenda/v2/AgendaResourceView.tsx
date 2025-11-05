@@ -4,7 +4,6 @@ import { useMemo } from 'react';
 import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import AgendaTimeline from './AgendaTimeline';
 import AgendaEventCard from './AgendaEventCard';
 import {
   AgendaEvent,
@@ -32,7 +31,6 @@ interface AgendaResourceViewProps {
   onEventResize?: (eventId: string, newDuration: number) => void;
   onEventClick?: (event: AgendaEvent) => void;
   onQuickAction?: (event: AgendaEvent, action: 'confirm' | 'complete' | 'cancel') => void;
-  onCreateEvent?: (start: Date, resourceId: string) => void;
   onEdit?: (event: AgendaEvent) => void;
   onDelete?: (event: AgendaEvent) => void;
 }
@@ -45,7 +43,6 @@ export default function AgendaResourceView({
   onEventResize,
   onEventClick,
   onQuickAction,
-  onCreateEvent,
   onEdit,
   onDelete,
 }: AgendaResourceViewProps) {
@@ -134,21 +131,21 @@ export default function AgendaResourceView({
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 p-4 rounded-t-lg">
+      <div className="bg-card border-b border-border p-4 rounded-t-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-blue-600" />
-            <h2 className="text-lg font-bold text-gray-900 capitalize">{dayLabel}</h2>
+            <Users className="h-5 w-5 text-brand" />
+            <h2 className="text-lg font-bold text-text capitalize">{dayLabel}</h2>
           </div>
           <div className="flex items-center gap-2 text-sm">
-            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded font-medium">
+            <span className="px-2 py-1 bg-brand-subtle text-brand rounded font-medium">
               {resources.length} recursos
             </span>
-            <span className="px-2 py-1 bg-green-100 text-green-700 rounded font-medium">
+            <span className="px-2 py-1 bg-success-bg text-success rounded font-medium">
               {dayEvents.length} eventos
             </span>
             {conflicts.length > 0 && (
-              <span className="px-2 py-1 bg-red-100 text-red-700 rounded font-medium">
+              <span className="px-2 py-1 bg-danger-bg text-danger rounded font-medium">
                 {conflicts.length} conflictos
               </span>
             )}
@@ -161,9 +158,9 @@ export default function AgendaResourceView({
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="flex h-full">
             {/* Columna de horas (compartida) */}
-            <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200">
-              <div className="h-14 border-b border-gray-200 flex items-center justify-center sticky top-0 z-10 bg-gray-50">
-                <span className="text-xs font-semibold text-gray-500 uppercase">Hora</span>
+            <div className="w-20 flex-shrink-0 bg-cardHover border-r border-border">
+              <div className="h-14 border-b border-border flex items-center justify-center sticky top-0 z-10 bg-cardHover">
+                <span className="text-xs font-semibold text-text-muted uppercase">Hora</span>
               </div>
               <div 
                 className="relative"
@@ -184,7 +181,7 @@ export default function AgendaResourceView({
                         height: `${AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR}px`,
                       }}
                     >
-                      <span className="text-xs font-medium text-gray-600">
+                      <span className="text-xs font-medium text-text-muted">
                         {String(hour).padStart(2, '0')}:00
                       </span>
                     </div>
@@ -202,16 +199,16 @@ export default function AgendaResourceView({
                 return (
                   <div
                     key={resource.id}
-                    className="flex-1 min-w-[250px] border-r border-gray-200 last:border-r-0"
+                    className="flex-1 min-w-[250px] border-r border-border last:border-r-0"
                   >
                     {/* Header del recurso */}
-                    <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-3 h-14">
+                    <div className="sticky top-0 z-10 bg-card border-b border-border p-3 h-14">
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-sm text-gray-900 truncate">
+                          <h3 className="font-semibold text-sm text-text truncate">
                             {resource.nombre}
                           </h3>
-                          <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                          <div className="flex items-center gap-2 text-xs text-text-muted mt-0.5">
                             <span>{stats?.totalEvents || 0} eventos</span>
                             <span>•</span>
                             <div className="flex items-center gap-1">
@@ -230,7 +227,7 @@ export default function AgendaResourceView({
                           ref={provided.innerRef}
                           {...provided.droppableProps}
                           className={`relative ${
-                            snapshot.isDraggingOver ? 'bg-blue-50 bg-opacity-30' : ''
+                            snapshot.isDraggingOver ? 'bg-brand-subtle/40' : ''
                           }`}
                           style={{
                             height: `${AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR * (AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR)}px`,
@@ -242,7 +239,7 @@ export default function AgendaResourceView({
                           }).map((_, index) => (
                             <div
                               key={index}
-                              className="absolute w-full border-t border-gray-200"
+                              className="absolute w-full border-t border-border"
                               style={{
                                 top: `${index * AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR}px`,
                                 height: `${AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR}px`,
@@ -251,7 +248,7 @@ export default function AgendaResourceView({
                               {[1, 2, 3].map((quarter) => (
                                 <div
                                   key={quarter}
-                                  className="absolute w-full border-t border-gray-100"
+                                  className="absolute w-full border-t border-border/40"
                                   style={{
                                     top: `${quarter * (AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR / 4)}px`,
                                   }}

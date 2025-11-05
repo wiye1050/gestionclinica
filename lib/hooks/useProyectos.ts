@@ -1,59 +1,50 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, Timestamp, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Proyecto, EstadisticasProyectos } from '@/types/proyectos';
+import { Proyecto, EstadisticasProyectos, ProyectoHito, ProyectoActualizacion, ProyectoTarea } from '@/types/proyectos';
+
+const toDate = (value: unknown): Date | undefined => {
+  if (value instanceof Timestamp) {
+    return value.toDate();
+  }
+  return value as Date | undefined;
+};
 
 // Convertir timestamps de Firestore a Date
-const convertirTimestamps = (data: any): any => {
-  if (!data) return data;
-  
-  const resultado = { ...data };
-  
-  // Convertir fechas del proyecto
-  if (data.fechaInicio instanceof Timestamp) {
-    resultado.fechaInicio = data.fechaInicio.toDate();
-  }
-  if (data.fechaFinEstimada instanceof Timestamp) {
-    resultado.fechaFinEstimada = data.fechaFinEstimada.toDate();
-  }
-  if (data.fechaFinReal instanceof Timestamp) {
-    resultado.fechaFinReal = data.fechaFinReal.toDate();
-  }
-  if (data.createdAt instanceof Timestamp) {
-    resultado.createdAt = data.createdAt.toDate();
-  }
-  if (data.updatedAt instanceof Timestamp) {
-    resultado.updatedAt = data.updatedAt.toDate();
-  }
-  if (data.archivedAt instanceof Timestamp) {
-    resultado.archivedAt = data.archivedAt.toDate();
-  }
+const convertirTimestamps = (data: Record<string, unknown> | undefined): Partial<Proyecto> | undefined => {
+  if (!data) return data as undefined;
 
-  // Convertir fechas en hitos
-  if (Array.isArray(data.hitos)) {
-    resultado.hitos = data.hitos.map((hito: any) => ({
+  const resultado: Partial<Proyecto> = { ...data } as Partial<Proyecto>;
+
+  resultado.fechaInicio = toDate(resultado.fechaInicio) ?? resultado.fechaInicio;
+  resultado.fechaFinEstimada = toDate(resultado.fechaFinEstimada) ?? resultado.fechaFinEstimada;
+  resultado.fechaFinReal = toDate(resultado.fechaFinReal) ?? resultado.fechaFinReal;
+  resultado.createdAt = toDate(resultado.createdAt) ?? resultado.createdAt;
+  resultado.updatedAt = toDate(resultado.updatedAt) ?? resultado.updatedAt;
+  resultado.archivedAt = toDate(resultado.archivedAt) ?? resultado.archivedAt;
+
+  if (Array.isArray(resultado.hitos)) {
+    resultado.hitos = (resultado.hitos as ProyectoHito[]).map((hito) => ({
       ...hito,
-      fechaObjetivo: hito.fechaObjetivo instanceof Timestamp ? hito.fechaObjetivo.toDate() : hito.fechaObjetivo,
-      fechaCompletado: hito.fechaCompletado instanceof Timestamp ? hito.fechaCompletado.toDate() : hito.fechaCompletado,
+      fechaObjetivo: toDate(hito.fechaObjetivo) ?? hito.fechaObjetivo,
+      fechaCompletado: toDate(hito.fechaCompletado) ?? hito.fechaCompletado,
     }));
   }
 
-  // Convertir fechas en actualizaciones
-  if (Array.isArray(data.actualizaciones)) {
-    resultado.actualizaciones = data.actualizaciones.map((act: any) => ({
+  if (Array.isArray(resultado.actualizaciones)) {
+    resultado.actualizaciones = (resultado.actualizaciones as ProyectoActualizacion[]).map((act) => ({
       ...act,
-      fecha: act.fecha instanceof Timestamp ? act.fecha.toDate() : act.fecha,
+      fecha: toDate(act.fecha) ?? act.fecha,
     }));
   }
 
-  // Convertir fechas en tareas
-  if (Array.isArray(data.tareas)) {
-    resultado.tareas = data.tareas.map((tarea: any) => ({
+  if (Array.isArray(resultado.tareas)) {
+    resultado.tareas = (resultado.tareas as ProyectoTarea[]).map((tarea) => ({
       ...tarea,
-      fechaLimite: tarea.fechaLimite instanceof Timestamp ? tarea.fechaLimite.toDate() : tarea.fechaLimite,
-      completadaEn: tarea.completadaEn instanceof Timestamp ? tarea.completadaEn.toDate() : tarea.completadaEn,
-      createdAt: tarea.createdAt instanceof Timestamp ? tarea.createdAt.toDate() : tarea.createdAt,
-      updatedAt: tarea.updatedAt instanceof Timestamp ? tarea.updatedAt.toDate() : tarea.updatedAt,
+      fechaLimite: toDate(tarea.fechaLimite) ?? tarea.fechaLimite,
+      completadaEn: toDate(tarea.completadaEn) ?? tarea.completadaEn,
+      createdAt: toDate(tarea.createdAt) ?? tarea.createdAt,
+      updatedAt: toDate(tarea.updatedAt) ?? tarea.updatedAt,
     }));
   }
 

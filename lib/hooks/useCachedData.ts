@@ -11,7 +11,7 @@ interface UseCachedDataOptions {
   refetchInterval?: number;
 }
 
-const cache = new Map<string, CacheEntry<any>>();
+const cache = new Map<string, CacheEntry<unknown>>();
 
 /**
  * Hook personalizado para cachear datos de Firestore
@@ -40,7 +40,7 @@ export function useCachedData<T>(
       const now = Date.now();
 
       if (!force && cached && (now - cached.timestamp) < cacheTime) {
-        setData(cached.data);
+        setData(cached.data as T);
         setLoading(false);
         return cached.data;
       }
@@ -52,7 +52,7 @@ export function useCachedData<T>(
       if (isMountedRef.current) {
         // Guardar en caché
         cache.set(key, {
-          data: result,
+          data: result as unknown,
           timestamp: now
         });
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { ReactNode } from 'react';
 import { LucideIcon } from 'lucide-react';
 
 interface StatCardProps {
@@ -13,13 +12,19 @@ interface StatCardProps {
 }
 
 const colorClasses = {
-  blue: 'bg-blue-100 text-blue-600',
-  green: 'bg-green-100 text-green-600',
-  red: 'bg-red-100 text-red-600',
-  yellow: 'bg-yellow-100 text-yellow-600',
-  purple: 'bg-purple-100 text-purple-600',
-  orange: 'bg-orange-100 text-orange-600',
+  blue: 'bg-brand-subtle text-brand',
+  green: 'bg-success-bg text-success',
+  red: 'bg-danger-bg text-danger',
+  yellow: 'bg-warn-bg text-warn',
+  purple: 'bg-cardHover text-text',
+  orange: 'bg-warn-bg text-warn',
 };
+
+const trendColors = {
+  up: 'text-success',
+  down: 'text-danger',
+  stable: 'text-text-muted',
+} as const;
 
 export default function StatCard({ 
   title, 
@@ -30,23 +35,29 @@ export default function StatCard({
   trend 
 }: StatCardProps) {
   return (
-    <div className="bg-white rounded-lg shadow p-4">
-      <div className="flex items-center justify-between">
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <div className="flex items-center justify-between gap-3">
         <div className="flex-1">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-text-muted">
             {title}
           </p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">
+          <p className="mt-2 text-2xl font-semibold text-text">
             {value}
           </p>
           {subtitle && (
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="mt-1 text-xs text-text-muted">
               {subtitle}
             </p>
           )}
+          {trend && (
+            <span className={`mt-2 inline-flex items-center gap-1 text-xs font-medium ${trendColors[trend]}`}>
+              {trend === 'up' ? '▲' : trend === 'down' ? '▼' : '•'}
+              {trend === 'up' ? 'En ascenso' : trend === 'down' ? 'En descenso' : 'Estable'}
+            </span>
+          )}
         </div>
-        <div className={`rounded-full p-3 ${colorClasses[color]}`}>
-          <Icon className="w-5 h-5" />
+        <div className={`flex h-11 w-11 items-center justify-center rounded-full ${colorClasses[color]}`}>
+          <Icon className="h-5 w-5" />
         </div>
       </div>
     </div>

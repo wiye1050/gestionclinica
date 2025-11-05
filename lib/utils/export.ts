@@ -6,16 +6,17 @@ export interface ExportColumn {
   width?: number;
 }
 
-export function exportToExcel<T extends Record<string, any>>(
+export function exportToExcel<T extends Record<string, unknown>>(
   data: T[],
   columns: ExportColumn[],
   filename: string
 ) {
   // Preparar datos
   const exportData = data.map((row) => {
-    const newRow: Record<string, any> = {};
+    const newRow: Record<string, unknown> = {};
     columns.forEach((col) => {
-      newRow[col.header] = row[col.key] ?? '';
+      const value = (row as Record<string, unknown>)[col.key];
+      newRow[col.header] = value ?? '';
     });
     return newRow;
   });
@@ -33,16 +34,17 @@ export function exportToExcel<T extends Record<string, any>>(
   XLSX.writeFile(wb, `${filename}.xlsx`);
 }
 
-export function exportToCSV<T extends Record<string, any>>(
+export function exportToCSV<T extends Record<string, unknown>>(
   data: T[],
   columns: ExportColumn[],
   filename: string
 ) {
   // Preparar datos
   const exportData = data.map((row) => {
-    const newRow: Record<string, any> = {};
+    const newRow: Record<string, unknown> = {};
     columns.forEach((col) => {
-      newRow[col.header] = row[col.key] ?? '';
+      const value = (row as Record<string, unknown>)[col.key];
+      newRow[col.header] = value ?? '';
     });
     return newRow;
   });

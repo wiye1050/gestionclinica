@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Draggable } from '@hello-pangea/dnd';
 import { 
   Clock, 
@@ -31,7 +31,6 @@ interface AgendaEventCardProps {
   onQuickAction?: (event: AgendaEvent, action: 'confirm' | 'complete' | 'cancel') => void;
   onEdit?: (event: AgendaEvent) => void;
   onDelete?: (event: AgendaEvent) => void;
-  isDragging?: boolean;
   hasConflict?: boolean;
 }
 
@@ -45,7 +44,6 @@ export default function AgendaEventCard({
   onQuickAction,
   onEdit,
   onDelete,
-  isDragging = false,
   hasConflict = false,
 }: AgendaEventCardProps) {
   const [isResizing, setIsResizing] = useState(false);
@@ -99,7 +97,7 @@ export default function AgendaEventCard({
     document.addEventListener('mouseup', handleMouseUp);
   };
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = () => {
     if (!isResizing && onClick) {
       onClick(event);
     }
@@ -170,12 +168,12 @@ export default function AgendaEventCard({
                       {event.titulo}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1 text-gray-700">
+                  <div className="flex items-center gap-1 text-text-muted">
                     <Clock className="w-3 h-3 flex-shrink-0" />
-                    <span className="text-xs text-gray-900">
+                    <span className="text-xs text-text">
                       {formatTimeRange(event.fechaInicio, event.fechaFin)}
                     </span>
-                    <span className="text-xs text-gray-700">
+                    <span className="text-xs text-text-muted">
                       ({formatDuration(event.fechaInicio, event.fechaFin)})
                     </span>
                   </div>
@@ -188,7 +186,7 @@ export default function AgendaEventCard({
               </div>
 
               {/* Info */}
-              <div className="flex-1 space-y-0.5 text-gray-900 min-h-0">
+              <div className="flex-1 space-y-0.5 text-text min-h-0">
                 {event.pacienteNombre && (
                   <div className="flex items-center gap-1 truncate">
                     <User className="w-3 h-3 flex-shrink-0" />
@@ -205,7 +203,7 @@ export default function AgendaEventCard({
 
               {/* Quick Actions */}
               {showActions && (onQuickAction || onEdit || onDelete) && (
-                <div className="flex items-center gap-1 mt-1 pt-1 border-t border-gray-300">
+                <div className="flex items-center gap-1 mt-1 pt-1 border-t border-border">
                   {quickActions.map((action) => (
                     <button
                       key={action.key}
@@ -213,7 +211,7 @@ export default function AgendaEventCard({
                         e.stopPropagation();
                         onQuickAction?.(event, action.key);
                       }}
-                      className="flex items-center gap-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded text-xs text-gray-900 hover:bg-gray-50 transition-colors"
+                      className="flex items-center gap-1 px-1.5 py-0.5 bg-card border border-border rounded text-xs text-text hover:bg-cardHover transition-colors"
                       title={action.label}
                     >
                       {action.icon}
@@ -227,7 +225,7 @@ export default function AgendaEventCard({
                         e.stopPropagation();
                         onEdit(event);
                       }}
-                      className="p-1 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                      className="p-1 bg-card border border-border rounded hover:bg-cardHover transition-colors"
                       title="Editar"
                     >
                       <Edit className="w-3 h-3" />
@@ -240,7 +238,7 @@ export default function AgendaEventCard({
                         e.stopPropagation();
                         onDelete(event);
                       }}
-                      className="p-1 bg-white border border-red-300 rounded hover:bg-red-50 transition-colors text-red-600"
+                      className="p-1 bg-card border border-red-300 rounded hover:bg-red-50 transition-colors text-red-600"
                       title="Eliminar"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -253,7 +251,7 @@ export default function AgendaEventCard({
             {/* Resize handle */}
             {isResizable && event.estado !== 'realizada' && event.estado !== 'cancelada' && (
               <div
-                className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-gray-400 hover:bg-opacity-50 transition-colors"
+                className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-muted hover:bg-opacity-50 transition-colors"
                 onMouseDown={handleResizeStart}
               />
             )}
