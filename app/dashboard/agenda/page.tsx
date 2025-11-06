@@ -480,7 +480,6 @@ function AgendaContent() {
                 onEventResize={handleEventResize}
                 onEventClick={handleEventClick}
                 onQuickAction={handleQuickAction}
-                onCreateEvent={handleCreateEvent}
               />
             )}
 
@@ -493,7 +492,6 @@ function AgendaContent() {
                 onEventResize={handleEventResize}
                 onEventClick={handleEventClick}
                 onQuickAction={handleQuickAction}
-                onCreateEvent={handleCreateEvent}
               />
             )}
           </div>
