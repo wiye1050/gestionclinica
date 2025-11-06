@@ -204,7 +204,7 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
                 </label>
                 <select
                   value={formData.tipo}
-                  onChange={(e) => handleChange('tipo', e.target.value)}
+                  onChange={(e) => handleChange('tipo', e.target.value as TipoProyecto)}
                   className="w-full px-4 py-2 border border-b border-borderorder rounded-lg focus-visible:focus-ring"
                 >
                   <option value="desarrollo">Desarrollo</option>
@@ -222,7 +222,7 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
                 </label>
                 <select
                   value={formData.estado}
-                  onChange={(e) => handleChange('estado', e.target.value)}
+                  onChange={(e) => handleChange('estado', e.target.value as EstadoProyecto)}
                   className="w-full px-4 py-2 border border-b border-borderorder rounded-lg focus-visible:focus-ring"
                 >
                   <option value="propuesta">Propuesta</option>
@@ -242,7 +242,7 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
                 </label>
                 <select
                   value={formData.prioridad}
-                  onChange={(e) => handleChange('prioridad', e.target.value)}
+                  onChange={(e) => handleChange('prioridad', e.target.value as PrioridadProyecto)}
                   className="w-full px-4 py-2 border border-b border-borderorder rounded-lg focus-visible:focus-ring"
                 >
                   <option value="baja">Baja</option>
