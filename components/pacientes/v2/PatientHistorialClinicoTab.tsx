@@ -102,7 +102,7 @@ export default function PatientHistorialClinicoTab({
           {onAddAlergia && (
             <button
               onClick={onAddAlergia}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-danger text-white rounded-2xl hover:opacity-90 transition-colors">
+              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-danger text-white rounded-2xl hover:opacity-90 transition-colors"
             >
               <Plus className="w-4 h-4" />
               Agregar
@@ -169,7 +169,7 @@ export default function PatientHistorialClinicoTab({
           {onAddMedicamento && (
             <button
               onClick={onAddMedicamento}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-accent text-white rounded-2xl hover:opacity-90 transition-colors">
+              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-accent text-white rounded-2xl hover:opacity-90 transition-colors"
             >
               <Plus className="w-4 h-4" />
               Agregar
@@ -233,7 +233,7 @@ export default function PatientHistorialClinicoTab({
           {onAddAntecedente && (
             <button
               onClick={onAddAntecedente}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-brand text-white rounded-2xl hover:opacity-90 transition-colors">
+              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-brand text-white rounded-2xl hover:opacity-90 transition-colors"
             >
               <Plus className="w-4 h-4" />
               Agregar
@@ -293,7 +293,7 @@ export default function PatientHistorialClinicoTab({
           {onAddAntecedente && (
             <button
               onClick={onAddAntecedente}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-success text-white rounded-2xl hover:opacity-90 transition-colors">
+              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-success text-white rounded-2xl hover:opacity-90 transition-colors"
             >
               <Plus className="w-4 h-4" />
               Agregar
@@ -351,7 +351,7 @@ export default function PatientHistorialClinicoTab({
           {onAddVacuna && (
             <button
               onClick={onAddVacuna}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-accent text-white rounded-2xl hover:opacity-90 transition-colors">
+              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-accent text-white rounded-2xl hover:opacity-90 transition-colors"
             >
               <Plus className="w-4 h-4" />
               Agregar

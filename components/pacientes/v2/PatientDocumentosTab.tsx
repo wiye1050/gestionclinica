@@ -193,7 +193,7 @@ export default function PatientDocumentosTab({
           {busqueda && (
             <button
               onClick={() => setBusqueda('')}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-muted hover:text-text">
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-muted hover:text-text"
             >
               <X className="w-4 h-4" />
             </button>
@@ -268,14 +268,14 @@ export default function PatientDocumentosTab({
               <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
                 <button
                   onClick={() => onView?.(doc.id)}
-                  className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-sm text-brand hover:bg-brand-subtle rounded transition-colors">
+                  className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-sm text-brand hover:bg-brand-subtle rounded transition-colors"
                 >
                   <Eye className="w-4 h-4" />
                   Ver
                 </button>
                 <button
                   onClick={() => onDownload?.(doc.id)}
-                  className="flex items-center justify-center gap-1 px-3 py-1.5 text-sm text-text-muted hover:bg-muted rounded transition-colors">
+                  className="flex items-center justify-center gap-1 px-3 py-1.5 text-sm text-text-muted hover:bg-muted rounded transition-colors"
                 >
                   <Download className="w-4 h-4" />
                 </button>
@@ -287,7 +287,7 @@ export default function PatientDocumentosTab({
                 </button>
                 <button
                   onClick={() => onDelete?.(doc.id)}
-                  className="flex items-center justify-center gap-1 px-3 py-1.5 text-sm text-danger hover:bg-danger-bg rounded transition-colors">
+                  className="flex items-center justify-center gap-1 px-3 py-1.5 text-sm text-danger hover:bg-danger-bg rounded transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -300,7 +300,7 @@ export default function PatientDocumentosTab({
           {documentosFiltrados.map((doc) => (
             <div
               key={doc.id}
-              className="p-4 hover:bg-cardHover transition-colors">
+              className="p-4 hover:bg-cardHover transition-colors"
             >
               <div className="flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-lg ${getColorClass(getColorTipo(doc.tipo))} flex items-center justify-center flex-shrink-0`}>
