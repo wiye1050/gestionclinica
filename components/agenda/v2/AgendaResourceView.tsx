@@ -33,7 +33,6 @@ interface AgendaResourceViewProps {
   onQuickAction?: (event: AgendaEvent, action: 'confirm' | 'complete' | 'cancel') => void;
   onEdit?: (event: AgendaEvent) => void;
   onDelete?: (event: AgendaEvent) => void;
-  onCreateEvent?: (date: Date, resourceId?: string) => void;
 }
 
 export default function AgendaResourceView({
@@ -46,7 +45,6 @@ export default function AgendaResourceView({
   onQuickAction,
   onEdit,
   onDelete,
-  onCreateEvent,
 }: AgendaResourceViewProps) {
   const dayEvents = useMemo(() => getEventsForDay(events, day), [events, day]);
 

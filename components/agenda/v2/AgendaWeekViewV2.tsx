@@ -24,7 +24,6 @@ interface AgendaWeekViewV2Props {
   onQuickAction?: (event: AgendaEvent, action: 'confirm' | 'complete' | 'cancel') => void;
   onEdit?: (event: AgendaEvent) => void;
   onDelete?: (event: AgendaEvent) => void;
-  onCreateEvent?: (date: Date, resourceId?: string) => void;
 }
 
 export default function AgendaWeekViewV2({
@@ -36,7 +35,6 @@ export default function AgendaWeekViewV2({
   onQuickAction,
   onEdit,
   onDelete,
-  onCreateEvent,
 }: AgendaWeekViewV2Props) {
   // Días de la semana
   const weekDays = useMemo(

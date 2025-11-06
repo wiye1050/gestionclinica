@@ -6,7 +6,12 @@ import { Proyecto, TipoProyecto, EstadoProyecto, PrioridadProyecto } from '@/typ
 import { X, Save, Tag, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 
-type ProyectoDraft = Omit<Proyecto, 'id'> & { id?: string };
+type ProyectoDraft = Omit<Proyecto, 'id' | 'createdAt' | 'updatedAt' | 'creadoPor'> & { 
+  id?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  creadoPor?: string;
+};
 
 type FormValues = {
   nombre: string;
