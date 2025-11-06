@@ -81,17 +81,60 @@ export interface Actividad {
 }
 
 // ============================================
+// TIPOS PARA DATOS DE FIREBASE
+// ============================================
+
+interface FirebaseTimestamp {
+  toDate(): Date;
+}
+
+interface HistorialFirebase {
+  id: string;
+  pacienteId: string;
+  tipo: string;
+  fecha: FirebaseTimestamp | Date;
+  horaInicio?: string;
+  horaFin?: string;
+  profesionalId?: string;
+  profesionalNombre?: string;
+  servicioId?: string;
+  servicioNombre?: string;
+  descripcion?: string;
+  resultado?: string;
+  planesSeguimiento?: string;
+}
+
+interface ServicioFirebase {
+  id: string;
+  grupoId: string;
+  catalogoServicioNombre: string;
+  profesionalPrincipalId: string;
+  profesionalPrincipalNombre?: string;
+  estado: 'activo' | 'pausado' | 'completado';
+  createdAt: FirebaseTimestamp | Date;
+  fechaFin?: FirebaseTimestamp | Date;
+  vecesRealizadoMes?: number;
+  ultimaRealizacion?: FirebaseTimestamp | Date;
+  proximaRealizacion?: FirebaseTimestamp | Date;
+  notas?: string;
+}
+
+// ============================================
 // FUNCIONES DE MAPEO
 // ============================================
 
 // Mapea registros de historial a citas
-export function mapHistorialToCita(historial: any): Cita | null {
+export function mapHistorialToCita(historial: HistorialFirebase): Cita | null {
   if (historial.tipo !== 'consulta') return null;
+
+  const fecha = historial.fecha instanceof Date
+    ? historial.fecha
+    : historial.fecha.toDate();
 
   return {
     id: historial.id,
     pacienteId: historial.pacienteId,
-    fecha: historial.fecha.toDate ? historial.fecha.toDate() : new Date(historial.fecha),
+    fecha,
     horaInicio: historial.horaInicio || '09:00',
     horaFin: historial.horaFin || '10:00',
     tipo: 'consulta',
@@ -105,7 +148,23 @@ export function mapHistorialToCita(historial: any): Cita | null {
 }
 
 // Mapea servicios asignados a tratamientos
-export function mapServicioToTratamiento(servicio: any, pacienteId: string): Tratamiento {
+export function mapServicioToTratamiento(servicio: ServicioFirebase, pacienteId: string): Tratamiento {
+  const fechaInicio = servicio.createdAt instanceof Date
+    ? servicio.createdAt
+    : servicio.createdAt.toDate();
+
+  const fechaFin = servicio.fechaFin
+    ? (servicio.fechaFin instanceof Date ? servicio.fechaFin : servicio.fechaFin.toDate())
+    : undefined;
+
+  const ultimaRealizacion = servicio.ultimaRealizacion
+    ? (servicio.ultimaRealizacion instanceof Date ? servicio.ultimaRealizacion : servicio.ultimaRealizacion.toDate())
+    : undefined;
+
+  const proximaRealizacion = servicio.proximaRealizacion
+    ? (servicio.proximaRealizacion instanceof Date ? servicio.proximaRealizacion : servicio.proximaRealizacion.toDate())
+    : undefined;
+
   return {
     id: servicio.id,
     pacienteId,
@@ -114,18 +173,20 @@ export function mapServicioToTratamiento(servicio: any, pacienteId: string): Tra
     profesionalId: servicio.profesionalPrincipalId,
     profesionalNombre: servicio.profesionalPrincipalNombre || 'Sin asignar',
     estado: servicio.estado,
-    fechaInicio: servicio.createdAt.toDate ? servicio.createdAt.toDate() : new Date(servicio.createdAt),
-    fechaFin: servicio.fechaFin ? (servicio.fechaFin.toDate ? servicio.fechaFin.toDate() : new Date(servicio.fechaFin)) : undefined,
+    fechaInicio,
+    fechaFin,
     vecesRealizadoMes: servicio.vecesRealizadoMes || 0,
-    ultimaRealizacion: servicio.ultimaRealizacion ? (servicio.ultimaRealizacion.toDate ? servicio.ultimaRealizacion.toDate() : new Date(servicio.ultimaRealizacion)) : undefined,
-    proximaRealizacion: servicio.proximaRealizacion ? (servicio.proximaRealizacion.toDate ? servicio.proximaRealizacion.toDate() : new Date(servicio.proximaRealizacion)) : undefined,
+    ultimaRealizacion,
+    proximaRealizacion,
     notas: servicio.notas,
   };
 }
 
 // Mapea registros de historial a actividades
-export function mapHistorialToActividad(historial: any): Actividad {
-  const fecha = historial.fecha.toDate ? historial.fecha.toDate() : new Date(historial.fecha);
+export function mapHistorialToActividad(historial: HistorialFirebase): Actividad {
+  const fecha = historial.fecha instanceof Date
+    ? historial.fecha
+    : historial.fecha.toDate();
 
   let icono = 'FileText';
   let color = 'blue';
@@ -163,13 +224,17 @@ export function mapHistorialToActividad(historial: any): Actividad {
 }
 
 // Mapea registros de historial a notas
-export function mapHistorialToNota(historial: any): Nota | null {
+export function mapHistorialToNota(historial: HistorialFirebase): Nota | null {
   if (!historial.descripcion && !historial.resultado) return null;
+
+  const fecha = historial.fecha instanceof Date
+    ? historial.fecha
+    : historial.fecha.toDate();
 
   return {
     id: historial.id,
     pacienteId: historial.pacienteId,
-    fecha: historial.fecha.toDate ? historial.fecha.toDate() : new Date(historial.fecha),
+    fecha,
     titulo: `Nota de ${historial.tipo}`,
     contenido: [historial.descripcion, historial.resultado, historial.planesSeguimiento]
       .filter(Boolean)

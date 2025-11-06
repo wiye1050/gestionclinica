@@ -25,6 +25,12 @@ import {
   mapHistorialToNota,
 } from '@/types/paciente-v2';
 
+interface ConsentimientoFirebase {
+  tipo: string;
+  fecha: Timestamp | Date;
+  aceptado: boolean;
+}
+
 interface UsePacienteV2Return {
   paciente: Paciente | null;
   profesionalReferente: Profesional | null;
@@ -42,6 +48,7 @@ export function usePacienteV2(pacienteId: string): UsePacienteV2Return {
   const [profesionalReferente, setProfesionalReferente] = useState<Profesional | null>(null);
   const [citas, setCitas] = useState<Cita[]>([]);
   const [tratamientos, setTratamientos] = useState<Tratamiento[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [notas, setNotas] = useState<Nota[]>([]);
   const [actividades, setActividades] = useState<Actividad[]>([]);
@@ -78,9 +85,9 @@ export function usePacienteV2(pacienteId: string): UsePacienteV2Return {
           fechaNacimiento: (pacienteDoc.data().fechaNacimiento as Timestamp)?.toDate?.() || new Date(),
           createdAt: (pacienteDoc.data().createdAt as Timestamp)?.toDate?.() || new Date(),
           updatedAt: (pacienteDoc.data().updatedAt as Timestamp)?.toDate?.() || new Date(),
-          consentimientos: (pacienteDoc.data().consentimientos || []).map((c: any) => ({
+          consentimientos: (pacienteDoc.data().consentimientos || []).map((c: ConsentimientoFirebase) => ({
             ...c,
-            fecha: c.fecha?.toDate?.() || new Date(),
+            fecha: c.fecha instanceof Date ? c.fecha : (c.fecha?.toDate?.() || new Date()),
           })),
           alergias: pacienteDoc.data().alergias || [],
           alertasClinicas: pacienteDoc.data().alertasClinicas || [],
@@ -115,10 +122,24 @@ export function usePacienteV2(pacienteId: string): UsePacienteV2Return {
         unsubscribeHistorial = onSnapshot(
           historialQuery,
           (snapshot) => {
-            const historialDocs = snapshot.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data(),
-            }));
+            const historialDocs = snapshot.docs.map((doc) => {
+              const data = doc.data();
+              return {
+                id: doc.id,
+                pacienteId: data.pacienteId,
+                tipo: data.tipo,
+                fecha: data.fecha,
+                horaInicio: data.horaInicio,
+                horaFin: data.horaFin,
+                profesionalId: data.profesionalId,
+                profesionalNombre: data.profesionalNombre,
+                servicioId: data.servicioId,
+                servicioNombre: data.servicioNombre,
+                descripcion: data.descripcion,
+                resultado: data.resultado,
+                planesSeguimiento: data.planesSeguimiento,
+              };
+            });
 
             // Mapear a citas
             const citasMapped = historialDocs
@@ -151,10 +172,23 @@ export function usePacienteV2(pacienteId: string): UsePacienteV2Return {
           unsubscribeServicios = onSnapshot(
             serviciosQuery,
             (snapshot) => {
-              const serviciosDocs = snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-              }));
+              const serviciosDocs = snapshot.docs.map((doc) => {
+                const data = doc.data();
+                return {
+                  id: doc.id,
+                  grupoId: data.grupoId,
+                  catalogoServicioNombre: data.catalogoServicioNombre,
+                  profesionalPrincipalId: data.profesionalPrincipalId,
+                  profesionalPrincipalNombre: data.profesionalPrincipalNombre,
+                  estado: data.estado,
+                  createdAt: data.createdAt,
+                  fechaFin: data.fechaFin,
+                  vecesRealizadoMes: data.vecesRealizadoMes,
+                  ultimaRealizacion: data.ultimaRealizacion,
+                  proximaRealizacion: data.proximaRealizacion,
+                  notas: data.notas,
+                };
+              });
 
               const tratamientosMapped = serviciosDocs.map((s) =>
                 mapServicioToTratamiento(s, pacienteId)

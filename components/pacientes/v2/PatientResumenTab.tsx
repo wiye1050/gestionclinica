@@ -22,7 +22,7 @@ interface PatientResumenTabProps {
 
 export default function PatientResumenTab({
   paciente,
-  profesionalReferente,
+  profesionalReferente: _profesionalReferente,
   proximasCitas,
   tratamientosActivos,
   estadisticas,
