@@ -17,7 +17,9 @@ export function lazyLoad<P extends Record<string, unknown>>(
     </Suspense>
   );
 
-  LazyWrapper.displayName = `LazyLoaded(${LazyComponent.displayName ?? LazyComponent.name ?? 'Component'})`;
+  const lazyMeta = LazyComponent as unknown as { displayName?: string; name?: string };
+  const componentName = lazyMeta.displayName ?? lazyMeta.name ?? 'Component';
+  (LazyWrapper as typeof LazyWrapper & { displayName?: string }).displayName = `LazyLoaded(${componentName})`;
 
   return LazyWrapper;
 }
@@ -45,7 +47,9 @@ export function lazyLoadPage<P extends Record<string, unknown>>(
     </Suspense>
   );
 
-  LazyWrapper.displayName = `LazyLoadedPage(${LazyComponent.displayName ?? LazyComponent.name ?? 'Component'})`;
+  const lazyPageMeta = LazyComponent as unknown as { displayName?: string; name?: string };
+  const pageName = lazyPageMeta.displayName ?? lazyPageMeta.name ?? 'Component';
+  (LazyWrapper as typeof LazyWrapper & { displayName?: string }).displayName = `LazyLoadedPage(${pageName})`;
 
   return LazyWrapper;
 }
