@@ -4,12 +4,18 @@
 // TIPOS DE USUARIO Y AUTENTICACIÓN
 // ============================================
 
+export type UserRole = 'admin' | 'coordinador' | 'profesional' | 'usuario';
+
 export interface User {
   uid: string;
   email: string;
   displayName?: string;
-  role?: 'admin' | 'coordinador' | 'profesional' | 'usuario';
+  role: UserRole;
+  permisos?: string[];
+  profesionalId?: string; // Si es profesional, referencia a su ficha
+  activo: boolean;
   createdAt?: Date;
+  updatedAt?: Date;
 }
 
 // ============================================
@@ -117,6 +123,7 @@ export interface CatalogoServicio {
   nombre: string;
   categoria: 'medicina' | 'fisioterapia' | 'enfermeria';
   descripcion?: string;
+  protocolosRequeridos?: string[];
   
   // Configuración del servicio
   tiempoEstimado: number;
@@ -437,6 +444,130 @@ export interface ProductoInventario {
   modificadoPor?: string;
 }
 
+// ============================================
+// TIPOS PARA PROTOCOLOS CLÍNICOS
+// ============================================
+
+export type ProtocolArea = 'medicina' | 'fisioterapia' | 'enfermeria' | 'administracion' | 'marketing' | 'operaciones';
+export type ProtocolStatus = 'borrador' | 'revision' | 'publicado' | 'retirado';
+
+export interface Protocolo {
+  id: string;
+  titulo: string;
+  area: ProtocolArea;
+  estado: ProtocolStatus;
+  descripcion?: string;
+  ultimaVersionId?: string;
+  requiereQuiz: boolean;
+  visiblePara: Array<'admin' | 'coordinacion' | 'terapeuta' | 'admin_ops' | 'marketing' | 'invitado'>;
+  checklistBasica?: string[];
+  creadoPor: string;
+  creadoPorNombre?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  modificadoPor?: string;
+}
+
+export interface ProtocoloVersion {
+  id: string;
+  protocoloId: string;
+  version: number;
+  titulo: string;
+  contenido: string;
+  checklist: Array<{ item: string; requerido: boolean }>;
+  guionComunicacion?: string;
+  anexos?: Array<{ nombre: string; url: string }>;
+  quiz?: {
+    preguntas: Array<{ pregunta: string; opciones: string[]; respuestaCorrecta: number }>;
+  };
+  codigoQrUrl?: string;
+  aprobado: boolean;
+  aprobadoPorUid?: string;
+  aprobadoPorNombre?: string;
+  aprobadoEn?: Date;
+  createdAt: Date;
+  createdPor: string;
+}
+
+export interface ProtocoloLectura {
+  id: string;
+  protocoloId: string;
+  version: number;
+  usuarioUid: string;
+  usuarioNombre?: string;
+  resultadoQuiz?: number;
+  aprobadoQuiz?: boolean;
+  checklistConfirmada: boolean;
+  leidoEn: Date;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  actorUid: string;
+  actorNombre?: string;
+  modulo: 'protocolos' | 'mejoras' | 'agenda' | 'pacientes' | string;
+  accion: string;
+  entidadId: string;
+  entidadTipo?: string;
+  rutaDetalle?: string;
+  resumen?: string;
+  detalles?: Record<string, unknown>;
+  createdAt: Date;
+}
+
+// ============================================
+// TIPOS PARA MEJORAS CONTINUAS
+// ============================================
+
+export type MejoraEstado = 'idea' | 'en-analisis' | 'planificada' | 'en-progreso' | 'completada';
+export type MejoraArea = 'salas' | 'equipos' | 'procedimientos' | 'software' | 'comunicacion' | 'otro';
+
+export interface MejoraRICE {
+  reach: number;
+  impact: number;
+  confidence: number;
+  effort: number;
+  score: number;
+}
+
+export interface Mejora {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  area: MejoraArea;
+  estado: MejoraEstado;
+  responsableUid?: string;
+  responsableNombre?: string;
+  rice: MejoraRICE;
+  evidenciasCount: number;
+  creadoPor: string;
+  creadoPorNombre?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MejoraEvidencia {
+  id: string;
+  mejoraId: string;
+  autorUid: string;
+  autorNombre?: string;
+  tipo: 'imagen' | 'documento' | 'enlace' | 'texto';
+  url?: string;
+  descripcion?: string;
+  createdAt: Date;
+}
+
+export interface MejoraTarea {
+  id: string;
+  mejoraId: string;
+  titulo: string;
+  estado: 'pendiente' | 'en-curso' | 'hecho';
+  responsableUid?: string;
+  dueDate?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Proveedor {
   id: string;
   nombre: string;
@@ -489,4 +620,164 @@ export interface EstadisticasInventario {
     salidas: number;
     ajustes: number;
   };
+}
+
+// ============================================
+// TIPOS PARA PACIENTES
+// ============================================
+
+export type GeneroPaciente = 'masculino' | 'femenino' | 'otro' | 'no-especificado';
+export type EstadoPaciente = 'activo' | 'inactivo' | 'egresado';
+
+export interface ContactoEmergencia {
+  nombre: string;
+  parentesco: string;
+  telefono: string;
+}
+
+export interface ConsentimientoPaciente {
+  tipo: string;
+  fecha: Date;
+  documentoId?: string;
+  firmadoPor?: string;
+}
+
+export interface Paciente {
+  id: string;
+  nombre: string;
+  apellidos: string;
+  fechaNacimiento: Date;
+  genero: GeneroPaciente;
+  documentoId?: string;
+  tipoDocumento?: string;
+  
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  ciudad?: string;
+  codigoPostal?: string;
+  
+  aseguradora?: string;
+  numeroPoliza?: string;
+  
+  alergias: string[];
+  alertasClinicas: string[];
+  diagnosticosPrincipales: string[];
+  riesgo: 'alto' | 'medio' | 'bajo';
+  
+  contactoEmergencia?: ContactoEmergencia;
+  consentimientos: ConsentimientoPaciente[];
+  
+  estado: EstadoPaciente;
+  profesionalReferenteId?: string;
+  grupoPacienteId?: string;
+  
+  notasInternas?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  creadoPor: string;
+  modificadoPor?: string;
+}
+
+export interface RegistroHistorialPaciente {
+  id: string;
+  pacienteId: string;
+  eventoAgendaId?: string;
+  servicioId?: string;
+  servicioNombre?: string;
+  profesionalId?: string;
+  profesionalNombre?: string;
+  fecha: Date;
+  tipo: 'consulta' | 'tratamiento' | 'seguimiento' | 'incidencia';
+  descripcion: string;
+  resultado?: string;
+  planesSeguimiento?: string;
+  adjuntos?: string[];
+  createdAt: Date;
+  creadoPor: string;
+}
+
+// ============================================
+// TIPOS PARA AGENDA Y SALAS
+// ============================================
+
+export type EstadoEventoAgenda = 'programada' | 'confirmada' | 'realizada' | 'cancelada';
+export type TipoEventoAgenda = 'clinico' | 'coordinacion' | 'reunion';
+
+export interface EventoAgenda {
+  id: string;
+  titulo: string;
+  tipo: TipoEventoAgenda;
+  pacienteId?: string;
+  grupoPacienteId?: string;
+  profesionalId: string;
+  salaId?: string;
+  servicioId?: string;
+  fechaInicio: Date;
+  fechaFin: Date;
+  duracion: number;
+  estado: EstadoEventoAgenda;
+  prioridad?: 'alta' | 'media' | 'baja';
+  motivo?: string;
+  notas?: string;
+  requiereSeguimiento?: boolean;
+  recordatoriosEnviados?: Array<{ tipo: 'email' | 'sms'; fecha: Date }>;
+  creadoPor: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BloqueAgenda {
+  id: string;
+  profesionalId: string;
+  salaId?: string;
+  diaSemana: number; // 0-6
+  horaInicio: string;
+  horaFin: string;
+  tipo: 'disponible' | 'bloqueado' | 'descanso';
+  vigenciaInicio: Date;
+  vigenciaFin?: Date;
+  motivo?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SalaClinica {
+  id: string;
+  nombre: string;
+  tipo: 'consulta' | 'quirurgica' | 'rehabilitacion' | 'diagnostico' | 'general';
+  capacidad: number;
+  equipamiento: string[];
+  estado: 'activa' | 'mantenimiento' | 'inactiva';
+  colorAgenda?: string;
+  notas?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  modificadoPor?: string;
+}
+
+// ============================================
+// TIPOS PARA NOTIFICACIONES
+// ============================================
+
+export type TipoNotificacion = 'seguimiento' | 'stock' | 'incidencia' | 'protocolo' | 'mejora' | 'agenda' | 'sistema';
+export type PrioridadNotificacion = 'alta' | 'media' | 'baja';
+
+export interface Notificacion {
+  id: string;
+  tipo: TipoNotificacion;
+  prioridad: PrioridadNotificacion;
+  titulo: string;
+  mensaje: string;
+  leida: boolean;
+  
+  // Enlaces
+  url?: string;
+  entidadId?: string;
+  entidadTipo?: string;
+  
+  // Metadata
+  destinatarioUid: string;
+  createdAt: Date;
+  leidaEn?: Date;
 }

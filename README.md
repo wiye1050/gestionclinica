@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Gestión Clínica – Resumen
 
-## Getting Started
+Aplicación operativa para coordinación de una clínica, desarrollada con **Next.js 15 + TypeScript + Firebase**.
 
-First, run the development server:
+### Módulos principales
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Autenticación** (email/password) y layout protegido (`app/dashboard`).
+- **Pacientes**: listado filtrable, alta con validaciones (`react-hook-form` + `zod`) y ficha clínica con alertas, historial y consentimientos (`app/dashboard/pacientes`). Los filtros de seguimiento y profesional se recuerdan en `localStorage` para cada usuario.
+  - Desde la pestaña Historial se puede exportar el timeline filtrado a Excel o PDF y generar un correo con enlace seguro.
+- **Agenda clínica**: vista semanal con disponibilidad por profesional/sala, creación de eventos vinculados a pacientes y acciones rápidas (confirmar, realizar, cancelar). Sincroniza con `pacientes-historial`.
+- **Servicios y tratamientos**: catálogos, asignaciones y estadísticas existentes. Cada servicio puede declarar protocolos obligatorios; en la ficha del paciente se listan automáticamente los protocolos requeridos por los servicios de su grupo para verificar lecturas pendientes.
+- **KPIs**: panel actualizado con métricas de agenda (citas programadas, confirmadas, canceladas) y operaciones.
+- **Calidad e informes**: reportes diarios, supervisión y generación de PDF mensual.
+- **Auditoría**: vista dedicada que toma los últimos eventos de `auditLogs`, con métricas rápidas, filtros por módulo y búsqueda libre para rastrear acciones recientes.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Scripts útiles
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `npm run dev` – desarrollo con Turbopack.
+- `npm run build` / `npm run start` – compilación y servidor de producción.
+- `npm run typecheck` – verificación estricta de tipos.
+- `npm run lint` – linting.
+- `npm run seed:servicios` – carga de datos iniciales en Firestore (servicios, profesionales, etc.).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Integraciones Firebase
 
-## Learn More
+- Firestore: colecciones `pacientes`, `pacientes-historial`, `agenda-eventos`, `agenda-bloques`, `servicios-asignados`, etc.
+- Autenticación: `firebase/auth` y hook `useAuth`.
+- Reglas recomendadas en `docs/firestore-security.md` (roles `coordinacion`, `direccion`, `profesional`).
+- Limpieza recomendada: eliminar periódicamente los PDFs compartidos (`patient-history/`) cuya metadata `expiresAt` haya pasado y actualizar el historial asociado.
+  - Puedes apoyarte en `scripts/purge-expired-history.ts` como punto de partida para automatizarlo (Cloud Function o cron).
 
-To learn more about Next.js, take a look at the following resources:
+### Boostrappers & UI
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `lucide-react`, `tailwindcss` (v4), `react-hook-form`, `zod`, `sonner` (toasts), `recharts`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+> Consulta `docs/firestore-security.md` antes de desplegar para adaptar las reglas a tu proyecto.
 
-## Deploy on Vercel
+## Despliegue
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+El despliegue recomendado es vía [Vercel](https://vercel.com/). Asegúrate de configurar las variables `NEXT_PUBLIC_FIREBASE_*` y reglas de Firestore antes de publicar.

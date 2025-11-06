@@ -163,24 +163,28 @@ export default function ProfesionalesPage() {
 
   const getColorEspecialidad = (especialidad: string) => {
     switch (especialidad) {
-      case 'medicina': return 'bg-blue-100 text-blue-800';
-      case 'fisioterapia': return 'bg-green-100 text-green-800';
-      case 'enfermeria': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'medicina':
+        return 'bg-brand-subtle text-brand';
+      case 'fisioterapia':
+        return 'bg-success-bg text-success';
+      case 'enfermeria':
+        return 'bg-warn-bg text-warn';
+      default:
+        return 'bg-cardHover text-text-muted';
     }
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-border bg-card px-6 py-5 shadow-sm">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Profesionales</h1>
-          <p className="text-gray-600 mt-1">Gestión del equipo profesional de la clínica</p>
+          <h1 className="text-2xl font-semibold text-text">Profesionales</h1>
+          <p className="mt-1 text-sm text-text-muted">Gestión del equipo profesional de la clínica.</p>
         </div>
         <button
           onClick={() => setMostrarFormulario(!mostrarFormulario)}
-          className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="inline-flex items-center gap-2 rounded-pill bg-brand px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand/90 focus-visible:focus-ring"
         >
           <Plus className="w-5 h-5" />
           <span>Nuevo Profesional</span>
@@ -188,68 +192,68 @@ export default function ProfesionalesPage() {
       </div>
 
       {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="flex items-center space-x-2">
-            <UserCheck className="w-5 h-5 text-gray-600" />
-            <p className="text-sm text-gray-600">Total</p>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <div className="flex items-center gap-2">
+            <UserCheck className="h-5 w-5 text-brand" />
+            <p className="text-sm text-text-muted">Total</p>
           </div>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
+          <p className="mt-2 text-2xl font-semibold text-text">{stats.total}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-600">Activos</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">{stats.activos}</p>
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-sm text-text-muted">Activos</p>
+          <p className="mt-2 text-2xl font-semibold text-success">{stats.activos}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-600">Medicina</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">{stats.medicina}</p>
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-sm text-text-muted">Medicina</p>
+          <p className="mt-2 text-2xl font-semibold text-brand">{stats.medicina}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-600">Fisioterapia</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">{stats.fisioterapia}</p>
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-sm text-text-muted">Fisioterapia</p>
+          <p className="mt-2 text-2xl font-semibold text-success">{stats.fisioterapia}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-600">Enfermería</p>
-          <p className="text-2xl font-bold text-purple-600 mt-1">{stats.enfermeria}</p>
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-sm text-text-muted">Enfermería</p>
+          <p className="mt-2 text-2xl font-semibold text-warn">{stats.enfermeria}</p>
         </div>
       </div>
 
       {/* Formulario */}
       {mostrarFormulario && (
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">
+        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+          <h2 className="mb-4 text-xl font-semibold text-text">
             {editandoId ? 'Editar Profesional' : 'Nuevo Profesional'}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                <label className="block text-sm font-medium text-text mb-1">Nombre *</label>
                 <input
                   type="text"
                   value={formData.nombre}
                   onChange={(e) => setFormData({...formData, nombre: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Apellidos *</label>
+                <label className="block text-sm font-medium text-text mb-1">Apellidos *</label>
                 <input
                   type="text"
                   value={formData.apellidos}
                   onChange={(e) => setFormData({...formData, apellidos: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Especialidad *</label>
+                <label className="block text-sm font-medium text-text mb-1">Especialidad *</label>
                 <select
                   value={formData.especialidad}
                   onChange={(e) => setFormData({...formData, especialidad: e.target.value as any})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
                   required
                 >
                   <option value="medicina">Medicina</option>
@@ -259,71 +263,71 @@ export default function ProfesionalesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                <label className="block text-sm font-medium text-text mb-1">Email *</label>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                <label className="block text-sm font-medium text-text mb-1">Teléfono</label>
                 <input
                   type="tel"
                   value={formData.telefono}
                   onChange={(e) => setFormData({...formData, telefono: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Horas Semanales</label>
+                <label className="block text-sm font-medium text-text mb-1">Horas Semanales</label>
                 <input
                   type="number"
                   value={formData.horasSemanales}
                   onChange={(e) => setFormData({...formData, horasSemanales: parseInt(e.target.value)})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
                   min="0"
                   max="168"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Hora Inicio</label>
+                <label className="block text-sm font-medium text-text mb-1">Hora Inicio</label>
                 <input
                   type="time"
                   value={formData.horaInicio}
                   onChange={(e) => setFormData({...formData, horaInicio: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Hora Fin</label>
+                <label className="block text-sm font-medium text-text mb-1">Hora Fin</label>
                 <input
                   type="time"
                   value={formData.horaFin}
                   onChange={(e) => setFormData({...formData, horaFin: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Días de Trabajo</label>
+              <label className="block text-sm font-medium text-text mb-2">Días de Trabajo</label>
               <div className="flex flex-wrap gap-2">
                 {diasSemana.map(dia => (
                   <button
                     key={dia}
                     type="button"
                     onClick={() => toggleDia(dia)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    className={`rounded-pill px-4 py-2 text-sm font-medium transition-colors focus-visible:focus-ring ${
                       formData.diasTrabajo.includes(dia)
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        ? 'bg-brand text-white hover:bg-brand/90'
+                        : 'border border-border bg-card text-text hover:bg-cardHover'
                     }`}
                   >
                     {dia.charAt(0).toUpperCase() + dia.slice(1)}
@@ -332,21 +336,21 @@ export default function ProfesionalesPage() {
               </div>
             </div>
 
-            <div className="flex items-center">
+            <div className="flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2">
               <input
                 type="checkbox"
                 id="activo"
                 checked={formData.activo}
                 onChange={(e) => setFormData({...formData, activo: e.target.checked})}
-                className="w-4 h-4 mr-2"
+                className="h-4 w-4 rounded border-border accent-brand"
               />
-              <label htmlFor="activo" className="text-sm text-gray-700">Profesional activo</label>
+              <label htmlFor="activo" className="text-sm text-text">Profesional activo</label>
             </div>
 
-            <div className="flex space-x-3">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 type="submit"
-                className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+                className="inline-flex items-center gap-2 rounded-pill bg-brand px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand/90 focus-visible:focus-ring"
               >
                 <Save className="w-4 h-4" />
                 <span>{editandoId ? 'Actualizar' : 'Crear'} Profesional</span>
@@ -354,7 +358,7 @@ export default function ProfesionalesPage() {
               <button
                 type="button"
                 onClick={resetForm}
-                className="flex items-center space-x-2 bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300"
+                className="inline-flex items-center gap-2 rounded-pill border border-border bg-card px-5 py-2 text-sm font-medium text-text hover:bg-cardHover focus-visible:focus-ring"
               >
                 <X className="w-4 h-4" />
                 <span>Cancelar</span>
@@ -365,13 +369,13 @@ export default function ProfesionalesPage() {
       )}
 
       {/* Filtros */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <div className="flex items-center space-x-4">
-          <span className="text-sm font-medium text-gray-700">Filtrar por especialidad:</span>
+      <div className="rounded-3xl border border-border bg-card p-4 shadow-sm">
+        <div className="flex flex-wrap items-center gap-4">
+          <span className="text-sm font-medium text-text">Filtrar por especialidad:</span>
           <select
             value={filtroEspecialidad}
             onChange={(e) => setFiltroEspecialidad(e.target.value)}
-            className="px-3 py-1 border border-gray-300 rounded-lg text-sm"
+            className="rounded-pill border border-border bg-card px-3 py-1 text-sm text-text focus-visible:focus-ring"
           >
             <option value="todos">Todas</option>
             <option value="medicina">Medicina</option>
@@ -382,39 +386,39 @@ export default function ProfesionalesPage() {
       </div>
 
       {/* Lista de Profesionales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {profesionalesFiltrados.length === 0 ? (
-          <div className="col-span-full bg-white p-8 rounded-lg shadow text-center">
-            <p className="text-gray-500">No hay profesionales registrados</p>
+          <div className="col-span-full rounded-3xl border border-border bg-card p-8 text-center shadow-sm">
+            <p className="text-text-muted">No hay profesionales registrados.</p>
           </div>
         ) : (
           profesionalesFiltrados.map((prof) => (
             <div
               key={prof.id}
-              className={`bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow ${
+              className={`rounded-3xl border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md ${
                 !prof.activo ? 'opacity-60' : ''
               }`}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-lg font-semibold text-text">
                     {prof.nombre} {prof.apellidos}
                   </h3>
                   <span className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-medium ${getColorEspecialidad(prof.especialidad)}`}>
                     {prof.especialidad.charAt(0).toUpperCase() + prof.especialidad.slice(1)}
                   </span>
                 </div>
-                <div className="flex space-x-2">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => iniciarEdicion(prof)}
-                    className="text-blue-600 hover:text-blue-800"
+                    className="text-brand transition-colors hover:text-brand/80"
                     title="Editar"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => eliminarProfesional(prof.id)}
-                    className="text-red-600 hover:text-red-800"
+                    className="text-danger transition-colors hover:text-danger/80"
                     title="Eliminar"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -422,33 +426,33 @@ export default function ProfesionalesPage() {
                 </div>
               </div>
 
-              <div className="space-y-2 text-sm text-gray-600">
-                <div className="flex items-center space-x-2">
+              <div className="space-y-2 text-sm text-text-muted">
+                <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4" />
                   <span>{prof.email}</span>
                 </div>
                 {prof.telefono && (
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2">
                     <Phone className="w-4 h-4" />
                     <span>{prof.telefono}</span>
                   </div>
                 )}
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4" />
                   <span>{prof.horaInicio} - {prof.horaFin}</span>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
                   <span>{prof.horasSemanales}h/semana</span>
                 </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="mt-4 pt-4 border-t border-border">
                 <div className="flex flex-wrap gap-1">
                   {prof.diasTrabajo.map(dia => (
                     <span
                       key={dia}
-                      className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs"
+                      className="rounded-full bg-brand-subtle px-2 py-1 text-xs font-medium text-brand"
                     >
                       {dia.slice(0, 3).toUpperCase()}
                     </span>
@@ -459,10 +463,10 @@ export default function ProfesionalesPage() {
               <div className="mt-4">
                 <button
                   onClick={() => toggleActivo(prof.id, prof.activo)}
-                  className={`w-full px-4 py-2 rounded-lg text-sm font-medium ${
+                  className={`w-full rounded-pill px-4 py-2 text-sm font-medium transition-colors focus-visible:focus-ring ${
                     prof.activo
-                      ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-success-bg text-success hover:bg-success-bg'
+                      : 'border border-border bg-card text-text hover:bg-cardHover'
                   }`}
                 >
                   {prof.activo ? 'Activo' : 'Inactivo'}

@@ -1,185 +1,384 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Mail, Cloud, BarChart3, Wrench, AlertTriangle, Package, ExternalLink, TrendingUp } from 'lucide-react';
-import { collection, getCountFromServer, query, where } from 'firebase/firestore';
+import { useKPIs } from '@/lib/hooks/useQueries';
+import {
+  Mail,
+  BarChart3,
+  Wrench,
+  AlertTriangle,
+  Package,
+  ExternalLink,
+  ArrowRight,
+  BookOpen,
+  Sun,
+  Moon,
+  Activity,
+  TrendingUp,
+  CalendarDays
+} from 'lucide-react';
 
-export default function DashboardPage() {
-  const [stats, setStats] = useState({
-    serviciosActivos: 0,
-    incidenciasPendientes: 0,
-    productosStockBajo: 0,
-  });
-  const [loading, setLoading] = useState(true);
+// Skeleton para loading
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="h-48 bg-gray-200 rounded-2xl"></div>
+      <div className="grid grid-cols-3 gap-5">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-32 bg-gray-200 rounded-xl"></div>
+        ))}
+      </div>
+      <div className="grid grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="h-32 bg-gray-200 rounded-xl"></div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DashboardContent() {
+  const router = useRouter();
+  
+  // React Query hook - caché de 2 min
+  const { data: kpisData, isLoading: loadingKPIs } = useKPIs();
+  
+  const [recentActivity, setRecentActivity] = useState<Array<{id: string; tipo: string; descripcion: string; fecha: Date}>>([]);
+  const [loadingActivity, setLoadingActivity] = useState(true);
+  const [isDark, setIsDark] = useState(false);
+
+  // Stats desde React Query o valores por defecto
+  const stats = useMemo(() => ({
+    serviciosActivos: kpisData?.serviciosActivos ?? 0,
+    incidenciasPendientes: kpisData?.reportesPendientes ?? 0,
+    productosStockBajo: 0, // Se puede agregar al hook useKPIs si es necesario
+    cumplimientoProtocolos: 0, // Se puede agregar al hook useKPIs si es necesario
+    seguimientosPendientes: kpisData?.eventosSemana ?? 0
+  }), [kpisData]);
 
   useEffect(() => {
-    (async () => {
-      try {
-        // Servicios activos
-        const serviciosQ = query(
-          collection(db, 'servicios-asignados'),
-          where('estado', '==', 'activo')
-        );
-        const serviciosCount = await getCountFromServer(serviciosQ);
-
-        // Incidencias de alta prioridad sin resolver
-        const incidenciasQ = query(
-          collection(db, 'daily-reports'),
-          where('prioridad', '==', 'alta'),
-          where('resuelta', '==', false),
-        );
-        const incidenciasCount = await getCountFromServer(incidenciasQ);
-
-        // Productos con alerta de stock bajo
-        const inventarioQ = query(
-          collection(db, 'inventario-productos'),
-          where('alertaStockBajo', '==', true)
-        );
-        const inventarioCount = await getCountFromServer(inventarioQ);
-
-        setStats({
-          serviciosActivos: serviciosCount.data().count,
-          incidenciasPendientes: incidenciasCount.data().count,
-          productosStockBajo: inventarioCount.data().count,
-        });
-      } catch (error) {
-        console.error('Error cargando contadores del dashboard:', error);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('theme') : null;
+    const prefersDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const shouldUseDark = stored ? stored === 'dark' : prefersDark;
+    setIsDark(shouldUseDark);
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.toggle('dark', shouldUseDark);
+    }
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-lg text-gray-600">Cargando...</div>
-      </div>
-    );
-  }
+  const toggleTheme = () => {
+    const next = !isDark;
+    setIsDark(next);
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.toggle('dark', next);
+      localStorage.setItem('theme', next ? 'dark' : 'light');
+    }
+  };
+
+  useEffect(() => {
+    let active = true;
+
+    const fetchActivity = async () => {
+      try {
+        const activitySnap = await getDocs(
+          query(collection(db, 'auditLogs'), orderBy('createdAt', 'desc'), limit(5))
+        );
+        
+        if (!active) return;
+
+        setRecentActivity(
+          activitySnap.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              tipo: data.modulo || 'general',
+              descripcion: data.resumen || data.accion || 'Sin descripción',
+              fecha: data.createdAt?.toDate?.() ?? new Date()
+            };
+          })
+        );
+      } catch (error) {
+        console.error('Error cargando actividad', error);
+      } finally {
+        if (active) setLoadingActivity(false);
+      }
+    };
+
+    fetchActivity();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const now = useMemo(() => new Date(), []);
+  const formattedDate = new Intl.DateTimeFormat('es-ES', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  }).format(now);
+
+  const ThemeIcon = isDark ? Sun : Moon;
+  const loading = loadingKPIs || loadingActivity;
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-3xl font-bold text-gray-900">Panel de Control</h2>
-        <p className="text-gray-600 mt-1">Instituto Ordóñez - Sistema de Gestión Clínica</p>
-      </div>
+      <section className="rounded-3xl border border-border bg-card px-8 py-7 shadow-sm">
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-3">
+            <span className="inline-flex items-center gap-2 rounded-pill border border-border bg-cardHover px-3 py-1 text-[13px] font-medium text-text-muted">
+              <span className="h-2 w-2 rounded-full bg-brand"></span>
+              Instituto Ordóñez
+            </span>
+            <div>
+              <h1 className="text-3xl font-semibold text-text">Panel Operativo</h1>
+              <p className="text-sm text-text-muted">{formattedDate}</p>
+            </div>
+            <div className="flex flex-wrap gap-6 text-sm text-text-muted">
+              <div className="space-y-1">
+                <p className="text-text-muted">Servicios activos</p>
+                <p className="text-2xl font-semibold text-text">{stats.serviciosActivos}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-text-muted">Eventos esta semana</p>
+                <p className="text-2xl font-semibold text-text">{stats.seguimientosPendientes}</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-2xl border border-border bg-cardHover px-4 py-3">
+            <p className="text-sm font-medium text-text">Modo {isDark ? 'oscuro' : 'claro'}</p>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
+              aria-label="Cambiar tema"
+            >
+              <ThemeIcon className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      </section>
 
-      {/* Tarjetas de acceso rápido */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <a
           href="https://email.ionos.es/appsuite/#!!&app=io.ox/mail&folder=default0/INBOX"
           target="_blank"
           rel="noopener noreferrer"
-          className="bg-linear-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg hover:shadow-xl transition-all p-6 text-white group cursor-pointer"
+          className="group rounded-2xl border border-border bg-card p-5 transition-colors hover:bg-cardHover focus-visible:focus-ring"
         >
-          <div className="flex items-center justify-between mb-4">
-            <Mail className="w-10 h-10" />
-            <ExternalLink className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="mb-4 flex items-center justify-between">
+            <div className="rounded-full bg-brand-subtle p-2 text-brand">
+              <Mail className="h-4 w-4" />
+            </div>
+            <ExternalLink className="h-4 w-4 text-text-muted transition-transform group-hover:translate-x-0.5" />
           </div>
-          <h3 className="text-xl font-bold mb-1">Correo Corporativo</h3>
-          <p className="text-blue-100 text-sm">Acceder al email</p>
+          <h3 className="text-lg font-semibold text-text">Correo corporativo</h3>
+          <p className="mt-1 text-sm text-text-muted">Abrir bandeja de entrada</p>
         </a>
 
         <a
           href="https://app.clinic-cloud.com/"
           target="_blank"
           rel="noopener noreferrer"
-          className="bg-linear-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg hover:shadow-xl transition-all p-6 text-white group cursor-pointer"
+          className="group rounded-2xl border border-border bg-card p-5 transition-colors hover:bg-cardHover focus-visible:focus-ring"
         >
-          <div className="flex items-center justify-between mb-4">
-            <Cloud className="w-10 h-10" />
-            <ExternalLink className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="mb-4 flex items-center justify-between">
+            <div className="rounded-full bg-brand-subtle p-2 text-brand">
+              <Activity className="h-4 w-4" />
+            </div>
+            <ExternalLink className="h-4 w-4 text-text-muted transition-transform group-hover:translate-x-0.5" />
           </div>
-          <h3 className="text-xl font-bold mb-1">ClinicCloud</h3>
-          <p className="text-purple-100 text-sm">Gestión de agenda CRM</p>
+          <div className="rounded-xl border border-border bg-cardHover px-3 py-2">
+            <Image src="/cliniccloud-logo.svg" alt="ClinicCloud" width={96} height={28} priority={false} />
+          </div>
         </a>
 
-        <a href="/dashboard/kpis" className="bg-linear-to-br from-green-500 to-green-600 rounded-lg shadow-lg hover:shadow-xl transition-all p-6 text-white group cursor-pointer">
-          <div className="flex items-center justify-between mb-4">
-            <BarChart3 className="w-10 h-10" />
-            <TrendingUp className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <Link
+          href="/dashboard/kpis"
+          className="group rounded-2xl border border-border bg-card p-5 transition-colors hover:bg-cardHover focus-visible:focus-ring"
+        >
+          <div className="mb-4 flex items-center justify-between">
+            <div className="rounded-full bg-brand-subtle p-2 text-brand">
+              <BarChart3 className="h-4 w-4" />
+            </div>
+            <ArrowRight className="h-4 w-4 text-text-muted transition-transform group-hover:translate-x-0.5" />
           </div>
-          <h3 className="text-xl font-bold mb-1">KPIs y Métricas</h3>
-          <p className="text-green-100 text-sm">Ver estadísticas</p>
-        </a>
-      </div>
+          <h3 className="text-lg font-semibold text-text">KPIs y métricas</h3>
+          <p className="mt-1 text-sm text-text-muted">Ver estadísticas en tiempo real</p>
+        </Link>
+      </section>
 
-      {/* KPIs rápidos */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm font-medium">Servicios Activos</p>
-              <p className="text-3xl font-bold text-blue-600 mt-2">{stats.serviciosActivos}</p>
-              <p className="text-gray-500 text-xs mt-1">En ejecución</p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <Wrench className="w-8 h-8 text-blue-600" />
-            </div>
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <button
+          type="button"
+          onClick={() => router.push('/dashboard/servicios?estado=activo')}
+          className="rounded-2xl border border-border bg-card p-5 text-left transition-colors hover:bg-cardHover focus-visible:focus-ring"
+        >
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-brand-subtle text-brand">
+            <Wrench className="h-4 w-4" />
           </div>
-        </div>
+          <p className="text-sm text-text-muted">Servicios activos</p>
+          <p className="mt-2 text-3xl font-semibold text-text">{loadingKPIs ? '—' : stats.serviciosActivos}</p>
+        </button>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm font-medium">Incidencias Críticas</p>
-              <p className={`text-3xl font-bold mt-2 ${stats.incidenciasPendientes > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                {stats.incidenciasPendientes}
-              </p>
-              <p className="text-gray-500 text-xs mt-1">Alta prioridad</p>
-            </div>
-            <div className={`p-3 rounded-full ${stats.incidenciasPendientes > 0 ? 'bg-red-100' : 'bg-green-100'}`}>
-              <AlertTriangle className={`w-8 h-8 ${stats.incidenciasPendientes > 0 ? 'text-red-600' : 'text-green-600'}`} />
-            </div>
+        <button
+          type="button"
+          onClick={() => router.push('/dashboard/reporte-diario?tipo=incidencia&prioridad=alta&estado=abierta')}
+          className="rounded-2xl border border-border bg-card p-5 text-left transition-colors hover:bg-cardHover focus-visible:focus-ring"
+        >
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-danger-bg text-danger">
+            <AlertTriangle className="h-4 w-4" />
           </div>
-        </div>
+          <p className="text-sm text-text-muted">Reportes pendientes</p>
+          <p className="mt-2 text-3xl font-semibold text-text">{loadingKPIs ? '—' : stats.incidenciasPendientes}</p>
+        </button>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm font-medium">Productos Stock Bajo</p>
-              <p className={`text-3xl font-bold mt-2 ${stats.productosStockBajo > 0 ? 'text-yellow-600' : 'text-green-600'}`}>
-                {stats.productosStockBajo}
-              </p>
-              <p className="text-gray-500 text-xs mt-1">Requieren atención</p>
-            </div>
-            <div className={`p-3 rounded-full ${stats.productosStockBajo > 0 ? 'bg-yellow-100' : 'bg-green-100'}`}>
-              <Package className={`w-8 h-8 ${stats.productosStockBajo > 0 ? 'text-yellow-600' : 'text-green-600'}`} />
-            </div>
+        <button
+          type="button"
+          onClick={() => router.push('/dashboard/inventario?critico=true')}
+          className="rounded-2xl border border-border bg-card p-5 text-left transition-colors hover:bg-cardHover focus-visible:focus-ring"
+        >
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-warn-bg text-warn">
+            <Package className="h-4 w-4" />
           </div>
-        </div>
-      </div>
+          <p className="text-sm text-text-muted">Stock bajo</p>
+          <p className="mt-2 text-3xl font-semibold text-text">{loading ? '—' : stats.productosStockBajo}</p>
+        </button>
 
-      {/* Estado General */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Estado General</h3>
-        <div className="space-y-3">
-          {stats.productosStockBajo > 0 && (
-            <div className="flex items-start space-x-3 p-3 rounded-lg bg-yellow-50 border border-yellow-200">
-              <span className="text-lg text-yellow-600">⚠️</span>
-              <span className="text-sm text-yellow-800">
-                {stats.productosStockBajo} producto{stats.productosStockBajo > 1 ? 's' : ''} con stock bajo
+        <button
+          type="button"
+          onClick={() => router.push('/dashboard/profesionales')}
+          className="rounded-2xl border border-border bg-card p-5 text-left transition-colors hover:bg-cardHover focus-visible:focus-ring"
+        >
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-brand-subtle text-brand">
+            <BookOpen className="h-4 w-4" />
+          </div>
+          <p className="text-sm text-text-muted">Profesionales activos</p>
+          <p className="mt-2 text-3xl font-semibold text-text">{loadingKPIs ? '—' : kpisData?.profesionalesActivos ?? 0}</p>
+        </button>
+      </section>
+
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-text">Alertas prioritarias</h3>
+              <span className="rounded-pill bg-danger-bg px-3 py-1 text-xs font-medium text-danger">
+                {stats.incidenciasPendientes + stats.productosStockBajo + stats.seguimientosPendientes} pendientes
               </span>
             </div>
-          )}
-          {stats.incidenciasPendientes > 0 && (
-            <div className="flex items-start space-x-3 p-3 rounded-lg bg-red-50 border border-red-200">
-              <span className="text-lg text-red-600">⚠️</span>
-              <span className="text-sm text-red-800">
-                {stats.incidenciasPendientes} incidencia{stats.incidenciasPendientes > 1 ? 's' : ''} pendiente{stats.incidenciasPendientes > 1 ? 's' : ''} de alta prioridad
+            <div className="mt-4 space-y-2">
+              {stats.incidenciasPendientes > 0 && (
+                <div className="flex items-center gap-3 rounded-2xl border border-border bg-cardHover px-4 py-3 text-sm text-text">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-danger-bg text-danger">
+                    <AlertTriangle className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <p className="font-medium">Reportes pendientes</p>
+                    <p className="text-text-muted">{stats.incidenciasPendientes} en seguimiento</p>
+                  </div>
+                </div>
+              )}
+              {stats.productosStockBajo > 0 && (
+                <div className="flex items-center gap-3 rounded-2xl border border-border bg-cardHover px-4 py-3 text-sm text-text">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-warn-bg text-warn">
+                    <Package className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <p className="font-medium">Productos con stock bajo</p>
+                    <p className="text-text-muted">{stats.productosStockBajo} referencias críticas</p>
+                  </div>
+                </div>
+              )}
+              {stats.seguimientosPendientes > 0 && (
+                <div className="flex items-center gap-3 rounded-2xl border border-border bg-cardHover px-4 py-3 text-sm text-text">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-subtle text-brand">
+                    <CalendarDays className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <p className="font-medium">Eventos agendados</p>
+                    <p className="text-text-muted">{stats.seguimientosPendientes} pendientes esta semana</p>
+                  </div>
+                </div>
+              )}
+              {stats.incidenciasPendientes === 0 && stats.productosStockBajo === 0 && stats.seguimientosPendientes === 0 && (
+                <div className="rounded-2xl border border-border bg-success-bg px-4 py-3 text-sm text-success">
+                  ✅ No hay alertas críticas
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+            <div className="mb-4 flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-subtle text-brand">
+                <Activity className="h-4 w-4" />
               </span>
+              <h3 className="text-lg font-semibold text-text">Última actividad</h3>
             </div>
-          )}
-          {stats.productosStockBajo === 0 && stats.incidenciasPendientes === 0 && (
-            <div className="flex items-start space-x-3 p-3 rounded-lg bg-green-50 border border-green-200">
-              <span className="text-lg text-green-600">✅</span>
-              <span className="text-sm text-green-800">No hay alertas críticas</span>
-            </div>
-          )}
+            {loadingActivity ? (
+              <p className="text-sm text-text-muted">Cargando actividad reciente…</p>
+            ) : recentActivity.length === 0 ? (
+              <p className="text-sm text-text-muted">No hay actividad registrada.</p>
+            ) : (
+              <div className="space-y-3">
+                {recentActivity.map((item) => (
+                  <div key={item.id} className="flex items-start gap-3 border-b border-border pb-3 last:border-0">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-cardHover text-brand">
+                      <TrendingUp className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-text">{item.descripcion}</p>
+                      <div className="mt-1 flex items-center gap-2 text-xs text-text-muted">
+                        <span>{item.tipo}</span>
+                        <span>•</span>
+                        <span>{item.fecha.toLocaleString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Link href="/dashboard/auditoria" className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-brand hover:text-brand/80">
+              Ver historial completo
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
         </div>
-      </div>
+
+        <aside className="space-y-6">
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-text">Métricas clave</h3>
+            <p className="mt-1 text-sm text-text-muted">Resumen rápido del rendimiento operativo.</p>
+            <div className="mt-5 space-y-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-text-muted">Servicios</p>
+                <p className="mt-1 text-3xl font-semibold text-text">{stats.serviciosActivos}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-text-muted">Profesionales</p>
+                <p className="mt-1 text-3xl font-semibold text-text">{kpisData?.profesionalesActivos ?? 0}</p>
+              </div>
+              <Link href="/dashboard/kpis" className="inline-flex items-center gap-2 text-sm font-medium text-brand hover:text-brand/80">
+                Ver todas las métricas
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </aside>
+      </section>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<DashboardSkeleton />}>
+      <DashboardContent />
+    </Suspense>
   );
 }

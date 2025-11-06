@@ -18,40 +18,38 @@ export default function KPICard({
   color 
 }: KPICardProps) {
   const colorClasses = {
-    blue: 'bg-blue-100 text-blue-600',
-    green: 'bg-green-100 text-green-600',
-    orange: 'bg-orange-100 text-orange-600',
-    purple: 'bg-purple-100 text-purple-600',
-    red: 'bg-red-100 text-red-600',
+    blue: 'bg-brand-subtle text-brand',
+    green: 'bg-success-bg text-success',
+    orange: 'bg-warn-bg text-warn',
+    purple: 'bg-cardHover text-text',
+    red: 'bg-danger-bg text-danger',
   };
 
   const trendColors = {
-    up: 'text-green-600',
-    down: 'text-red-600',
-    stable: 'text-gray-600',
+    up: 'text-success',
+    down: 'text-danger',
+    stable: 'text-text-muted',
   };
 
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
-          
-          {trend && trendValue && (
-            <div className={`flex items-center space-x-1 mt-2 ${trendColors[trend]}`}>
-              <TrendIcon className="w-4 h-4" />
-              <span className="text-sm font-medium">{trendValue}</span>
-            </div>
-          )}
+    <div className="flex h-full flex-col justify-between rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-text-muted">{title}</p>
+          <p className="mt-2 text-3xl font-semibold text-text">{value}</p>
         </div>
-        
-        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${colorClasses[color]}`}>
+        <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${colorClasses[color]}`}>
           {icon}
         </div>
       </div>
+      {trend && trendValue && (
+        <div className={`mt-4 inline-flex items-center gap-2 text-sm font-medium ${trendColors[trend]}`}>
+          <TrendIcon className="h-4 w-4" />
+          <span>{trendValue}</span>
+        </div>
+      )}
     </div>
   );
 }

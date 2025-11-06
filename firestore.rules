@@ -1,0 +1,166 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ========== HELPER FUNCTIONS ==========
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function hasRole(role) {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    
+    function hasAnyRole(roles) {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in roles;
+    }
+    
+    // ========== VALIDATION FUNCTIONS ==========
+    
+    function isValidPaciente() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['nombre', 'apellidos', 'fechaNacimiento', 'genero']) &&
+             data.nombre is string && data.nombre.size() > 0 && data.nombre.size() <= 100 &&
+             data.apellidos is string && data.apellidos.size() > 0 && data.apellidos.size() <= 100 &&
+             data.fechaNacimiento is timestamp &&
+             data.genero in ['masculino', 'femenino', 'otro'] &&
+             (data.dni == null || (data.dni is string && data.dni.size() <= 20)) &&
+             (data.telefono == null || (data.telefono is string && data.telefono.size() <= 20)) &&
+             (data.email == null || (data.email is string && data.email.matches('.*@.*\\..*')));
+    }
+    
+    function isValidHistorial() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['pacienteId', 'fecha', 'tipo']) &&
+             data.pacienteId is string && data.pacienteId.size() > 0 &&
+             data.fecha is timestamp &&
+             data.tipo in ['consulta', 'tratamiento', 'seguimiento', 'otro'] &&
+             (data.descripcion == null || (data.descripcion is string && data.descripcion.size() <= 5000)) &&
+             (data.profesionalId == null || data.profesionalId is string);
+    }
+    
+    function isValidServicioAsignado() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['pacienteId', 'catalogoServicioId']) &&
+             data.pacienteId is string &&
+             data.catalogoServicioId is string &&
+             (data.estado == null || data.estado in ['pendiente', 'activo', 'completado', 'cancelado']) &&
+             (data.sesionesCompletadas == null || data.sesionesCompletadas is number);
+    }
+    
+    // ========== PACIENTES ==========
+    match /pacientes/{patientId} {
+      allow read: if isAuthenticated();
+      allow create: if hasAnyRole(['admin', 'doctor', 'coordinador']) && isValidPaciente();
+      allow update: if hasAnyRole(['admin', 'doctor', 'coordinador']) && isValidPaciente();
+      allow delete: if hasRole('admin');
+    }
+    
+    // ========== HISTORIAL CLÍNICO ==========
+    match /pacientes-historial/{historyId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAnyRole(['doctor', 'admin']) && isValidHistorial();
+      allow delete: if false; // NUNCA permitir eliminación
+    }
+    
+    // ========== SERVICIOS ASIGNADOS ==========
+    match /servicios-asignados/{serviceId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAnyRole(['admin', 'coordinador']) && isValidServicioAsignado();
+    }
+    
+    // ========== CATÁLOGO DE SERVICIOS ==========
+    match /catalogo-servicios/{catalogId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole('admin');
+    }
+    
+    // ========== PROFESIONALES ==========
+    match /profesionales/{professionalId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole('admin');
+    }
+    
+    // ========== GRUPOS DE PACIENTES ==========
+    match /grupos-pacientes/{groupId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAnyRole(['admin', 'coordinador']);
+    }
+    
+    // ========== REPORTES DIARIOS ==========
+    match /reportes-diarios/{reportId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && 
+                       (resource.data.reportadoPorId == request.auth.uid || 
+                        hasRole('admin'));
+      allow delete: if hasRole('admin');
+    }
+    
+    // ========== AGENDA - EVENTOS ==========
+    match /agenda-eventos/{eventId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAnyRole(['coordinador', 'admin', 'doctor']);
+    }
+    
+    // ========== AGENDA - BLOQUES ==========
+    match /agenda-bloques/{blockId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAnyRole(['coordinador', 'admin']);
+    }
+    
+    // ========== SALAS ==========
+    match /salas/{roomId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAnyRole(['admin', 'coordinador']);
+    }
+    
+    // ========== INVENTARIO ==========
+    match /inventario-productos/{productId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAnyRole(['admin', 'coordinador']);
+    }
+    
+    // ========== MEJORAS ==========
+    match /mejoras/{improvementId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if hasRole('admin') || 
+                       resource.data.creadoPor == request.auth.email;
+      allow delete: if hasRole('admin');
+    }
+    
+    // ========== PROTOCOLOS ==========
+    match /protocolos/{protocolId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole('admin');
+    }
+    
+    // ========== PROTOCOLOS - VERSIONES ==========
+    match /protocolos-versiones/{versionId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole('admin');
+    }
+    
+    // ========== AUDIT LOGS ==========
+    match /auditLogs/{logId} {
+      allow read: if hasRole('admin');
+      allow write: if false; // Solo Cloud Functions
+    }
+    
+    // ========== USERS ==========
+    match /users/{userId} {
+      allow read: if isOwner(userId) || hasRole('admin');
+      allow write: if hasRole('admin');
+      allow update: if isOwner(userId) && 
+                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
+    }
+  }
+}

@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { CatalogoServicio, Profesional } from '@/types';
-import { Plus, Edit2, Trash2, Save, X, Clock, } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, Clock } from 'lucide-react';
 
 export default function CatalogoServiciosPage() {
   const { user } = useAuth();
