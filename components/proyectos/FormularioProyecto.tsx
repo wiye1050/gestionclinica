@@ -81,6 +81,7 @@ export default function FormularioProyecto({
     
     onSubmit({
       ...data,
+      descripcion: data.descripcion || '',
       responsableNombre: responsable?.nombre || '',
       tags,
       progreso: proyecto?.progreso || 0,
