@@ -5,7 +5,7 @@ import { LoadingSpinner, LoadingCard } from '@/components/ui/Loading';
 /**
  * Wrapper para lazy loading con fallback automático
  */
-export function lazyLoad<P>(
+export function lazyLoad<P extends Record<string, unknown>>(
   importFunc: () => Promise<{ default: ComponentType<P> }>,
   fallback?: ReactNode
 ) {
@@ -13,7 +13,7 @@ export function lazyLoad<P>(
 
   const LazyWrapper = (props: P) => (
     <Suspense fallback={fallback || <LoadingCard />}>
-      <LazyComponent {...props} />
+      <LazyComponent {...(props as P)} />
     </Suspense>
   );
 
@@ -25,7 +25,7 @@ export function lazyLoad<P>(
 /**
  * Lazy loading de páginas completas
  */
-export function lazyLoadPage<P>(
+export function lazyLoadPage<P extends Record<string, unknown>>(
   importFunc: () => Promise<{ default: ComponentType<P> }>
 ) {
   const LazyComponent = lazy(importFunc);
@@ -41,7 +41,7 @@ export function lazyLoadPage<P>(
         </div>
       }
     >
-      <LazyComponent {...props} />
+      <LazyComponent {...(props as P)} />
     </Suspense>
   );
 
