@@ -88,6 +88,53 @@ export default function PacienteDetallePage() {
   const [serviciosRelacionados, setServiciosRelacionados] = useState<ServicioAsignado[]>([]);
   const [relacionesError, setRelacionesError] = useState<string | null>(null);
 
+  const fetchRelacionesGrupo = useCallback(
+    async (grupoId: string) => {
+      setRelacionesError(null);
+
+      try {
+        const serviciosSnap = await getDocs(
+          query(collection(db, 'servicios-asignados'), where('grupoId', '==', grupoId), limit(25))
+        );
+
+        const serviciosData: ServicioAsignado[] = serviciosSnap.docs.map((docSnap) => {
+          const data = docSnap.data() ?? {};
+          return {
+            id: docSnap.id,
+            catalogoServicioId: data.catalogoServicioId,
+            catalogoServicioNombre: data.catalogoServicioNombre,
+            grupoId: data.grupoId,
+            grupoNombre: data.grupoNombre,
+            esActual: data.esActual ?? false,
+            estado: data.estado ?? 'activo',
+            tiquet: data.tiquet ?? 'NO',
+            profesionalPrincipalId: data.profesionalPrincipalId,
+            profesionalPrincipalNombre: data.profesionalPrincipalNombre,
+            requiereApoyo: data.requiereApoyo ?? false,
+            sala: data.sala,
+            tiempoReal: data.tiempoReal,
+            supervision: data.supervision ?? false,
+            vecesRealizadoMes: data.vecesRealizadoMes ?? 0,
+            ultimaRealizacion: data.ultimaRealizacion?.toDate?.(),
+            proximaRealizacion: data.proximaRealizacion?.toDate?.(),
+            notas: data.notas,
+            createdAt: data.createdAt?.toDate?.() ?? new Date(),
+            updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
+            creadoPor: data.creadoPor ?? 'sistema'
+          } as ServicioAsignado;
+        });
+
+        setServiciosRelacionados(serviciosData);
+      } catch (err) {
+        console.error('Error cargando servicios relacionados', err);
+        setRelacionesError('No se pudieron cargar los servicios relacionados.');
+        setServiciosRelacionados([]);
+      } finally {
+        }
+    },
+    []
+  );
+
   useEffect(() => {
     const fetchInitialData = async () => {
       if (!pacienteId) {
@@ -228,53 +275,6 @@ export default function PacienteDetallePage() {
 
     fetchInitialData();
   }, [pacienteId, fetchRelacionesGrupo]);
-
-  const fetchRelacionesGrupo = useCallback(
-    async (grupoId: string) => {
-      setRelacionesError(null);
-
-      try {
-        const serviciosSnap = await getDocs(
-          query(collection(db, 'servicios-asignados'), where('grupoId', '==', grupoId), limit(25))
-        );
-
-        const serviciosData: ServicioAsignado[] = serviciosSnap.docs.map((docSnap) => {
-          const data = docSnap.data() ?? {};
-          return {
-            id: docSnap.id,
-            catalogoServicioId: data.catalogoServicioId,
-            catalogoServicioNombre: data.catalogoServicioNombre,
-            grupoId: data.grupoId,
-            grupoNombre: data.grupoNombre,
-            esActual: data.esActual ?? false,
-            estado: data.estado ?? 'activo',
-            tiquet: data.tiquet ?? 'NO',
-            profesionalPrincipalId: data.profesionalPrincipalId,
-            profesionalPrincipalNombre: data.profesionalPrincipalNombre,
-            requiereApoyo: data.requiereApoyo ?? false,
-            sala: data.sala,
-            tiempoReal: data.tiempoReal,
-            supervision: data.supervision ?? false,
-            vecesRealizadoMes: data.vecesRealizadoMes ?? 0,
-            ultimaRealizacion: data.ultimaRealizacion?.toDate?.(),
-            proximaRealizacion: data.proximaRealizacion?.toDate?.(),
-            notas: data.notas,
-            createdAt: data.createdAt?.toDate?.() ?? new Date(),
-            updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
-            creadoPor: data.creadoPor ?? 'sistema'
-          } as ServicioAsignado;
-        });
-
-        setServiciosRelacionados(serviciosData);
-      } catch (err) {
-        console.error('Error cargando servicios relacionados', err);
-        setRelacionesError('No se pudieron cargar los servicios relacionados.');
-        setServiciosRelacionados([]);
-      } finally {
-        }
-    },
-    []
-  );
 
   const profesionalReferente = useMemo(() => {
     if (!paciente?.profesionalReferenteId) return null;
