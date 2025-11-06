@@ -4,8 +4,7 @@
 import type { 
   Paciente as PacienteOriginal,
   RegistroHistorialPaciente,
-  ServicioAsignado,
-  Profesional
+  ServicioAsignado
 } from './index';
 
 // ============================================

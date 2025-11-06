@@ -31,9 +31,6 @@ import PatientNotasTab from '@/components/pacientes/v2/PatientNotasTab';
 import type { Activity as TimelineActivity } from '@/components/pacientes/v2/PatientTimeline';
 import { resolverSeguimientoAction } from '../actions';
 import { hasActiveFollowUpInHistory } from '@/lib/utils/followUps';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { toast } from 'sonner';
 import {
   LayoutDashboard,
@@ -399,8 +396,14 @@ export default function PacienteDetallePage() {
     }
   };
 
-  const generarHistorialPDF = () => {
-    const doc = new jsPDF();
+  const generarHistorialPDF = async () => {
+    const [{ default: JsPDF }, autoTableModule] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable'),
+    ]);
+    const autoTable = autoTableModule.default ?? autoTableModule;
+
+    const doc = new JsPDF();
     doc.setFontSize(16);
     doc.text('Historial Clínico', 14, 20);
 
@@ -424,15 +427,16 @@ export default function PacienteDetallePage() {
     return doc;
   };
 
-  const exportarHistorialPDF = () => {
+  const exportarHistorialPDF = async () => {
     if (historialFiltrado.length === 0) return;
-    const doc = generarHistorialPDF();
+    const doc = await generarHistorialPDF();
     const fecha = new Date().toISOString().split('T')[0];
     doc.save(`Historial_${paciente?.nombre ?? 'paciente'}_${fecha}.pdf`);
   };
 
-  const exportarHistorialExcel = () => {
+  const exportarHistorialExcel = async () => {
     if (historialFiltrado.length === 0) return;
+    const XLSX = await import('xlsx');
     const datos = historialFiltrado.map((registro) => ({
       Fecha: registro.fecha.toLocaleString('es-ES'),
       Tipo: registro.tipo,
@@ -454,7 +458,7 @@ export default function PacienteDetallePage() {
     if (!pacienteId || historialFiltrado.length === 0) return;
     try {
       setCompartiendo(true);
-      const doc = generarHistorialPDF();
+      const doc = await generarHistorialPDF();
       const blob = doc.output('blob');
       const timestamp = Date.now();
       const fileName = `historial_${pacienteId}_${timestamp}.pdf`;
@@ -607,21 +611,21 @@ export default function PacienteDetallePage() {
             ))}
             <div className="flex items-center gap-2 pl-2">
               <button
-                onClick={exportarHistorialExcel}
+                onClick={() => void exportarHistorialExcel()}
                 className="rounded-pill border border-success px-3 py-1 text-success hover:bg-success-bg"
                 disabled={historialFiltrado.length === 0}
               >
                 Exportar Excel
               </button>
               <button
-                onClick={exportarHistorialPDF}
+                onClick={() => void exportarHistorialPDF()}
                 className="rounded-pill border border-brand px-3 py-1 text-brand hover:bg-brand-subtle"
                 disabled={historialFiltrado.length === 0}
               >
                 Exportar PDF
               </button>
               <button
-                onClick={compartirHistorialPorCorreo}
+                onClick={() => void compartirHistorialPorCorreo()}
                 className="rounded-pill border border-brand px-3 py-1 text-brand hover:bg-brand-subtle disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={historialFiltrado.length === 0 || compartiendo}
               >
