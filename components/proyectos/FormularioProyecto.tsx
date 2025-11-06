@@ -79,11 +79,20 @@ export default function FormularioProyecto({
   const onFormSubmit = (data: FormValues) => {
     const responsable = profesionales.find(p => p.uid === data.responsableUid);
     
+    // Validación: responsableUid es requerido
+    if (!data.responsableUid) {
+      return;
+    }
+    
     onSubmit({
-      ...data,
+      nombre: data.nombre,
       descripcion: data.descripcion || '',
+      tipo: data.tipo,
+      estado: data.estado,
+      prioridad: data.prioridad,
+      responsableUid: data.responsableUid,
       responsableNombre: responsable?.nombre || '',
-      tags,
+      tags: tags,
       progreso: proyecto?.progreso || 0,
       hitos: proyecto?.hitos || [],
       actualizaciones: proyecto?.actualizaciones || [],
@@ -91,6 +100,9 @@ export default function FormularioProyecto({
       equipo: proyecto?.equipo || [],
       fechaInicio: data.fechaInicio ? new Date(data.fechaInicio) : undefined,
       fechaFinEstimada: data.fechaFinEstimada ? new Date(data.fechaFinEstimada) : undefined,
+      presupuesto: data.presupuesto,
+      horasEstimadas: data.horasEstimadas,
+      color: data.color,
     });
   };
 
