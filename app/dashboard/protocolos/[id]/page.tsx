@@ -15,6 +15,7 @@ import {
 import { db } from '@/lib/firebase';
 import { Protocolo, ProtocoloVersion, ProtocoloLectura } from '@/types';
 import { registerReadingAction } from '../actions';
+import DOMPurify from 'isomorphic-dompurify';
 
 export default function ProtocoloDetallePage() {
   const params = useParams<{ id: string }>();
@@ -123,7 +124,10 @@ export default function ProtocoloDetallePage() {
               </button>
             </form>
           </div>
-          <article className="prose max-w-none" dangerouslySetInnerHTML={{ __html: versionActual.contenido }} />
+          <article
+            className="prose max-w-none"
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(versionActual.contenido) }}
+          />
         </section>
       ) : (
         <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800">

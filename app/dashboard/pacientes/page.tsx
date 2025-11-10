@@ -3,6 +3,7 @@
 import { Suspense, lazy, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { z } from 'zod';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { usePacientes } from '@/lib/hooks/usePacientes';
 import { useProfesionales } from '@/lib/hooks/useQueries';
@@ -11,10 +12,10 @@ import ModuleHeader from '@/components/shared/ModuleHeader';
 import StatCard from '@/components/shared/StatCard';
 import ViewSelector from '@/components/shared/ViewSelector';
 import SkeletonLoader from '@/components/shared/SkeletonLoader';
-import { 
-  Users, 
-  UserCheck, 
-  AlertTriangle, 
+import {
+  Users,
+  UserCheck,
+  AlertTriangle,
   Calendar,
   LayoutGrid,
   List,
@@ -23,6 +24,13 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
+
+// Esquema de validación para localStorage
+const SavedFiltersSchema = z.object({
+  followUpOnly: z.boolean().optional(),
+  profesionalId: z.string().optional(),
+  vista: z.enum(['lista', 'kanban']).optional(),
+}).strict();
 
 // Lazy loading de componentes
 const PacientesTable = lazy(() => import('@/components/pacientes/PacientesTable').then(m => ({ default: m.PacientesTable })));
@@ -51,26 +59,40 @@ function PacientesContent() {
   const { data: pacientes = [], isLoading: loadingPacientes } = usePacientes();
   const { data: profesionalesData = [], isLoading: loadingProfesionales } = useProfesionales();
 
-  // Cargar filtros guardados
+  // Cargar filtros guardados con validación Zod
   useEffect(() => {
     if (typeof window === 'undefined' || filtersLoaded) return;
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
-      const saved = JSON.parse(raw);
-      if (saved) {
-        if (saved.followUpOnly !== undefined && searchParams.get('filtro') !== 'seguimiento') {
-          setFollowUpOnly(Boolean(saved.followUpOnly));
-        }
-        if (saved.profesionalId) {
-          setProfesionalFilter(saved.profesionalId);
-        }
-        if (saved.vista) {
-          setVista(saved.vista);
-        }
+
+      const parsed = JSON.parse(raw);
+
+      // Validar con Zod antes de usar
+      const validation = SavedFiltersSchema.safeParse(parsed);
+
+      if (!validation.success) {
+        console.warn('Filtros guardados inválidos:', validation.error);
+        // Limpiar localStorage corrupto
+        window.localStorage.removeItem(STORAGE_KEY);
+        return;
+      }
+
+      const saved = validation.data;
+
+      if (saved.followUpOnly !== undefined && searchParams.get('filtro') !== 'seguimiento') {
+        setFollowUpOnly(saved.followUpOnly);
+      }
+      if (saved.profesionalId) {
+        setProfesionalFilter(saved.profesionalId);
+      }
+      if (saved.vista) {
+        setVista(saved.vista);
       }
     } catch (err) {
-      console.warn('No se pudieron cargar los filtros guardados', err);
+      console.warn('Error cargando filtros guardados:', err);
+      // Limpiar localStorage corrupto
+      window.localStorage.removeItem(STORAGE_KEY);
     } finally {
       setFiltersLoaded(true);
     }

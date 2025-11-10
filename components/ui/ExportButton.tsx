@@ -1,6 +1,7 @@
 'use client';
 
 import { Download } from 'lucide-react';
+import { toast } from 'sonner';
 import { exportToExcel, exportToCSV, ExportColumn } from '@/lib/utils/export';
 
 interface ExportButtonProps<T> {
@@ -20,14 +21,21 @@ export function ExportButton<T extends Record<string, unknown>>({
 }: ExportButtonProps<T>) {
   const handleExport = () => {
     if (data.length === 0) {
-      alert('No hay datos para exportar');
+      toast.warning('No hay datos para exportar');
       return;
     }
 
-    if (format === 'excel') {
-      exportToExcel(data, columns, filename);
-    } else {
-      exportToCSV(data, columns, filename);
+    try {
+      if (format === 'excel') {
+        exportToExcel(data, columns, filename);
+        toast.success('Exportación a Excel completada');
+      } else {
+        exportToCSV(data, columns, filename);
+        toast.success('Exportación a CSV completada');
+      }
+    } catch (error) {
+      console.error('Error exportando:', error);
+      toast.error('Error al exportar. Por favor, inténtalo de nuevo.');
     }
   };
 

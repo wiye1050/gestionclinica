@@ -228,12 +228,12 @@ export default function InformesPage() {
       }
 
       doc.save(`Informe_${meses[mes]}_${año}.pdf`);
-      
-      alert('✅ Informe generado correctamente');
-      
+
+      toast.success('Informe generado correctamente');
+
     } catch (error) {
       console.error('Error al generar PDF:', error);
-      alert('❌ Error al generar el informe');
+      toast.error('Error al generar el informe. Por favor, inténtalo de nuevo.');
     } finally {
       setLoading(false);
     }
