@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { X, Calendar, Clock, User, MapPin, AlertCircle } from 'lucide-react';
 import { AgendaEvent } from './agendaHelpers';
+import { sanitizeHTML, sanitizeInput } from '@/lib/utils/sanitize';
 
 interface EventModalProps {
   isOpen: boolean;
@@ -79,32 +80,33 @@ export default function EventModal({
 
       // Construir objeto solo con campos que tienen valor (Firebase no acepta undefined)
       const eventData: Partial<AgendaEvent> = {
-        titulo: formData.titulo,
+        titulo: sanitizeInput(formData.titulo),
         tipo: formData.tipo,
         fechaInicio,
         fechaFin,
         prioridad: formData.prioridad,
-        notas: formData.notas || '',
+        notas: formData.notas ? sanitizeHTML(formData.notas) : '',
         estado: event?.estado || 'programada',
       };
 
       // Solo agregar campos opcionales si tienen valor
       if (formData.profesionalId) {
-        eventData.profesionalId = formData.profesionalId;
+        const profesionalId = sanitizeInput(formData.profesionalId);
+        eventData.profesionalId = profesionalId;
         if (profesional) {
           eventData.profesionalNombre = `${profesional.nombre} ${profesional.apellidos}`;
         }
       }
 
       if (formData.salaId) {
-        eventData.salaId = formData.salaId;
+        eventData.salaId = sanitizeInput(formData.salaId);
         if (sala) {
           eventData.salaNombre = sala.nombre;
         }
       }
 
       if (formData.pacienteId) {
-        eventData.pacienteId = formData.pacienteId;
+        eventData.pacienteId = sanitizeInput(formData.pacienteId);
         if (paciente) {
           eventData.pacienteNombre = `${paciente.nombre} ${paciente.apellidos}`;
         }
@@ -123,7 +125,7 @@ export default function EventModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="rounded-3xl border border-border bg-card shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="panel-block shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-4 sticky top-0 border-b border-border bg-card">
           <h2 className="text-xl font-semibold text-text">

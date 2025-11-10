@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { Proyecto, TipoProyecto, EstadoProyecto, PrioridadProyecto } from '@/types/proyectos';
 import { X, Save, Tag, Plus } from 'lucide-react';
 import { format } from 'date-fns';
+import { sanitizeHTML, sanitizeInput, sanitizeObject } from '@/lib/utils/sanitize';
 
 type ProyectoDraft = Omit<Proyecto, 'id' | 'createdAt' | 'updatedAt' | 'creadoPor'> & { 
   id?: string;
@@ -34,6 +35,14 @@ interface FormularioProyectoProps {
   profesionales: Array<{ uid: string; nombre: string }>;
 }
 
+const TEXT_FIELDS: Array<keyof FormValues> = ['nombre', 'responsableUid', 'color'];
+
+function sanitizeProyectoValues(values: FormValues): FormValues {
+  let sanitized = sanitizeObject(values, TEXT_FIELDS, sanitizeInput);
+  sanitized = sanitizeObject(sanitized, ['descripcion'], sanitizeHTML);
+  return sanitized;
+}
+
 export default function FormularioProyecto({ 
   proyecto, 
   onSubmit, 
@@ -41,7 +50,9 @@ export default function FormularioProyecto({
   profesionales 
 }: FormularioProyectoProps) {
   const esEdicion = !!proyecto;
-  const [tags, setTags] = useState<string[]>(proyecto?.tags || []);
+  const [tags, setTags] = useState<string[]>(
+    () => (proyecto?.tags || []).map((tag) => sanitizeInput(tag))
+  );
   const [nuevoTag, setNuevoTag] = useState('');
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
@@ -66,8 +77,9 @@ export default function FormularioProyecto({
   });
 
   const agregarTag = () => {
-    if (nuevoTag.trim() && !tags.includes(nuevoTag.trim())) {
-      setTags([...tags, nuevoTag.trim()]);
+    const cleaned = sanitizeInput(nuevoTag.trim());
+    if (cleaned && !tags.includes(cleaned)) {
+      setTags([...tags, cleaned]);
       setNuevoTag('');
     }
   };
@@ -76,7 +88,8 @@ export default function FormularioProyecto({
     setTags(tags.filter(t => t !== tag));
   };
 
-  const onFormSubmit = (data: FormValues) => {
+  const onFormSubmit = (formValues: FormValues) => {
+    const data = sanitizeProyectoValues(formValues);
     const responsable = profesionales.find(p => p.uid === data.responsableUid);
     
     // Validación: responsableUid es requerido

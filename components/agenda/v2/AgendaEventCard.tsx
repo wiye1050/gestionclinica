@@ -21,6 +21,25 @@ import {
   formatDuration,
 } from './agendaHelpers';
 
+const EVENT_STATE_BADGES: Record<
+  AgendaEvent['estado'],
+  { className: string; label: string }
+> = {
+  programada: { className: 'bg-yellow-100 text-yellow-800', label: 'Programada' },
+  confirmada: { className: 'bg-green-100 text-green-800', label: 'Confirmada' },
+  realizada: { className: 'bg-gray-200 text-gray-700', label: 'Realizada' },
+  cancelada: { className: 'bg-red-100 text-red-800', label: 'Cancelada' },
+};
+
+const EVENT_TYPE_BADGES: Record<AgendaEvent['tipo'], string> = {
+  consulta: 'bg-blue-100 text-blue-800',
+  seguimiento: 'bg-emerald-100 text-emerald-800',
+  revision: 'bg-amber-100 text-amber-800',
+  tratamiento: 'bg-purple-100 text-purple-800',
+  urgencia: 'bg-rose-100 text-rose-800',
+  administrativo: 'bg-slate-200 text-slate-700',
+};
+
 interface AgendaEventCardProps {
   event: AgendaEvent;
   index: number;
@@ -54,6 +73,8 @@ export default function AgendaEventCard({
 
   const typeColors = EVENT_TYPE_COLORS[event.tipo] || EVENT_TYPE_COLORS.consulta;
   const stateStyle = EVENT_STATE_STYLES[event.estado];
+  const stateBadge = EVENT_STATE_BADGES[event.estado];
+  const typeBadgeClass = EVENT_TYPE_BADGES[event.tipo] ?? 'bg-gray-200 text-gray-700';
 
   // Iconos por estado
   const estadoIcon = {
@@ -166,6 +187,14 @@ export default function AgendaEventCard({
                     {estadoIcon}
                     <span className={`font-semibold truncate ${typeColors.text}`}>
                       {event.titulo}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 text-[10px] font-semibold">
+                    <span className={`rounded-full px-2 py-0.5 ${stateBadge.className}`}>
+                      {stateBadge.label}
+                    </span>
+                    <span className={`rounded-full px-2 py-0.5 capitalize ${typeBadgeClass}`}>
+                      {event.tipo}
                     </span>
                   </div>
                   <div className="flex items-center gap-1 text-text-muted">

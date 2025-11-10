@@ -5,6 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Paciente, Profesional } from '@/types';
+import { sanitizeHTML, sanitizeInput, sanitizeObject } from '@/lib/utils/sanitize';
 
 const schema = z.object({
   nombre: z.string().min(2, 'El nombre es obligatorio'),
@@ -33,6 +34,33 @@ const schema = z.object({
 });
 
 export type PacienteFormValues = z.infer<typeof schema>;
+
+const TEXT_FIELDS: Array<keyof PacienteFormValues> = [
+  'nombre',
+  'apellidos',
+  'documentoId',
+  'tipoDocumento',
+  'telefono',
+  'email',
+  'direccion',
+  'ciudad',
+  'codigoPostal',
+  'aseguradora',
+  'numeroPoliza',
+  'profesionalReferenteId',
+  'alergias',
+  'alertasClinicas',
+  'diagnosticosPrincipales',
+  'contactoEmergenciaNombre',
+  'contactoEmergenciaParentesco',
+  'contactoEmergenciaTelefono',
+];
+
+function sanitizePacienteValues(values: PacienteFormValues): PacienteFormValues {
+  let sanitized = sanitizeObject(values, TEXT_FIELDS, sanitizeInput);
+  sanitized = sanitizeObject(sanitized, ['notasInternas'], sanitizeHTML);
+  return sanitized;
+}
 
 interface PacienteFormProps {
   onSubmit: (values: PacienteFormValues) => Promise<void>;
@@ -136,8 +164,13 @@ export function PacienteForm({
     [profesionales]
   );
 
+  const handleSafeSubmit = handleSubmit(async (values) => {
+    const sanitized = sanitizePacienteValues(values);
+    await onSubmit(sanitized);
+  });
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSafeSubmit} className="space-y-6">
       <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Datos personales</h2>

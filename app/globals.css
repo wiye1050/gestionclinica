@@ -19,6 +19,9 @@
   --warn-bg: 35 90% 94%;
   --danger: 0 78% 58%;
   --danger-bg: 0 85% 95%;
+  --glass-bg: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-shadow: 0 25px 60px rgba(6, 24, 44, 0.18);
 }
 
 .dark {
@@ -37,6 +40,9 @@
   --success-bg: 152 30% 18%;
   --warn-bg: 35 35% 20%;
   --danger-bg: 0 35% 20%;
+  --glass-bg: rgba(20, 27, 45, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.18);
+  --glass-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
 }
 
 html {
@@ -54,15 +60,132 @@ body {
   background-color: hsl(var(--card));
   color: hsl(var(--text));
   border: 1px solid hsl(var(--border));
-  border-radius: 18px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  border-radius: 26px;
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.08);
 }
 
 .card-hover {
-  transition: background-color 0.15s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .card-hover:hover {
-  background-color: hsl(var(--card-hover));
+  transform: translateY(-2px);
+  box-shadow: 0 35px 70px rgba(15, 23, 42, 0.12);
+}
+
+.glass-panel {
+  border-radius: 26px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  box-shadow: var(--glass-shadow);
+}
+
+.surface-card {
+  border-radius: 28px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  color: hsl(var(--text));
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.09);
+}
+
+.sidebar-panel {
+  border-radius: 32px;
+  background: hsl(var(--card));
+  color: hsl(var(--text));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 35px 80px rgba(15, 23, 42, 0.12);
+}
+
+.panel-block {
+  border-radius: 24px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  color: hsl(var(--text));
+  box-shadow: 0 24px 55px rgba(15, 23, 42, 0.08);
+}
+
+.panel-block--muted {
+  border-radius: 24px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--muted));
+  color: hsl(var(--text));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.dashboard-canvas {
+  border-radius: 36px;
+  background: hsl(var(--card));
+  color: hsl(var(--text));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 45px 120px rgba(15, 23, 42, 0.18);
+  padding: clamp(1.5rem, 3vw, 2.75rem);
+  min-height: calc(100vh - 6rem);
+}
+
+.dashboard-canvas__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.btn-gradient {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  background-image: linear-gradient(120deg, #2563eb, #0ea5e9);
+  color: #fff;
+  font-weight: 600;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+  box-shadow: 0 20px 30px rgba(37, 99, 235, 0.35);
+}
+.btn-gradient:hover {
+  box-shadow: 0 25px 35px rgba(14, 165, 233, 0.45);
+  transform: translateY(-1px);
+}
+.btn-gradient:disabled {
+  opacity: 0.6;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.app-shell {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  --surface-overlay-from: rgba(5, 33, 86, 0.65);
+  --surface-overlay-to: rgba(60, 136, 231, 0.5);
+}
+.app-shell::before,
+.app-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.app-shell::before {
+  background-image: url('/images/login-bg.svg');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.55;
+}
+.app-shell::after {
+  background-image: linear-gradient(120deg, var(--surface-overlay-from), var(--surface-overlay-to));
+  opacity: 0.85;
+}
+.app-shell--hero {
+  --surface-overlay-from: rgba(5, 33, 86, 0.7);
+  --surface-overlay-to: rgba(60, 136, 231, 0.6);
+}
+.app-shell--dashboard {
+  --surface-overlay-from: rgba(5, 21, 46, 0.45);
+  --surface-overlay-to: rgba(35, 114, 196, 0.3);
+}
+.app-shell__content {
+  position: relative;
+  z-index: 1;
 }
 
 .badge {
@@ -96,10 +219,10 @@ body {
   flex-direction: column;
   gap: 0.25rem;
   padding: 1.25rem;
-  background-color: hsl(var(--card));
-  border: 1px solid hsl(var(--border));
-  border-radius: 18px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  border-radius: 24px;
+  border: 1px solid rgba(15, 23, 42, 0.05);
+  background: #fff;
+  box-shadow: 0 20px 55px rgba(15, 23, 42, 0.08);
 }
 .stat__label {
   font-size: 0.8125rem;

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { addDoc, collection, doc, getDoc, getDocs, limit, orderBy, query, updateDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { Paciente, Profesional } from '@/types';
@@ -149,60 +149,20 @@ export default function EditarPacientePage() {
         ? values.diagnosticosPrincipales.split(',').map((item) => item.trim()).filter(Boolean)
         : [];
 
-      const profesionalReferente = profesionales.find(
-        (prof) => prof.id === values.profesionalReferenteId
-      );
-
-      await updateDoc(doc(db, 'pacientes', pacienteId), {
-        nombre: values.nombre,
-        apellidos: values.apellidos,
-        fechaNacimiento: values.fechaNacimiento ? new Date(values.fechaNacimiento) : null,
-        genero: values.genero,
-        documentoId: values.documentoId || null,
-        tipoDocumento: values.tipoDocumento || null,
-        telefono: values.telefono || null,
-        email: values.email || null,
-        direccion: values.direccion || null,
-        ciudad: values.ciudad || null,
-        codigoPostal: values.codigoPostal || null,
-        aseguradora: values.aseguradora || null,
-        numeroPoliza: values.numeroPoliza || null,
-        alergias,
-        alertasClinicas: alertas,
-        diagnosticosPrincipales: diagnosticos,
-        riesgo: values.riesgo,
-        estado: values.estado,
-        profesionalReferenteId: values.profesionalReferenteId || null,
-        notasInternas: values.notasInternas || null,
-        contactoEmergencia: values.contactoEmergenciaNombre
-          ? {
-              nombre: values.contactoEmergenciaNombre,
-              parentesco: values.contactoEmergenciaParentesco ?? '',
-              telefono: values.contactoEmergenciaTelefono ?? ''
-            }
-          : null,
-        updatedAt: new Date(),
-        modificadoPor: user.email ?? user.uid
+      const response = await fetch(`/api/pacientes/${pacienteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...values,
+          alergias,
+          alertasClinicas: alertas,
+          diagnosticosPrincipales: diagnosticos,
+        }),
       });
-
-      await addDoc(collection(db, 'pacientes-historial'), {
-        pacienteId,
-        eventoAgendaId: null,
-        servicioId: null,
-        servicioNombre: null,
-        profesionalId: values.profesionalReferenteId || null,
-        profesionalNombre: profesionalReferente
-          ? `${profesionalReferente.nombre} ${profesionalReferente.apellidos}`
-          : null,
-        fecha: new Date(),
-        tipo: 'seguimiento',
-        descripcion: 'Datos del paciente actualizados desde la ficha clínica.',
-        resultado: null,
-        planesSeguimiento: null,
-        adjuntos: [],
-        createdAt: new Date(),
-        creadoPor: user.email ?? user.uid
-      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'No se pudo actualizar el paciente');
+      }
 
       toast.success('Paciente actualizado correctamente');
       router.push(`/dashboard/pacientes/${pacienteId}`);

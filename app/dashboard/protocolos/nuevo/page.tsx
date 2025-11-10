@@ -1,10 +1,9 @@
-'use client';
+"use client";
 
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { sanitizeHTML, sanitizeInput, sanitizeStringArray } from '@/lib/utils/sanitize';
 
 export default function NuevoProtocoloPage() {
   const router = useRouter();
@@ -19,18 +18,26 @@ export default function NuevoProtocoloPage() {
     const formData = new FormData(e.currentTarget);
     
     try {
-      await addDoc(collection(db, 'protocolos'), {
-        titulo: formData.get('titulo'),
-        area: formData.get('area'),
-        descripcion: formData.get('descripcion') || '',
+      const visibleRoles = formData.getAll('visiblePara').map((rol) => rol?.toString() ?? '');
+      const sanitizedPayload = {
+        titulo: sanitizeInput(formData.get('titulo')?.toString() ?? ''),
+        area: sanitizeInput(formData.get('area')?.toString() ?? ''),
+        descripcion: sanitizeHTML(formData.get('descripcion')?.toString() ?? ''),
         requiereQuiz: formData.get('requiereQuiz') === 'on',
-        visiblePara: formData.getAll('visiblePara'),
-        estado: 'borrador',
-        creadoPor: 'dev-admin',
-        creadoPorNombre: 'Admin',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        visiblePara: sanitizeStringArray(visibleRoles),
+      };
+
+      const response = await fetch('/api/protocolos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sanitizedPayload),
       });
+
+      const result = await response.json();
+      if (!response.ok) {
+        const message = typeof result?.error === 'string' ? result.error : 'No se pudo crear el protocolo';
+        throw new Error(message);
+      }
 
       router.push('/dashboard/protocolos');
     } catch (err) {
@@ -114,7 +121,7 @@ export default function NuevoProtocoloPage() {
         <button
           type="submit"
           disabled={loading}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+          className="rounded-lg bg-blue-600 px-4 py-2 text-text hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
         >
           {loading ? 'Guardando…' : 'Crear protocolo'}
         </button>

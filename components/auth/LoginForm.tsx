@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { sanitizeInput } from '@/lib/utils/sanitize';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -17,7 +18,8 @@ export default function LoginForm() {
     setError('');
     setLoading(true);
 
-    const result = await login(email, password);
+    const cleanEmail = sanitizeInput(email);
+    const result = await login(cleanEmail, password);
     
     if (result.success) {
       router.push('/dashboard');
@@ -28,16 +30,21 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Gestión Clínica</h1>
-          <p className="text-gray-600 mt-2">Panel de Coordinación</p>
+    <div className="glass-panel w-full">
+      <div className="rounded-[22px] border border-white/40 p-10">
+        <div className="mb-8 text-center text-slate-900">
+          <span className="inline-flex items-center justify-center rounded-full border border-blue-100/80 bg-blue-50/60 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-blue-700">
+            Panel de coordinación
+          </span>
+          <h1 className="mt-6 text-3xl font-semibold">Gestión Clínica</h1>
+          <p className="mt-2 text-slate-500">
+            Accede al control completo de pacientes, servicios y operaciones del Instituto.
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5 text-slate-900">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="email" className="mb-2 block text-sm font-medium text-slate-700">
               Email
             </label>
             <input
@@ -46,13 +53,13 @@ export default function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full rounded-2xl border border-white/60 bg-white/80 px-4 py-2.5 text-slate-900 shadow-inner focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500/70"
               placeholder="tu@email.com"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="password" className="mb-2 block text-sm font-medium text-slate-700">
               Contraseña
             </label>
             <input
@@ -61,22 +68,18 @@ export default function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full rounded-2xl border border-white/60 bg-white/80 px-4 py-2.5 text-slate-900 shadow-inner focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500/70"
               placeholder="••••••••"
             />
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+            <div className="rounded-2xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-700">
               {error}
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
+          <button type="submit" disabled={loading} className="btn-gradient w-full px-6 py-3 text-base">
             {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
           </button>
         </form>

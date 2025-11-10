@@ -110,7 +110,7 @@ export default function AgendaWeekViewV2({
     <div className="h-full flex flex-col">
       {/* Timeline con columnas de días */}
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="flex h-full overflow-hidden rounded-3xl border border-border bg-card">
+        <div className="flex h-full overflow-hidden panel-block">
           {/* Columna de horas */}
           <div className="w-20 flex-shrink-0 bg-cardHover border-r border-border">
             <div className="h-14 border-b border-border flex items-center justify-center sticky top-0 z-10 bg-cardHover">

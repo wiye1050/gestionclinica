@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, type Firestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
@@ -15,7 +15,15 @@ const firebaseConfig = {
 
 // Inicializar Firebase
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const db = getFirestore(app);
+let firestoreInstance: Firestore;
+try {
+  firestoreInstance = initializeFirestore(app, {
+    ignoreUndefinedProperties: true
+  });
+} catch {
+  firestoreInstance = getFirestore(app);
+}
+const db = firestoreInstance;
 const auth = getAuth(app);
 const storage = getStorage(app);
 

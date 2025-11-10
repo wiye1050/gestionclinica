@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { addDoc, collection, getDocs, orderBy, query, limit } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { Profesional } from '@/types';
@@ -69,7 +69,6 @@ export default function NuevoPacientePage() {
     setSubmitting(true);
 
     try {
-      const ahora = new Date();
       const alergias = values.alergias
         ? values.alergias.split(',').map((item) => item.trim()).filter(Boolean)
         : [];
@@ -80,60 +79,29 @@ export default function NuevoPacientePage() {
         ? values.diagnosticosPrincipales.split(',').map((item) => item.trim()).filter(Boolean)
         : [];
 
-      const docRef = await addDoc(collection(db, 'pacientes'), {
-        nombre: values.nombre,
-        apellidos: values.apellidos,
-        fechaNacimiento: values.fechaNacimiento ? new Date(values.fechaNacimiento) : null,
-        genero: values.genero,
-        documentoId: values.documentoId || null,
-        tipoDocumento: values.tipoDocumento || null,
-        telefono: values.telefono || null,
-        email: values.email || null,
-        direccion: values.direccion || null,
-        ciudad: values.ciudad || null,
-        codigoPostal: values.codigoPostal || null,
-        aseguradora: values.aseguradora || null,
-        numeroPoliza: values.numeroPoliza || null,
-        alergias,
-        alertasClinicas,
-        diagnosticosPrincipales,
-        riesgo: values.riesgo,
-        estado: values.estado,
-        profesionalReferenteId: values.profesionalReferenteId || null,
-        notasInternas: values.notasInternas || null,
-        contactoEmergencia: values.contactoEmergenciaNombre
-          ? {
-              nombre: values.contactoEmergenciaNombre,
-              parentesco: values.contactoEmergenciaParentesco ?? '',
-              telefono: values.contactoEmergenciaTelefono ?? ''
-            }
-          : null,
-        consentimientos: [],
-        createdAt: ahora,
-        updatedAt: ahora,
-        creadoPor: user.email ?? user.uid
+      const response = await fetch('/api/pacientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...values,
+          alergias,
+          alertasClinicas,
+          diagnosticosPrincipales,
+          fechaNacimiento: values.fechaNacimiento
+            ? new Date(values.fechaNacimiento).toISOString()
+            : null,
+          profesionalReferenteNombre: profesionales.find((p) => p.id === values.profesionalReferenteId)
+            ? `${profesionales.find((p) => p.id === values.profesionalReferenteId)!.nombre} ${
+                profesionales.find((p) => p.id === values.profesionalReferenteId)!.apellidos
+              }`
+            : null,
+        }),
       });
 
-      await addDoc(collection(db, 'pacientes-historial'), {
-        pacienteId: docRef.id,
-        eventoAgendaId: null,
-        servicioId: null,
-        servicioNombre: null,
-        profesionalId: values.profesionalReferenteId || null,
-        profesionalNombre: profesionales.find((p) => p.id === values.profesionalReferenteId)
-          ? `${profesionales.find((p) => p.id === values.profesionalReferenteId)!.nombre} ${
-              profesionales.find((p) => p.id === values.profesionalReferenteId)!.apellidos
-            }`
-          : null,
-        fecha: ahora,
-        tipo: 'seguimiento',
-        descripcion: 'Ficha de paciente creada en el sistema.',
-        resultado: null,
-        planesSeguimiento: null,
-        adjuntos: [],
-        createdAt: ahora,
-        creadoPor: user.email ?? user.uid
-      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'No se pudo registrar el paciente');
+      }
 
       toast.success('Paciente registrado correctamente');
       router.push('/dashboard/pacientes');

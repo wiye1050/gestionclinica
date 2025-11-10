@@ -2,17 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  where
-} from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
   Paciente,
@@ -496,21 +486,15 @@ export default function PacienteDetallePage() {
 
       const expiracion = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7);
 
-      await addDoc(collection(db, 'pacientes-historial'), {
-        pacienteId,
-        eventoAgendaId: null,
-        servicioId: null,
-        servicioNombre: null,
-        profesionalId: null,
-        profesionalNombre: null,
-        fecha: new Date(),
-        tipo: 'seguimiento',
-        descripcion: `Historial compartido por correo. Enlace disponible hasta ${expiracion.toLocaleString('es-ES')}.`,
-        resultado: null,
-        planesSeguimiento: 'Confirmar recepción del informe',
-        adjuntos: [url],
-        createdAt: new Date(),
-        creadoPor: paciente?.modificadoPor ?? paciente?.creadoPor ?? 'sistema'
+      await fetch(`/api/pacientes/${pacienteId}/historial`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'seguimiento',
+          descripcion: `Historial compartido por correo. Enlace disponible hasta ${expiracion.toLocaleString('es-ES')}.`,
+          planesSeguimiento: 'Confirmar recepción del informe',
+          adjuntos: [url],
+        }),
       });
     } catch (err) {
       console.error('Error preparando historial para correo:', err);
@@ -586,7 +570,7 @@ export default function PacienteDetallePage() {
         vacunas={[]}
       />
 
-      <section className="space-y-4 rounded-2xl border border-border bg-card p-6">
+      <section className="space-y-4 panel-block p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-text">Historial del paciente</h2>
@@ -642,7 +626,7 @@ export default function PacienteDetallePage() {
         ) : (
           <div className="space-y-4">
             {actividadesOrdenadas.map((registro) => (
-              <article key={registro.id} className="rounded-2xl border border-border bg-card shadow-sm">
+              <article key={registro.id} className="panel-block shadow-sm">
                 <header className="flex flex-col gap-2 border-b border-border/70 px-6 py-4 md:flex-row md:items-center md:justify-between">
                   <div>
                     <p className="text-xs text-text-muted">
@@ -714,7 +698,7 @@ export default function PacienteDetallePage() {
   );
 
   const renderTratamientosTab = () => (
-    <div className="rounded-2xl border border-border bg-card p-6 text-sm text-text-muted">
+    <div className="panel-block p-6 text-sm text-text-muted">
       Aún no hay un módulo de tratamientos detallado. Puedes gestionarlos desde servicios asignados.
     </div>
   );

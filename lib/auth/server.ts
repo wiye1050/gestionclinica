@@ -1,5 +1,7 @@
 import { cookies } from 'next/headers';
-// import { getAuth } from 'firebase-admin/auth';
+import type { DecodedIdToken } from 'firebase-admin/auth';
+import { adminAuth } from '@/lib/firebaseAdmin';
+import { SESSION_COOKIE_NAME } from './session';
 import { AppRole } from './roles';
 
 interface CurrentUser {
@@ -22,11 +24,48 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     };
   }
 
-  // Пока не есть Firebase Admin настроен, возвращаем учетку администратора по умолчанию.
-  return {
-    uid: 'dev-admin',
-    email: 'dev@local.test',
-    displayName: 'Dev Admin',
-    roles: ['admin']
-  };
+  if (!adminAuth) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[auth] Firebase Admin no configurado; getCurrentUser devuelve null.');
+    }
+    return null;
+  }
+
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+
+  if (!sessionCookie) {
+    return null;
+  }
+
+  try {
+    const decoded = (await adminAuth.verifySessionCookie(sessionCookie, true)) as DecodedIdToken &
+      Record<string, unknown>;
+
+    const claims = decoded as Record<string, unknown>;
+    const rawRoles =
+      claims.roles ??
+      (typeof claims.customClaims === 'object' && claims.customClaims
+        ? (claims.customClaims as Record<string, unknown>).roles
+        : undefined);
+
+    const roles =
+      Array.isArray(rawRoles)
+        ? (rawRoles.filter((role): role is AppRole =>
+            ['admin', 'coordinacion', 'terapeuta', 'admin_ops', 'marketing', 'invitado'].includes(
+              String(role)
+            )
+          ) as AppRole[])
+        : [];
+
+    return {
+      uid: decoded.uid,
+      email: decoded.email ?? undefined,
+      displayName: decoded.name ?? undefined,
+      roles: roles.length > 0 ? roles : ['invitado']
+    };
+  } catch (error) {
+    console.warn('[auth] Sesión inválida, se ignorará la cookie', error);
+    return null;
+  }
 }

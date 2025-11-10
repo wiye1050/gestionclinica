@@ -65,3 +65,6 @@ lib/google-cloud-key.json
 !package-lock.json
 !tsconfig.json
 !next.config.json
+google-credentials-oneline.txt
+google-credentials.json
+service-account.json

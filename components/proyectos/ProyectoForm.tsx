@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Proyecto, TipoProyecto, EstadoProyecto, PrioridadProyecto } from '@/types/proyectos';
 import { X, Save, Calendar, Users, DollarSign, Clock } from 'lucide-react';
 import { format } from 'date-fns';
+import { sanitizeHTML, sanitizeInput, sanitizeStringArray } from '@/lib/utils/sanitize';
 
 type ProyectoDraft = Omit<Proyecto, 'id'> & { id?: string };
 
@@ -93,22 +94,24 @@ export default function ProyectoForm({ proyecto, onClose, onGuardar, profesional
     
     if (!validar()) return;
 
-    const tagsArray = formData.tags
-      .split(',')
-      .map(t => t.trim())
-      .filter(t => t.length > 0);
+    const tagsArray = sanitizeStringArray(
+      formData.tags
+        .split(',')
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0)
+    );
 
     const proyectoData: ProyectoDraft = {
-      nombre: formData.nombre,
-      descripcion: formData.descripcion,
+      nombre: sanitizeInput(formData.nombre),
+      descripcion: sanitizeHTML(formData.descripcion),
       tipo: formData.tipo,
       estado: formData.estado,
       prioridad: formData.prioridad,
-      responsableUid: formData.responsableUid,
-      responsableNombre: formData.responsableNombre,
+      responsableUid: sanitizeInput(formData.responsableUid),
+      responsableNombre: sanitizeInput(formData.responsableNombre),
       progreso: formData.progreso,
       tags: tagsArray,
-      color: formData.color,
+      color: sanitizeInput(formData.color),
       hitos: proyecto?.hitos || [],
       tareas: proyecto?.tareas || [],
       actualizaciones: proyecto?.actualizaciones || [],

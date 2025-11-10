@@ -35,7 +35,7 @@ export default function StatCard({
   trend 
 }: StatCardProps) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+    <div className="panel-block p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div className="flex-1">
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-text-muted">

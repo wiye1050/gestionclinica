@@ -18,7 +18,7 @@ export default function SkeletonLoader() {
       {/* Stats Skeleton */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div key={i} className="panel-block p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="space-y-2 flex-1">
                 <div className="h-3 w-20 rounded-xl bg-cardHover animate-pulse" />
@@ -31,7 +31,7 @@ export default function SkeletonLoader() {
       </div>
 
       {/* Filters Skeleton */}
-      <div className="rounded-3xl border border-border bg-card p-4 shadow-sm">
+      <div className="panel-block p-4 shadow-sm">
         <div className="grid grid-cols-6 gap-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className="space-y-1">
@@ -43,7 +43,7 @@ export default function SkeletonLoader() {
       </div>
 
       {/* View Selector Skeleton */}
-      <div className="rounded-2xl border border-border bg-card p-2 shadow-sm">
+      <div className="panel-block p-2 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex gap-2">
             {[1, 2, 3].map((i) => (
@@ -55,7 +55,7 @@ export default function SkeletonLoader() {
       </div>
 
       {/* Table Skeleton */}
-      <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+      <div className="overflow-hidden panel-block shadow-sm">
         <div className="space-y-3 p-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <div key={i} className="h-16 rounded-2xl bg-cardHover animate-pulse" />

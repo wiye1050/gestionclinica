@@ -1,10 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, getDocs, query, where, orderBy, limit, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Paciente } from '@/types';
 
 // Hook para obtener todos los pacientes con caché
-export function usePacientes(filters?: { estado?: string; busqueda?: string }) {
+export function usePacientes(
+  filters?: { estado?: string; busqueda?: string },
+  options?: { initialData?: Paciente[] }
+) {
   return useQuery({
     queryKey: ['pacientes', filters],
     queryFn: async () => {
@@ -35,6 +38,8 @@ export function usePacientes(filters?: { estado?: string; busqueda?: string }) {
       return pacientes;
     },
     staleTime: 3 * 60 * 1000, // 3 minutos - los pacientes no cambian tan rápido
+    initialData: options?.initialData,
+    initialDataUpdatedAt: options?.initialData ? Date.now() : undefined,
   });
 }
 
@@ -44,12 +49,16 @@ export function useCreatePaciente() {
 
   return useMutation({
     mutationFn: async (nuevoPaciente: Omit<Paciente, 'id'>) => {
-      const docRef = await addDoc(collection(db, 'pacientes'), {
-        ...nuevoPaciente,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+      const response = await fetch('/api/pacientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nuevoPaciente),
       });
-      return docRef.id;
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'No se pudo crear el paciente');
+      }
+      return payload.id as string;
     },
     onSuccess: () => {
       // Invalidar y refetch automático
@@ -64,10 +73,15 @@ export function useUpdatePaciente() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Paciente> }) => {
-      await updateDoc(doc(db, 'pacientes', id), {
-        ...data,
-        updatedAt: new Date(),
+      const response = await fetch(`/api/pacientes/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
       });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'No se pudo actualizar el paciente');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pacientes'] });
@@ -81,7 +95,11 @@ export function useDeletePaciente() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      await deleteDoc(doc(db, 'pacientes', id));
+      const response = await fetch(`/api/pacientes/${id}`, { method: 'DELETE' });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'No se pudo eliminar el paciente');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pacientes'] });

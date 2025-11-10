@@ -10,7 +10,7 @@ interface GraficoTendenciaProps {
 
 export function GraficoLinea({ data, titulo, color = '#3b82f6' }: GraficoTendenciaProps) {
   return (
-    <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+    <div className="surface-card card-hover p-6">
       <h3 className="mb-4 text-lg font-semibold text-text">{titulo}</h3>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data}>
@@ -33,7 +33,7 @@ export function GraficoLinea({ data, titulo, color = '#3b82f6' }: GraficoTendenc
 
 export function GraficoBarras({ data, titulo, color = '#3b82f6' }: GraficoTendenciaProps) {
   return (
-    <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+    <div className="surface-card card-hover p-6">
       <h3 className="mb-4 text-lg font-semibold text-text">{titulo}</h3>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data}>
@@ -62,7 +62,7 @@ interface GraficoPieProps {
 
 export function GraficoPie({ data, titulo, colores = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'] }: GraficoPieProps) {
   return (
-    <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+    <div className="surface-card card-hover p-6">
       <h3 className="mb-4 text-lg font-semibold text-text">{titulo}</h3>
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>
