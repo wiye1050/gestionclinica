@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState } from 'react';
@@ -115,7 +114,7 @@ export default function InformesPage() {
         headStyles: { fillColor: [59, 130, 246] }
       });
 
-      yPos = (doc as any).lastAutoTable.finalY + 10;
+      yPos = (doc.lastAutoTable?.finalY ?? yPos) + 10;
 
       if (yPos > 250) {
         doc.addPage();
@@ -145,7 +144,7 @@ export default function InformesPage() {
         headStyles: { fillColor: [59, 130, 246] }
       });
 
-      yPos = (doc as any).lastAutoTable.finalY + 10;
+      yPos = (doc.lastAutoTable?.finalY ?? yPos) + 10;
 
       if (yPos > 250) {
         doc.addPage();
@@ -188,7 +187,7 @@ export default function InformesPage() {
         doc.text('No hay evaluaciones en este período', 25, yPos);
       }
 
-      yPos = (doc as any).lastAutoTable.finalY + 10 || yPos + 7;
+      yPos = (doc.lastAutoTable?.finalY ?? yPos - 3) + 10;
 
       if (yPos > 250) {
         doc.addPage();

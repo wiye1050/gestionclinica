@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -252,7 +251,7 @@ export default function ProfesionalesPage() {
                 <label className="block text-sm font-medium text-text mb-1">Especialidad *</label>
                 <select
                   value={formData.especialidad}
-                  onChange={(e) => setFormData({...formData, especialidad: e.target.value as any})}
+                  onChange={(e) => setFormData({...formData, especialidad: e.target.value as 'medicina' | 'fisioterapia' | 'enfermeria'})}
                   className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
                   required
                 >

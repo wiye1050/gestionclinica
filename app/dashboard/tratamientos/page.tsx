@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -316,7 +315,7 @@ export default function TratamientosPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
                 <select
                   value={formData.categoria}
-                  onChange={(e) => setFormData({...formData, categoria: e.target.value as any})}
+                  onChange={(e) => setFormData({...formData, categoria: e.target.value as 'medicina' | 'fisioterapia' | 'enfermeria' | 'mixto'})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   required
                 >
