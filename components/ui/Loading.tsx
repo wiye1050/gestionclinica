@@ -12,7 +12,7 @@ export function LoadingSpinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
 
 export function LoadingCard() {
   return (
-    <div className="rounded-3xl border border-border bg-card p-6 shadow-sm animate-pulse">
+    <div className="panel-block p-6 shadow-sm animate-pulse">
       <div className="mb-4 h-4 w-1/4 rounded-xl bg-cardHover" />
       <div className="space-y-3">
         <div className="h-3 rounded-xl bg-cardHover" />
@@ -24,7 +24,7 @@ export function LoadingCard() {
 
 export function LoadingTable({ rows = 5 }: { rows?: number }) {
   return (
-    <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm animate-pulse">
+    <div className="overflow-hidden panel-block shadow-sm animate-pulse">
       <div className="h-12 border-b border-border bg-cardHover" />
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex h-16 items-center gap-4 border-b border-border px-6">
@@ -40,7 +40,7 @@ export function LoadingTable({ rows = 5 }: { rows?: number }) {
 export function LoadingOverlay({ message = 'Cargando...' }: { message?: string }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="flex flex-col items-center gap-4 rounded-3xl border border-border bg-card px-6 py-5 shadow-lg">
+      <div className="flex flex-col items-center gap-4 panel-block px-6 py-5 shadow-lg">
         <LoadingSpinner size="lg" />
         <p className="text-sm font-medium text-text">{message}</p>
       </div>

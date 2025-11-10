@@ -63,7 +63,7 @@ export default function PacientesKanban({ pacientes, profesionales, pacientesSeg
                   <Link
                     key={paciente.id}
                     href={`/dashboard/pacientes/${paciente.id}`}
-                    className={`block rounded-2xl border border-border bg-card p-3 shadow-sm transition-all hover:shadow-md ${riesgoClass}`}
+                    className={`block panel-block p-3 shadow-sm transition-all hover:shadow-md ${riesgoClass}`}
                   >
                     {/* Nombre */}
                     <div className="mb-2">

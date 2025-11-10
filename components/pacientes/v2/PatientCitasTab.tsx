@@ -194,7 +194,7 @@ export default function PatientCitasTab({
 
       {/* Timeline de citas */}
       {citasFiltradas.length === 0 ? (
-        <div className="rounded-3xl border border-border bg-card p-12 text-center shadow-sm">
+        <div className="panel-block p-12 text-center shadow-sm">
           <Calendar className="w-12 h-12 mx-auto mb-3 text-text-muted" />
           <p className="text-text-muted">No hay citas que coincidan con los filtros</p>
           {onNuevaCita && (
@@ -215,7 +215,7 @@ export default function PatientCitasTab({
                 {citasDelMes.map((cita) => (
                   <div
                     key={cita.id}
-                    className="rounded-3xl border border-border bg-card p-4 transition-shadow hover:shadow-md"
+                    className="panel-block p-4 transition-shadow hover:shadow-md"
                   >
                     <div className="flex items-start gap-4">
                       {/* Fecha */}

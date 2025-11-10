@@ -2,11 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { collection, addDoc, serverTimestamp, getDocs, orderBy, query, where, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getCurrentUser } from '@/lib/auth/server';
+import { createProtocolo, createVersion, registerLectura } from '@/lib/server/protocolos';
 import { createProtocolSchema, createProtocolVersionSchema } from '@/lib/validators/protocols';
 import { logAudit } from '@/lib/utils/audit';
-import { getCurrentUser } from '@/lib/auth/server';
 
 type ActionState = { success: boolean; error: string | null };
 
@@ -38,24 +37,16 @@ export async function createProtocolAction(prevState: ActionState, formData: For
   const payload = parsed.data;
 
   try {
-    const docRef = await addDoc(collection(db, 'protocolos'), {
-      ...payload,
-      estado: 'borrador',
-      checklistBasica: payload.requiereQuiz ? [] : payload.visiblePara,
-      creadoPor: user.uid,
-      creadoPorNombre: user.displayName ?? user.email,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+    const result = await createProtocolo(payload, { uid: user.uid, email: user.email });
 
     await logAudit({
       actorUid: user.uid,
       actorNombre: user.displayName ?? user.email,
       modulo: 'protocolos',
       accion: 'crear-protocolo',
-      entidadId: docRef.id,
+      entidadId: result.id,
       entidadTipo: 'protocolo',
-      rutaDetalle: `/dashboard/protocolos/${docRef.id}`,
+      rutaDetalle: `/dashboard/protocolos/${result.id}`,
       resumen: payload.titulo,
       detalles: { titulo: payload.titulo, area: payload.area }
     });
@@ -86,13 +77,11 @@ export async function registerReadingAction(formData: FormData) {
     checklistConfirmada: formData.get('checklistConfirmada')
   });
 
-  await addDoc(collection(db, 'protocolos-lecturas'), {
-    ...parsed,
-    usuarioUid: user.uid,
-    usuarioNombre: user.displayName ?? user.email,
+
+  await registerLectura(parsed.protocoloId, {
+    version: parsed.version,
     checklistConfirmada: parsed.checklistConfirmada,
-    leidoEn: new Date()
-  });
+  }, { uid: user.uid, email: user.email });
 
   await logAudit({
     actorUid: user.uid,
@@ -133,23 +122,9 @@ export async function createProtocolVersionAction(prevState: ActionState, formDa
   }
 
   try {
-    const latestSnap = await getDocs(
-      query(
-        collection(db, 'protocolos-versiones'),
-        where('protocoloId', '==', parsed.data.protocoloId),
-        orderBy('version', 'desc'),
-        limit(1)
-      )
-    );
-
-    const nextVersion = (latestSnap.docs[0]?.data()?.version ?? 0) + 1;
-
-    await addDoc(collection(db, 'protocolos-versiones'), {
-      ...parsed.data,
-      version: nextVersion,
-      creadoPor: user.uid,
-      creadoPorNombre: user.displayName ?? user.email,
-      createdAt: serverTimestamp()
+    const result = await createVersion(parsed.data.protocoloId, parsed.data.contenido, {
+      uid: user.uid,
+      email: user.email,
     });
 
     await logAudit({
@@ -160,7 +135,7 @@ export async function createProtocolVersionAction(prevState: ActionState, formDa
       entidadId: parsed.data.protocoloId,
       entidadTipo: 'protocolo-version',
       rutaDetalle: `/dashboard/protocolos/${parsed.data.protocoloId}`,
-      resumen: `Versión v${nextVersion}`,
+      resumen: `Versión v${result.version}`,
       detalles: {}
     });
 

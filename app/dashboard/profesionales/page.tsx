@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { Profesional } from '@/types';
 import { Plus, Edit2, Trash2, Save, X, UserCheck, Mail, Phone, Clock, Calendar } from 'lucide-react';
+import { sanitizeInput, sanitizeStringArray } from '@/lib/utils/sanitize';
 
 export default function ProfesionalesPage() {
   const { user } = useAuth();
@@ -61,48 +62,55 @@ export default function ProfesionalesPage() {
     setMostrarFormulario(false);
   };
 
+  const sanitizeProfesionalPayload = (data: typeof formData) => ({
+    ...data,
+    nombre: sanitizeInput(data.nombre),
+    apellidos: sanitizeInput(data.apellidos),
+    especialidad: data.especialidad,
+    email: sanitizeInput(data.email),
+    telefono: data.telefono ? sanitizeInput(data.telefono) : '',
+    diasTrabajo: sanitizeStringArray(data.diasTrabajo),
+    horaInicio: sanitizeInput(data.horaInicio),
+    horaFin: sanitizeInput(data.horaFin),
+  });
+
   // Crear o actualizar profesional
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    const datos = {
-      ...formData,
-      serviciosAsignados: 0,
-      cargaTrabajo: 0,
-      updatedAt: new Date(),
-    };
-
     try {
-      if (editandoId) {
-        // Actualizar
-        await updateDoc(doc(db, 'profesionales', editandoId), datos);
-      } else {
-        // Crear nuevo
-        await addDoc(collection(db, 'profesionales'), {
-          ...datos,
-          createdAt: new Date(),
-        });
+      const sanitizedPayload = sanitizeProfesionalPayload(formData);
+      const endpoint = editandoId ? `/api/profesionales/${editandoId}` : '/api/profesionales';
+      const method = editandoId ? 'PATCH' : 'POST';
+      const response = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sanitizedPayload),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.error || 'No se pudo guardar el profesional');
       }
       resetForm();
     } catch (error) {
       console.error('Error al guardar profesional:', error);
-      alert('Error al guardar profesional');
+      alert(error instanceof Error ? error.message : 'Error al guardar profesional');
     }
   };
 
   // Iniciar edición
   const iniciarEdicion = (prof: Profesional) => {
     setFormData({
-      nombre: prof.nombre,
-      apellidos: prof.apellidos,
+      nombre: sanitizeInput(prof.nombre),
+      apellidos: sanitizeInput(prof.apellidos),
       especialidad: prof.especialidad,
-      email: prof.email,
-      telefono: prof.telefono || '',
+      email: sanitizeInput(prof.email),
+      telefono: prof.telefono ? sanitizeInput(prof.telefono) : '',
       horasSemanales: prof.horasSemanales,
-      diasTrabajo: prof.diasTrabajo,
-      horaInicio: prof.horaInicio,
-      horaFin: prof.horaFin,
+      diasTrabajo: sanitizeStringArray(prof.diasTrabajo ?? []),
+      horaInicio: sanitizeInput(prof.horaInicio),
+      horaFin: sanitizeInput(prof.horaFin),
       activo: prof.activo,
     });
     setEditandoId(prof.id);
@@ -114,10 +122,14 @@ export default function ProfesionalesPage() {
     if (!confirm('¿Eliminar este profesional? Esta acción no se puede deshacer.')) return;
 
     try {
-      await deleteDoc(doc(db, 'profesionales', id));
+      const response = await fetch(`/api/profesionales/${id}`, { method: 'DELETE' });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'No se pudo eliminar profesional');
+      }
     } catch (error) {
       console.error('Error al eliminar:', error);
-      alert('Error al eliminar profesional');
+      alert(error instanceof Error ? error.message : 'Error al eliminar profesional');
     }
   };
 
@@ -134,12 +146,18 @@ export default function ProfesionalesPage() {
   // Cambiar estado activo/inactivo
   const toggleActivo = async (id: string, estadoActual: boolean) => {
     try {
-      await updateDoc(doc(db, 'profesionales', id), {
-        activo: !estadoActual,
-        updatedAt: new Date(),
+      const response = await fetch(`/api/profesionales/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activo: !estadoActual }),
       });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'No se pudo actualizar el estado');
+      }
     } catch (error) {
       console.error('Error al cambiar estado:', error);
+      alert(error instanceof Error ? error.message : 'Error al cambiar estado');
     }
   };
 
@@ -176,14 +194,14 @@ export default function ProfesionalesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-border bg-card px-6 py-5 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-4 panel-block px-6 py-5 shadow-sm">
         <div>
           <h1 className="text-2xl font-semibold text-text">Profesionales</h1>
           <p className="mt-1 text-sm text-text-muted">Gestión del equipo profesional de la clínica.</p>
         </div>
         <button
           onClick={() => setMostrarFormulario(!mostrarFormulario)}
-          className="inline-flex items-center gap-2 rounded-pill bg-brand px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand/90 focus-visible:focus-ring"
+          className="inline-flex items-center gap-2 rounded-pill bg-brand px-5 py-2.5 text-sm font-medium text-text transition-colors hover:bg-brand/90 focus-visible:focus-ring"
         >
           <Plus className="w-5 h-5" />
           <span>Nuevo Profesional</span>
@@ -192,26 +210,26 @@ export default function ProfesionalesPage() {
 
       {/* Estadísticas */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="panel-block p-5 shadow-sm">
           <div className="flex items-center gap-2">
             <UserCheck className="h-5 w-5 text-brand" />
             <p className="text-sm text-text-muted">Total</p>
           </div>
           <p className="mt-2 text-2xl font-semibold text-text">{stats.total}</p>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="panel-block p-5 shadow-sm">
           <p className="text-sm text-text-muted">Activos</p>
           <p className="mt-2 text-2xl font-semibold text-success">{stats.activos}</p>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="panel-block p-5 shadow-sm">
           <p className="text-sm text-text-muted">Medicina</p>
           <p className="mt-2 text-2xl font-semibold text-brand">{stats.medicina}</p>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="panel-block p-5 shadow-sm">
           <p className="text-sm text-text-muted">Fisioterapia</p>
           <p className="mt-2 text-2xl font-semibold text-success">{stats.fisioterapia}</p>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="panel-block p-5 shadow-sm">
           <p className="text-sm text-text-muted">Enfermería</p>
           <p className="mt-2 text-2xl font-semibold text-warn">{stats.enfermeria}</p>
         </div>
@@ -219,7 +237,7 @@ export default function ProfesionalesPage() {
 
       {/* Formulario */}
       {mostrarFormulario && (
-        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+        <div className="panel-block p-6 shadow-sm">
           <h2 className="mb-4 text-xl font-semibold text-text">
             {editandoId ? 'Editar Profesional' : 'Nuevo Profesional'}
           </h2>
@@ -325,7 +343,7 @@ export default function ProfesionalesPage() {
                     onClick={() => toggleDia(dia)}
                     className={`rounded-pill px-4 py-2 text-sm font-medium transition-colors focus-visible:focus-ring ${
                       formData.diasTrabajo.includes(dia)
-                        ? 'bg-brand text-white hover:bg-brand/90'
+                        ? 'bg-brand text-text hover:bg-brand/90'
                         : 'border border-border bg-card text-text hover:bg-cardHover'
                     }`}
                   >
@@ -335,7 +353,7 @@ export default function ProfesionalesPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2">
+            <div className="flex items-center gap-2 panel-block px-3 py-2">
               <input
                 type="checkbox"
                 id="activo"
@@ -349,7 +367,7 @@ export default function ProfesionalesPage() {
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 rounded-pill bg-brand px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand/90 focus-visible:focus-ring"
+                className="inline-flex items-center gap-2 rounded-pill bg-brand px-5 py-2.5 text-sm font-medium text-text transition-colors hover:bg-brand/90 focus-visible:focus-ring"
               >
                 <Save className="w-4 h-4" />
                 <span>{editandoId ? 'Actualizar' : 'Crear'} Profesional</span>
@@ -368,7 +386,7 @@ export default function ProfesionalesPage() {
       )}
 
       {/* Filtros */}
-      <div className="rounded-3xl border border-border bg-card p-4 shadow-sm">
+      <div className="panel-block p-4 shadow-sm">
         <div className="flex flex-wrap items-center gap-4">
           <span className="text-sm font-medium text-text">Filtrar por especialidad:</span>
           <select
@@ -387,14 +405,14 @@ export default function ProfesionalesPage() {
       {/* Lista de Profesionales */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {profesionalesFiltrados.length === 0 ? (
-          <div className="col-span-full rounded-3xl border border-border bg-card p-8 text-center shadow-sm">
+          <div className="col-span-full panel-block p-8 text-center shadow-sm">
             <p className="text-text-muted">No hay profesionales registrados.</p>
           </div>
         ) : (
           profesionalesFiltrados.map((prof) => (
             <div
               key={prof.id}
-              className={`rounded-3xl border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md ${
+              className={`panel-block p-6 shadow-sm transition-shadow hover:shadow-md ${
                 !prof.activo ? 'opacity-60' : ''
               }`}
             >

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bell, X, CheckCircle, AlertTriangle, Package, FileText, Clock } from 'lucide-react';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Notificacion } from '@/types';
 import { getPendingFollowUpPatientIds } from '@/lib/utils/followUps';
@@ -12,16 +12,18 @@ interface NotificacionesDropdownProps {
   userUid: string;
 }
 
+type UiNotification = Notificacion & { persisted?: boolean };
+
 export function NotificacionesDropdown({ userUid }: NotificacionesDropdownProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
+  const [notificaciones, setNotificaciones] = useState<UiNotification[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Cargar notificaciones del sistema
   useEffect(() => {
     const generarNotificacionesAutomaticas = async () => {
-      const notifs: Notificacion[] = [];
+      const notifs: UiNotification[] = [];
 
       try {
         // 1. Seguimientos pendientes
@@ -85,6 +87,43 @@ export function NotificacionesDropdown({ userUid }: NotificacionesDropdownProps)
           });
         }
 
+        // Notificaciones persistidas (agenda, etc.)
+        try {
+          const persistidasSnap = await getDocs(
+            query(
+              collection(db, 'notificaciones'),
+              where('destinatarioUid', '==', userUid),
+              orderBy('createdAt', 'desc'),
+              limit(20)
+            )
+          );
+
+          persistidasSnap.forEach((docSnap) => {
+            const data = docSnap.data();
+            notifs.push({
+              id: docSnap.id,
+              tipo: (data.tipo as Notificacion['tipo']) ?? 'agenda',
+              prioridad: (data.prioridad as Notificacion['prioridad']) ?? 'media',
+              titulo: data.titulo ?? 'Notificación',
+              mensaje: data.mensaje ?? '',
+              leida: Boolean(data.leida),
+              url: data.url ?? undefined,
+              entidadId: data.entidadId ?? undefined,
+              entidadTipo: data.entidadTipo ?? undefined,
+              destinatarioUid: data.destinatarioUid ?? userUid,
+              createdAt: data.createdAt?.toDate?.() ?? new Date(),
+              persisted: true,
+            });
+          });
+        } catch (error) {
+          console.error('Error cargando notificaciones persistidas:', error);
+        }
+
+        notifs.sort(
+          (a, b) =>
+            (b.createdAt?.getTime?.() ?? 0) - (a.createdAt?.getTime?.() ?? 0)
+        );
+
         setNotificaciones(notifs);
       } catch (error) {
         console.error('Error generando notificaciones:', error);
@@ -107,16 +146,41 @@ export function NotificacionesDropdown({ userUid }: NotificacionesDropdownProps)
     setIsOpen(false);
   };
 
-  const marcarComoLeida = (notifId: string) => {
+  const marcarComoLeida = async (notifId: string) => {
     setNotificaciones(prev =>
       prev.map(n => (n.id === notifId ? { ...n, leida: true, leidaEn: new Date() } : n))
     );
+    try {
+      const notif = notificaciones.find((n) => n.id === notifId);
+      if (notif?.persisted) {
+        await updateDoc(doc(db, 'notificaciones', notifId), {
+          leida: true,
+          leidaEn: new Date(),
+        });
+      }
+    } catch (error) {
+      console.error('Error marcando notificación como leída:', error);
+    }
   };
 
-  const marcarTodasLeidas = () => {
+  const marcarTodasLeidas = async () => {
+    const timestamp = new Date();
     setNotificaciones(prev =>
-      prev.map(n => ({ ...n, leida: true, leidaEn: new Date() }))
+      prev.map(n => ({ ...n, leida: true, leidaEn: timestamp }))
     );
+    try {
+      const persistidas = notificaciones.filter((n) => n.persisted && !n.leida);
+      await Promise.all(
+        persistidas.map((notif) =>
+          updateDoc(doc(db, 'notificaciones', notif.id), {
+            leida: true,
+            leidaEn: timestamp,
+          })
+        )
+      );
+    } catch (error) {
+      console.error('Error marcando notificaciones como leídas:', error);
+    }
   };
 
   const getIcono = (tipo: string) => {

@@ -101,10 +101,10 @@ function MejorasContent() {
                 disabled={isLoading}
               />
             </Suspense>
-            <Link
-              href="/dashboard/mejoras/nueva"
-              className="rounded-pill bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-            >
+          <Link
+            href="/dashboard/mejoras/nueva"
+            className="rounded-pill bg-brand px-4 py-2 text-sm font-semibold text-text hover:opacity-90"
+          >
               Nueva mejora
             </Link>
           </div>

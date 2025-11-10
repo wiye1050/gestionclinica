@@ -18,6 +18,7 @@ interface DetailPanelProps {
   children?: ReactNode;
   actions?: ReactNode;
   headerColor?: string;
+  variant?: 'modal' | 'drawer';
 }
 
 export default function DetailPanel({
@@ -30,13 +31,26 @@ export default function DetailPanel({
   onTabChange,
   children,
   actions,
-  headerColor = 'from-blue-600 to-blue-700'
+  headerColor = 'from-blue-600 to-blue-700',
+  variant = 'modal'
 }: DetailPanelProps) {
   if (!isOpen) return null;
 
+  const isDrawer = variant === 'drawer';
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div
+      className={`fixed inset-0 z-50 flex bg-black/50 ${
+        isDrawer ? 'justify-end items-stretch' : 'items-center justify-center p-4'
+      }`}
+    >
+      <div
+        className={`bg-white shadow-2xl flex flex-col ${
+          isDrawer
+            ? 'h-full w-full max-w-xl rounded-none rounded-l-3xl'
+            : 'rounded-xl max-w-6xl w-full max-h-[90vh] overflow-hidden'
+        }`}
+      >
         {/* Header */}
         <div className={`bg-gradient-to-r ${headerColor} text-white p-6 flex items-start justify-between`}>
           <div className="flex-1">

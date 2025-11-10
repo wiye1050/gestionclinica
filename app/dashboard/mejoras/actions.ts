@@ -1,11 +1,10 @@
 "use server";
 
 import { revalidatePath } from 'next/cache';
-import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { createMejoraSchema, updateMejoraEstadoSchema, addEvidenciaSchema } from '@/lib/validators/mejoras';
 import { logAudit } from '@/lib/utils/audit';
 import { getCurrentUser } from '@/lib/auth/server';
+import { createMejora, updateMejoraEstado, agregarEvidencia } from '@/lib/server/mejoras';
 
 type ActionState = { success: boolean; error: string | null };
 
@@ -42,25 +41,22 @@ export async function crearMejoraAction(prevState: ActionState, formData: FormDa
   const score = calcularScore({ reach, impact, confidence, effort });
 
   try {
-    const docRef = await addDoc(collection(db, 'mejoras'), {
-      ...rest,
-      estado: 'idea',
-      rice: { reach, impact, confidence, effort, score },
-      evidenciasCount: 0,
-      creadoPor: user.uid,
-      creadoPorNombre: user.displayName ?? user.email,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+    const result = await createMejora(
+      {
+        ...rest,
+        rice: { reach, impact, confidence, effort, score },
+      },
+      { uid: user.uid, email: user.email }
+    );
 
     await logAudit({
       actorUid: user.uid,
       actorNombre: user.displayName ?? user.email,
       modulo: 'mejoras',
       accion: 'crear-mejora',
-      entidadId: docRef.id,
+      entidadId: result.id,
       entidadTipo: 'mejora',
-      rutaDetalle: `/dashboard/mejoras/${docRef.id}`,
+      rutaDetalle: `/dashboard/mejoras/${result.id}`,
       resumen: rest.titulo,
       detalles: { titulo: rest.titulo, area: rest.area }
     });
@@ -82,10 +78,7 @@ export async function actualizarEstadoMejoraAction(formData: FormData) {
     estado: formData.get('estado')
   });
 
-  await updateDoc(doc(db, 'mejoras', parsed.mejoraId), {
-    estado: parsed.estado,
-    updatedAt: serverTimestamp()
-  });
+  await updateMejoraEstado(parsed.mejoraId, parsed.estado, { uid: user.uid, email: user.email });
 
   await logAudit({
     actorUid: user.uid,
@@ -113,12 +106,7 @@ export async function agregarEvidenciaAction(formData: FormData) {
     descripcion: formData.get('descripcion')?.toString()
   });
 
-  await addDoc(collection(db, 'mejoras-evidencias'), {
-    ...parsed,
-    autorUid: user.uid,
-    autorNombre: user.displayName ?? user.email,
-    createdAt: serverTimestamp()
-  });
+  await agregarEvidencia(parsed, { uid: user.uid, email: user.email });
 
   await logAudit({
     actorUid: user.uid,

@@ -100,7 +100,7 @@ export default function ProtocoloDetallePage() {
         </div>
         <Link
           href={`/dashboard/protocolos/${protocolo.id}/nueva-version`}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+          className="rounded-lg bg-blue-600 px-4 py-2 text-text hover:bg-blue-700"
         >
           Nueva versión
         </Link>

@@ -1,7 +1,6 @@
-import { collection, addDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { logAuditServer } from '@/lib/utils/auditServer';
 
-interface AuditLogPayload {
+export interface AuditLogPayload {
   actorUid: string;
   actorNombre?: string;
   modulo: string;
@@ -14,12 +13,5 @@ interface AuditLogPayload {
 }
 
 export const logAudit = async (payload: AuditLogPayload) => {
-  try {
-    await addDoc(collection(db, 'auditLogs'), {
-      ...payload,
-      createdAt: new Date()
-    });
-  } catch (error) {
-    console.error('Error registrando auditoría', error);
-  }
+  await logAuditServer(payload);
 };

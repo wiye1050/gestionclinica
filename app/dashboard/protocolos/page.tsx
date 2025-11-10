@@ -93,7 +93,7 @@ function ProtocolosContent() {
             </Suspense>
             <Link
               href="/dashboard/protocolos/nuevo"
-              className="rounded-pill bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+              className="rounded-pill bg-brand px-4 py-2 text-sm font-semibold text-text hover:opacity-90"
             >
               Nuevo protocolo
             </Link>

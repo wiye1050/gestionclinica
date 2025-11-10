@@ -18,7 +18,7 @@ interface ViewSelectorProps {
 
 export default function ViewSelector({ views, currentView, onViewChange, counter }: ViewSelectorProps) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-2 shadow-sm">
+    <div className="flex items-center justify-between gap-3 panel-block p-2 shadow-sm">
       <div className="flex items-center gap-2">
         {views.map((view) => (
           <button

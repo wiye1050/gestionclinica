@@ -12,7 +12,7 @@ interface ModuleHeaderProps {
 export default function ModuleHeader({ title, description, actions, stats }: ModuleHeaderProps) {
   return (
     <section className="space-y-4">
-      <div className="rounded-3xl border border-border bg-card px-6 py-5 shadow-sm">
+      <div className="surface-card card-hover px-6 py-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold text-text">{title}</h1>

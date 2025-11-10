@@ -2,16 +2,32 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { addDoc, collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
+import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAgendaForm, AgendaEventFormValues } from '@/components/agenda/useAgendaForm';
 import { Profesional, Paciente, CatalogoServicio, SalaClinica } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { SubmitHandler } from 'react-hook-form';
 import { toast } from 'sonner';
+import { sanitizeHTML, sanitizeInput, sanitizeObject } from '@/lib/utils/sanitize';
 
 interface AgendaEventFormProps {
   onSuccess?: () => void;
+}
+
+const TEXT_FIELDS: Array<keyof AgendaEventFormValues> = [
+  'titulo',
+  'pacienteId',
+  'pacienteNombre',
+  'profesionalId',
+  'salaId',
+  'servicioId',
+];
+
+function sanitizeAgendaValues(values: AgendaEventFormValues): AgendaEventFormValues {
+  let sanitized = sanitizeObject(values, TEXT_FIELDS, sanitizeInput);
+  sanitized = sanitizeObject(sanitized, ['notas'], sanitizeHTML);
+  return sanitized;
 }
 
 export function AgendaEventForm({ onSuccess }: AgendaEventFormProps) {
@@ -161,11 +177,12 @@ export function AgendaEventForm({ onSuccess }: AgendaEventFormProps) {
   }, [pacientes]);
 
   const onSubmit: SubmitHandler<AgendaEventFormValues> = async (values) => {
+    const sanitizedValues = sanitizeAgendaValues(values);
     setError(null);
     try {
-      const fecha = new Date(values.fecha);
-      const [inicioHoras, inicioMinutos] = values.horaInicio.split(':').map(Number);
-      const [finHoras, finMinutos] = values.horaFin.split(':').map(Number);
+      const fecha = new Date(sanitizedValues.fecha);
+      const [inicioHoras, inicioMinutos] = sanitizedValues.horaInicio.split(':').map(Number);
+      const [finHoras, finMinutos] = sanitizedValues.horaFin.split(':').map(Number);
 
       const fechaInicio = new Date(fecha);
       fechaInicio.setHours(inicioHoras, inicioMinutos, 0, 0);
@@ -178,62 +195,34 @@ export function AgendaEventForm({ onSuccess }: AgendaEventFormProps) {
         return;
       }
 
-      const profesionalSeleccionado = profesionales.find(
-        (prof) => prof.id === values.profesionalId
-      );
-      const salaSeleccionada = salas.find((sala) => sala.id === values.salaId);
-      const servicioSeleccionado = servicios.find((serv) => serv.id === values.servicioId);
+      const tipoMap: Record<string, string> = {
+        clinico: 'consulta',
+        coordinacion: 'seguimiento',
+        reunion: 'administrativo',
+      };
 
-      const eventoRef = await addDoc(collection(db, 'agenda-eventos'), {
-        titulo: values.titulo,
-        tipo: values.tipo,
-        pacienteId: values.pacienteId || null,
-        pacienteNombre: values.pacienteNombre || null,
-        profesionalId: values.profesionalId,
-        profesionalNombre: profesionalSeleccionado
-          ? `${profesionalSeleccionado.nombre} ${profesionalSeleccionado.apellidos}`
-          : null,
-        salaId: values.salaId || null,
-        salaNombre: salaSeleccionada?.nombre ?? null,
-        servicioId: values.servicioId || null,
-        servicioNombre: servicioSeleccionado?.nombre ?? null,
-        fechaInicio,
-        fechaFin,
-        estado: values.estado,
-        prioridad: values.prioridad,
-        notas: values.notas || null,
-        requiereSeguimiento: values.requiereSeguimiento ?? false,
-        createdAt: new Date(),
-        updatedAt: new Date()
+      const response = await fetch('/api/agenda/eventos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          titulo: sanitizedValues.titulo,
+          tipo: tipoMap[sanitizedValues.tipo] ?? sanitizedValues.tipo,
+          pacienteId: sanitizedValues.pacienteId || null,
+          profesionalId: sanitizedValues.profesionalId,
+          salaId: sanitizedValues.salaId || null,
+          servicioId: sanitizedValues.servicioId || null,
+          fechaInicio: fechaInicio.toISOString(),
+          fechaFin: fechaFin.toISOString(),
+          estado: sanitizedValues.estado,
+          prioridad: sanitizedValues.prioridad,
+          notas: sanitizedValues.notas || '',
+          requiereSeguimiento: sanitizedValues.requiereSeguimiento ?? false,
+        }),
       });
 
-      if (values.pacienteId) {
-        const tipoHistorial: 'consulta' | 'tratamiento' | 'seguimiento' | 'incidencia' =
-          values.tipo === 'clinico'
-            ? 'consulta'
-            : values.tipo === 'coordinacion'
-            ? 'seguimiento'
-            : 'incidencia';
-
-        await addDoc(collection(db, 'pacientes-historial'), {
-          pacienteId: values.pacienteId,
-          eventoAgendaId: eventoRef.id,
-          servicioId: values.servicioId || null,
-          servicioNombre: servicioSeleccionado?.nombre ?? null,
-          profesionalId: values.profesionalId,
-          profesionalNombre: profesionalSeleccionado
-            ? `${profesionalSeleccionado.nombre} ${profesionalSeleccionado.apellidos}`
-            : null,
-          fecha: fechaInicio,
-          tipo: tipoHistorial,
-          descripcion: values.notas || `Evento ${values.tipo} programado`,
-          resultado: null,
-          planesSeguimiento: values.requiereSeguimiento ? 'Requiere seguimiento posterior' : null,
-          adjuntos: [],
-          createdAt: new Date(),
-          creadoPor:
-            profesionalSeleccionado?.email ?? 'sistema'
-        });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'No se pudo programar el evento');
       }
 
       toast.success('Evento programado correctamente');

@@ -66,7 +66,7 @@ type InventarioItem = {
   alertaStockBajo: boolean;
 };
 
-export function useInventario() {
+export function useInventario(options?: { initialData?: { productos: InventarioItem[]; stockBajo: number; total: number } }) {
   return useQuery<{ productos: InventarioItem[]; stockBajo: number; total: number }>({
     queryKey: ['inventario'],
     queryFn: async () => {
@@ -96,6 +96,8 @@ export function useInventario() {
       };
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
+    initialData: options?.initialData,
+    initialDataUpdatedAt: options?.initialData ? Date.now() : undefined,
   });
 }
 
@@ -182,8 +184,8 @@ export function useProtocolos() {
 }
 
 // Hook para servicios asignados
-export function useServicios() {
-  return useQuery({
+export function useServicios(options?: { initialData?: ServicioAsignado[] }) {
+  return useQuery<ServicioAsignado[]>({
     queryKey: ['servicios-asignados'],
     queryFn: async () => {
       const snapshot = await getDocs(
@@ -199,12 +201,14 @@ export function useServicios() {
       })) as ServicioAsignado[];
     },
     staleTime: 3 * 60 * 1000, // 3 minutos
+    initialData: options?.initialData,
+    initialDataUpdatedAt: options?.initialData ? Date.now() : undefined,
   });
 }
 
 // Hook para profesionales
-export function useProfesionales() {
-  return useQuery({
+export function useProfesionales(options?: { initialData?: Profesional[] }) {
+  return useQuery<Profesional[]>({
     queryKey: ['profesionales'],
     queryFn: async () => {
       const snapshot = await getDocs(
@@ -221,12 +225,14 @@ export function useProfesionales() {
       return profesionales.filter(p => p.activo);
     },
     staleTime: 5 * 60 * 1000, // 5 minutos - profesionales no cambian frecuentemente
+    initialData: options?.initialData,
+    initialDataUpdatedAt: options?.initialData ? Date.now() : undefined,
   });
 }
 
 // Hook para grupos de pacientes
-export function useGruposPacientes() {
-  return useQuery({
+export function useGruposPacientes(options?: { initialData?: GrupoPaciente[] }) {
+  return useQuery<GrupoPaciente[]>({
     queryKey: ['grupos-pacientes'],
     queryFn: async () => {
       const snapshot = await getDocs(
@@ -243,12 +249,14 @@ export function useGruposPacientes() {
       return grupos.filter(g => g.activo);
     },
     staleTime: 5 * 60 * 1000,
+    initialData: options?.initialData,
+    initialDataUpdatedAt: options?.initialData ? Date.now() : undefined,
   });
 }
 
 // Hook para catálogo de servicios
-export function useCatalogoServicios() {
-  return useQuery({
+export function useCatalogoServicios(options?: { initialData?: CatalogoServicio[] }) {
+  return useQuery<CatalogoServicio[]>({
     queryKey: ['catalogo-servicios'],
     queryFn: async () => {
       const snapshot = await getDocs(
@@ -265,6 +273,8 @@ export function useCatalogoServicios() {
       return servicios.filter(s => s.activo);
     },
     staleTime: 10 * 60 * 1000, // 10 minutos - catálogo es bastante estático
+    initialData: options?.initialData,
+    initialDataUpdatedAt: options?.initialData ? Date.now() : undefined,
   });
 }
 
@@ -290,7 +300,12 @@ export function useReportes() {
 }
 
 // Hook para eventos de agenda
-export function useEventosAgenda(weekStart: Date) {
+export function useEventosAgenda(
+  weekStart: Date,
+  options?: {
+    initialData?: AgendaEvent[];
+  }
+) {
   const weekEnd = addDays(weekStart, 7);
 
   return useQuery<AgendaEvent[]>({
@@ -331,6 +346,8 @@ export function useEventosAgenda(weekStart: Date) {
       });
     },
     staleTime: 3 * 60 * 1000, // 3 minutos
+    initialData: options?.initialData,
+    initialDataUpdatedAt: options?.initialData ? Date.now() : undefined,
   });
 }
 

@@ -34,7 +34,7 @@ export default function KPICard({
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
 
   return (
-    <div className="flex h-full flex-col justify-between rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <div className="surface-card card-hover flex h-full flex-col justify-between p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-text-muted">{title}</p>

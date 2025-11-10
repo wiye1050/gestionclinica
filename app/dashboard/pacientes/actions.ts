@@ -1,11 +1,10 @@
 "use server";
 
 import { z } from 'zod';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { getCurrentUser } from '@/lib/auth/server';
 import { logAudit } from '@/lib/utils/audit';
 import { revalidatePath } from 'next/cache';
+import { addPacienteHistorial } from '@/lib/server/pacientesAdmin';
 
 const resolverSchema = z.object({
   pacienteId: z.string().min(1)
@@ -23,16 +22,15 @@ export async function resolverSeguimientoAction(formData: FormData): Promise<voi
   }
 
   try {
-    await addDoc(collection(db, 'pacientes-historial'), {
-      pacienteId: parsed.data.pacienteId,
-      fecha: serverTimestamp(),
-      tipo: 'seguimiento',
-      descripcion: 'Seguimiento resuelto por coordinación.',
-      resultado: 'Seguimiento completado',
-      planesSeguimiento: null,
-      creadoPor: user.uid,
-      createdAt: serverTimestamp()
-    });
+    await addPacienteHistorial(
+      parsed.data.pacienteId,
+      {
+        tipo: 'seguimiento',
+        descripcion: 'Seguimiento resuelto por coordinación.',
+        planesSeguimiento: null,
+      },
+      { email: user.email, uid: user.uid }
+    );
 
     await logAudit({
       actorUid: user.uid,

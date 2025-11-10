@@ -52,7 +52,7 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="hidden w-64 border-r border-border bg-card p-4 lg:block">
+    <aside className="sidebar-panel flex h-full w-full flex-col gap-4 px-4 py-6">
       <nav className="space-y-3">
         {menuItems.map((item) => {
           const Icon = item.icon;
@@ -62,8 +62,10 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center space-x-3 rounded-2xl px-4 py-3 text-sm transition-colors ${
-                isActive ? 'bg-brand-subtle text-brand font-semibold' : 'text-text-muted hover:bg-cardHover'
+              className={`flex items-center space-x-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                isActive
+                  ? 'bg-slate-900 text-white shadow-[0_16px_35px_rgba(15,23,42,0.25)]'
+                  : 'text-slate-600 hover:bg-slate-50'
               }`}
             >
               <Icon className="w-5 h-5" />
@@ -74,10 +76,10 @@ export default function Sidebar() {
 
         {/* Coordinación */}
         <div className="pt-2">
-          <button
-            onClick={() => setCoordinacionOpen(!coordinacionOpen)}
-            className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold text-text transition-colors hover:bg-cardHover"
-          >
+            <button
+              onClick={() => setCoordinacionOpen(!coordinacionOpen)}
+              className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+            >
             <div className="flex items-center space-x-3">
               <CheckSquare className="w-5 h-5" />
               <span className="font-medium">Coordinación</span>
@@ -99,8 +101,10 @@ export default function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center space-x-3 rounded-2xl px-3 py-2 text-xs transition-colors ${
-                      isActive ? 'bg-brand-subtle text-brand font-semibold' : 'text-text-muted hover:bg-cardHover'
+                    className={`flex items-center space-x-3 rounded-2xl px-3 py-2 text-xs font-medium transition ${
+                      isActive
+                        ? 'bg-slate-900/90 text-white shadow-[0_12px_30px_rgba(15,23,42,0.2)]'
+                        : 'text-slate-500 hover:bg-slate-50'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -114,10 +118,10 @@ export default function Sidebar() {
 
         {/* Sección Gestión de Servicios */}
         <div className="pt-2">
-          <button
-            onClick={() => setGestionOpen(!gestionOpen)}
-            className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold text-text transition-colors hover:bg-cardHover"
-          >
+            <button
+              onClick={() => setGestionOpen(!gestionOpen)}
+              className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+            >
             <div className="flex items-center space-x-3">
               <ClipboardList className="w-5 h-5" />
               <span className="font-medium">Gestión</span>
@@ -139,8 +143,10 @@ export default function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center space-x-3 rounded-2xl px-3 py-2 text-xs transition-colors ${
-                      isActive ? 'bg-brand-subtle text-brand font-semibold' : 'text-text-muted hover:bg-cardHover'
+                    className={`flex items-center space-x-3 rounded-2xl px-3 py-2 text-xs font-medium transition ${
+                      isActive
+                        ? 'bg-slate-900/90 text-white shadow-[0_12px_30px_rgba(15,23,42,0.2)]'
+                        : 'text-slate-500 hover:bg-slate-50'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -153,13 +159,13 @@ export default function Sidebar() {
         </div>
 
         {/* Items directos */}
-        <div className="mt-4 space-y-1 border-t border-border pt-4">
+        <div className="mt-4 space-y-1 border-t border-slate-100 pt-4">
           <Link
             href="/dashboard/auditoria"
-            className={`flex items-center space-x-3 rounded-2xl px-4 py-3 text-sm transition-colors ${
+            className={`flex items-center space-x-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
               pathname === '/dashboard/auditoria'
-                ? 'bg-brand-subtle text-brand font-semibold'
-                : 'text-text-muted hover:bg-cardHover'
+                ? 'bg-slate-900 text-white shadow-[0_16px_35px_rgba(15,23,42,0.25)]'
+                : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
             <ShieldCheck className="w-5 h-5" />
@@ -167,10 +173,10 @@ export default function Sidebar() {
           </Link>
           <Link
             href="/dashboard/inventario"
-            className={`flex items-center space-x-3 rounded-2xl px-4 py-3 text-sm transition-colors ${
+            className={`flex items-center space-x-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
               pathname === '/dashboard/inventario'
-                ? 'bg-brand-subtle text-brand font-semibold'
-                : 'text-text-muted hover:bg-cardHover'
+                ? 'bg-slate-900 text-white shadow-[0_16px_35px_rgba(15,23,42,0.25)]'
+                : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
             <Package className="w-5 h-5" />
@@ -178,10 +184,10 @@ export default function Sidebar() {
           </Link>
           <Link
             href="/dashboard/protocolos"
-            className={`flex items-center space-x-3 rounded-2xl px-4 py-3 text-sm transition-colors ${
+            className={`flex items-center space-x-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
               pathname.startsWith('/dashboard/protocolos')
-                ? 'bg-brand-subtle text-brand font-semibold'
-                : 'text-text-muted hover:bg-cardHover'
+                ? 'bg-slate-900 text-white shadow-[0_16px_35px_rgba(15,23,42,0.25)]'
+                : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
             <BookOpen className="w-5 h-5" />
@@ -189,10 +195,10 @@ export default function Sidebar() {
           </Link>
           <Link
             href="/dashboard/proyectos"
-            className={`flex items-center space-x-3 rounded-2xl px-4 py-3 text-sm transition-colors ${
+            className={`flex items-center space-x-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
               pathname === '/dashboard/proyectos'
-                ? 'bg-brand-subtle text-brand font-semibold'
-                : 'text-text-muted hover:bg-cardHover'
+                ? 'bg-slate-900 text-white shadow-[0_16px_35px_rgba(15,23,42,0.25)]'
+                : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
             <FolderKanban className="w-5 h-5" />

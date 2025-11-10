@@ -60,7 +60,7 @@ export default function AgendaTimeline({
   const now = new Date();
 
   return (
-    <div className="flex h-full overflow-hidden rounded-3xl border border-border bg-card">
+    <div className="flex h-full overflow-hidden panel-block">
       {/* Columna de horas */}
       <div className="w-20 flex-shrink-0 bg-cardHover border-r border-border">
         <div className="h-12 border-b border-border flex items-center justify-center">

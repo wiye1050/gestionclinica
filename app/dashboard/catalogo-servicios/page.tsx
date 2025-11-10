@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { CatalogoServicio, Profesional } from '@/types';
 import { Plus, Edit2, Trash2, Save, X, Clock } from 'lucide-react';
+import { sanitizeHTML, sanitizeInput, sanitizeStringArray } from '@/lib/utils/sanitize';
 
 export default function CatalogoServiciosPage() {
   const { user } = useAuth();
@@ -79,43 +80,58 @@ export default function CatalogoServiciosPage() {
   };
 
   // Crear o actualizar servicio
+  const sanitizeServicioPayload = (data: typeof formData) => ({
+    ...data,
+    nombre: sanitizeInput(data.nombre),
+    descripcion: data.descripcion ? sanitizeHTML(data.descripcion) : '',
+    salaPredeterminada: data.salaPredeterminada ? sanitizeInput(data.salaPredeterminada) : '',
+    cargaMensualEstimada: data.cargaMensualEstimada ? sanitizeInput(data.cargaMensualEstimada) : '',
+    profesionalesHabilitados: sanitizeStringArray(data.profesionalesHabilitados),
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
     const datos = {
-      ...formData,
+      ...sanitizeServicioPayload(formData),
       updatedAt: new Date()};
 
     try {
-      if (editandoId) {
-        await updateDoc(doc(db, 'catalogo-servicios', editandoId), datos);
-      } else {
-        await addDoc(collection(db, 'catalogo-servicios'), {
-          ...datos,
-          createdAt: new Date()});
+      const endpoint = editandoId ? `/api/catalogo-servicios/${editandoId}` : '/api/catalogo-servicios';
+      const method = editandoId ? 'PATCH' : 'POST';
+      const response = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(datos),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'No se pudo guardar el servicio');
       }
       resetForm();
     } catch (error) {
       console.error('Error al guardar servicio:', error);
-      alert('Error al guardar servicio');
+      alert(error instanceof Error ? error.message : 'Error al guardar servicio');
     }
   };
 
   // Iniciar edición
   const iniciarEdicion = (servicio: CatalogoServicio) => {
     setFormData({
-      nombre: servicio.nombre,
+      nombre: sanitizeInput(servicio.nombre),
       categoria: servicio.categoria,
-      descripcion: servicio.descripcion || '',
+      descripcion: servicio.descripcion ? sanitizeHTML(servicio.descripcion) : '',
       tiempoEstimado: servicio.tiempoEstimado,
       requiereSala: servicio.requiereSala,
-      salaPredeterminada: servicio.salaPredeterminada || '',
+      salaPredeterminada: servicio.salaPredeterminada ? sanitizeInput(servicio.salaPredeterminada) : '',
       requiereSupervision: servicio.requiereSupervision,
       requiereApoyo: servicio.requiereApoyo,
       frecuenciaMensual: servicio.frecuenciaMensual || 0,
-      cargaMensualEstimada: servicio.cargaMensualEstimada || '',
-      profesionalesHabilitados: servicio.profesionalesHabilitados,
+      cargaMensualEstimada: servicio.cargaMensualEstimada
+        ? sanitizeInput(servicio.cargaMensualEstimada)
+        : '',
+      profesionalesHabilitados: sanitizeStringArray(servicio.profesionalesHabilitados ?? []),
       activo: servicio.activo});
     setEditandoId(servicio.id);
     setMostrarFormulario(true);
@@ -126,10 +142,14 @@ export default function CatalogoServiciosPage() {
     if (!confirm('¿Eliminar este servicio del catálogo? Esta acción no se puede deshacer.')) return;
 
     try {
-      await deleteDoc(doc(db, 'catalogo-servicios', id));
+      const response = await fetch(`/api/catalogo-servicios/${id}`, { method: 'DELETE' });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'No se pudo eliminar el servicio');
+      }
     } catch (error) {
       console.error('Error al eliminar:', error);
-      alert('Error al eliminar servicio');
+      alert(error instanceof Error ? error.message : 'Error al eliminar servicio');
     }
   };
 
@@ -146,11 +166,18 @@ export default function CatalogoServiciosPage() {
   // Cambiar estado activo
   const toggleActivo = async (id: string, estadoActual: boolean) => {
     try {
-      await updateDoc(doc(db, 'catalogo-servicios', id), {
-        activo: !estadoActual,
-        updatedAt: new Date()});
+      const response = await fetch(`/api/catalogo-servicios/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activo: !estadoActual }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'No se pudo actualizar el estado');
+      }
     } catch (error) {
       console.error('Error al cambiar estado:', error);
+      alert(error instanceof Error ? error.message : 'Error al cambiar estado');
     }
   };
 
@@ -187,7 +214,7 @@ export default function CatalogoServiciosPage() {
         </div>
         <button
           onClick={() => setMostrarFormulario(!mostrarFormulario)}
-          className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="flex items-center space-x-2 bg-blue-600 text-text px-4 py-2 rounded-lg hover:bg-blue-700"
         >
           <Plus className="w-5 h-5" />
           <span>Nuevo Servicio</span>
@@ -364,7 +391,7 @@ export default function CatalogoServiciosPage() {
                     onClick={() => toggleProfesional(prof.id)}
                     className={`px-3 py-2 rounded-lg text-sm ${
                       formData.profesionalesHabilitados.includes(prof.id)
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-blue-600 text-text hover:bg-blue-500'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                   >
@@ -380,7 +407,7 @@ export default function CatalogoServiciosPage() {
             <div className="flex space-x-3">
               <button
                 type="submit"
-                className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+                className="flex items-center space-x-2 bg-blue-600 text-text px-6 py-2 rounded-lg hover:bg-blue-700"
               >
                 <Save className="w-4 h-4" />
                 <span>{editandoId ? 'Actualizar' : 'Crear'} Servicio</span>

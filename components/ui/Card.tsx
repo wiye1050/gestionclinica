@@ -8,11 +8,17 @@ type Props = {
   action?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  variant?: 'solid' | 'glass';
 };
 
-function CardComponent({ title, subtitle, action, children, className }: Props) {
+function CardComponent({ title, subtitle, action, children, className, variant = 'solid' }: Props) {
+  const base =
+    variant === 'glass'
+      ? 'glass-panel p-6 card-hover'
+      : 'surface-card p-6 card-hover';
+
   return (
-    <section className={`card p-6 card-hover ${className ?? ''}`}>
+    <section className={`${base} ${className ?? ''}`}>
       {(title || action) && (
         <header className="mb-3 flex items-center justify-between gap-2">
           <div>

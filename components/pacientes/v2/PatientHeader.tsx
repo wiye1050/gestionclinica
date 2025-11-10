@@ -110,7 +110,7 @@ export default function PatientHeader({ paciente, onNewCita, onNewNota, onUpload
               Más acciones
             </button>
             {showActions && (
-              <div className="absolute right-0 mt-2 w-56 space-y-1 rounded-2xl border border-border bg-card p-2 shadow-lg">
+              <div className="absolute right-0 mt-2 w-56 space-y-1 panel-block p-2 shadow-lg">
                 <button
                   onClick={() => {
                     onNewNota?.();

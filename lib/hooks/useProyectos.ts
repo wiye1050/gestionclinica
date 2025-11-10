@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Proyecto, EstadisticasProyectos, ProyectoHito, ProyectoActualizacion, ProyectoTarea } from '@/types/proyectos';
 
@@ -52,7 +52,7 @@ const convertirTimestamps = (data: Record<string, unknown> | undefined): Partial
 };
 
 // Hook principal
-export function useProyectos() {
+export function useProyectos(options?: { initialData?: Proyecto[] }) {
   const queryClient = useQueryClient();
 
   // Obtener todos los proyectos
@@ -69,6 +69,8 @@ export function useProyectos() {
       });
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
+    initialData: options?.initialData,
+    initialDataUpdatedAt: options?.initialData ? Date.now() : undefined,
   });
 
   // Calcular estadísticas
@@ -122,13 +124,16 @@ export function useProyectos() {
   // Crear proyecto
   const crearProyecto = useMutation({
     mutationFn: async (proyecto: Omit<Proyecto, 'id'>) => {
-      const docRef = doc(collection(db, 'proyectos'));
-      await setDoc(docRef, {
-        ...proyecto,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+      const response = await fetch('/api/proyectos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(proyecto),
       });
-      return docRef.id;
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'No se pudo crear el proyecto');
+      }
+      return payload.id as string;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['proyectos'] });
@@ -138,11 +143,15 @@ export function useProyectos() {
   // Actualizar proyecto
   const actualizarProyecto = useMutation({
     mutationFn: async ({ id, datos }: { id: string; datos: Partial<Proyecto> }) => {
-      const docRef = doc(db, 'proyectos', id);
-      await updateDoc(docRef, {
-        ...datos,
-        updatedAt: Timestamp.now(),
+      const response = await fetch(`/api/proyectos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(datos),
       });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'No se pudo actualizar el proyecto');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['proyectos'] });
@@ -152,7 +161,11 @@ export function useProyectos() {
   // Eliminar proyecto
   const eliminarProyecto = useMutation({
     mutationFn: async (id: string) => {
-      await deleteDoc(doc(db, 'proyectos', id));
+      const response = await fetch(`/api/proyectos/${id}`, { method: 'DELETE' });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'No se pudo eliminar el proyecto');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['proyectos'] });
