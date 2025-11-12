@@ -1,0 +1,25 @@
+{
+  "name": "gestionclinica-functions",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs --target node18 --sourcemap --out-dir dist",
+    "typecheck": "tsc --noEmit",
+    "deploy": "npm run build && firebase deploy --only functions",
+    "lint": "eslint ."
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^5.1.0",
+    "nodemailer": "^7.0.10"
+  },
+  "devDependencies": {
+    "tsup": "^8.2.4",
+    "typescript": "^5.6.3"
+  }
+}

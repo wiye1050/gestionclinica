@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/functions/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -42,6 +43,7 @@ next-env.d.ts
 .eslintcache
 .idea/
 dist/
+/functions/dist/
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
