@@ -150,23 +150,28 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
         }
       });
 
-      // Buscar inventario
-      const inventarioSnap = await getDocs(query(collection(db, 'inventario-productos'), limit(50)));
-      inventarioSnap.docs.forEach((doc) => {
-        const data = doc.data();
-        const nombre = data.nombre?.toLowerCase() || '';
-        
-        if (nombre.includes(lowerTerm)) {
-          searchResults.push({
-            id: doc.id,
-            type: 'inventario',
-            title: data.nombre,
-            subtitle: `Stock: ${data.stock || 0}`,
-            url: `/dashboard/inventario`,
-            icon: <Package className="w-5 h-5 text-orange-600" />
+      // Buscar inventario (vía API)
+      try {
+        const response = await fetch('/api/inventario?limit=50');
+        const inventario = await response.json();
+        if (response.ok && Array.isArray(inventario?.productos)) {
+          inventario.productos.forEach((item: { id: string; nombre?: string; stock?: number }) => {
+            const nombre = item.nombre?.toLowerCase() ?? '';
+            if (nombre.includes(lowerTerm)) {
+              searchResults.push({
+                id: item.id,
+                type: 'inventario',
+                title: item.nombre ?? 'Producto',
+                subtitle: `Stock: ${item.stock ?? 0}`,
+                url: '/dashboard/inventario',
+                icon: <Package className="w-5 h-5 text-orange-600" />,
+              });
+            }
           });
         }
-      });
+      } catch (error) {
+        console.warn('[global-search] No se pudo consultar el inventario', error);
+      }
 
       // Agregar enlaces de navegación que coincidan
       const matchingNav = NAVIGATION_LINKS.filter(link =>

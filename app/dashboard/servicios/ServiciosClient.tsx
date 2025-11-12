@@ -1,4 +1,3 @@
-/* eslint-disable react/no-unescaped-entities */
 'use client';
 
 import { Suspense, lazy, useState, useMemo } from 'react';
@@ -9,13 +8,13 @@ import {
   useGruposPacientes, 
   useCatalogoServicios 
 } from '@/lib/hooks/useQueries';
-import { Plus, Filter, Users, UserCheck, CheckSquare, Square, Trash2 } from 'lucide-react';
+import CompactFilters from '@/components/shared/CompactFilters';
+import { Plus, Users, CheckSquare, Square, Trash2, CheckCircle, Package } from 'lucide-react';
 import { LoadingTable } from '@/components/ui/Loading';
 import type { ServicioAsignado, Profesional, GrupoPaciente, CatalogoServicio } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { sanitizeInput } from '@/lib/utils/sanitize';
 
-// Lazy loading del componente de exportación
 const ExportButton = lazy(() => import('@/components/ui/ExportButton').then(m => ({ default: m.ExportButton })));
 
 type TiquetValue = 'SI' | 'NO' | 'CORD' | 'ESPACH';
@@ -49,7 +48,6 @@ export default function ServiciosClient({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   
-  // React Query hooks - caché automático
   const { data: servicios = [], isLoading: loadingServicios } = useServicios({
     initialData: initialServicios,
   });
@@ -109,9 +107,8 @@ export default function ServiciosClient({
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [filtroGrupo, setFiltroGrupo] = useState<string>('todos');
-  const [filtroEstado, setFiltroEstado] = useState<string>('todos');
+  const [filtroTiquet, setFiltroTiquet] = useState<string>('todos');
 
-  // Estado del formulario
   const [nuevoServicio, setNuevoServicio] = useState<NuevoServicioForm>({
     catalogoServicioId: '',
     grupoId: '',
@@ -126,7 +123,6 @@ export default function ServiciosClient({
 
   const loading = loadingServicios || loadingProfesionales || loadingGrupos || loadingCatalogo;
 
-  // Crear servicio
   const handleCrearServicio = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -203,7 +199,6 @@ export default function ServiciosClient({
     }
   };
 
-  // Cambiar checkbox "ACTUAL"
   const toggleActual = async (servicioId: string, valorActual: boolean) => {
     try {
       await patchServicio(servicioId, { esActual: !valorActual });
@@ -212,7 +207,6 @@ export default function ServiciosClient({
     }
   };
 
-  // Actualizar tiquet
   const actualizarTiquet = async (servicioId: string, nuevoTiquet: string) => {
     try {
       await patchServicio(servicioId, { tiquet: nuevoTiquet });
@@ -221,7 +215,6 @@ export default function ServiciosClient({
     }
   };
 
-  // Actualizar profesional
   const actualizarProfesional = async (servicioId: string, campo: string, profesionalId: string) => {
     if (!profesionalId && campo === 'profesionalPrincipalId') {
       alert('El profesional principal es obligatorio');
@@ -236,7 +229,6 @@ export default function ServiciosClient({
     }
   };
 
-  // Eliminar servicio
   const eliminarServicio = async (servicioId: string) => {
     if (!confirm('¿Eliminar este servicio?')) return;
     
@@ -247,32 +239,38 @@ export default function ServiciosClient({
     }
   };
 
-  // Filtrar servicios (memoizado para rendimiento)
   const serviciosFiltrados = useMemo(() => {
     return servicios.filter(servicio => {
       const cumpleGrupo = filtroGrupo === 'todos' || servicio.grupoId === filtroGrupo;
-      const cumpleEstado = filtroEstado === 'todos' || servicio.tiquet === filtroEstado;
-      return cumpleGrupo && cumpleEstado;
+      const cumpleTiquet = filtroTiquet === 'todos' || servicio.tiquet === filtroTiquet;
+      return cumpleGrupo && cumpleTiquet;
     });
-  }, [servicios, filtroGrupo, filtroEstado]);
+  }, [servicios, filtroGrupo, filtroTiquet]);
 
-  // Obtener color del tiquet
+  const kpis = useMemo(() => {
+    return {
+      total: servicios.length,
+      actuales: servicios.filter(s => s.esActual).length,
+      grupos: grupos.length,
+      profesionales: profesionales.length
+    };
+  }, [servicios, grupos, profesionales]);
+
   const getColorTiquet = (tiquet: string) => {
     switch (tiquet) {
       case 'SI':
-        return 'bg-success-bg text-success';
+        return 'bg-green-100 text-green-700';
       case 'NO':
-        return 'bg-danger-bg text-danger';
+        return 'bg-red-100 text-red-700';
       case 'CORD':
-        return 'bg-warn-bg text-warn';
+        return 'bg-yellow-100 text-yellow-700';
       case 'ESPACH':
-        return 'bg-brand-subtle text-brand';
+        return 'bg-blue-100 text-blue-700';
       default:
-        return 'bg-cardHover text-text-muted';
+        return 'bg-gray-100 text-gray-700';
     }
   };
 
-  // Datos para exportar
   const exportData = useMemo(() => serviciosFiltrados.map(servicio => ({
     'Servicio': servicio.catalogoServicioNombre,
     'Grupo': servicio.grupoNombre,
@@ -301,73 +299,96 @@ export default function ServiciosClient({
     { header: 'Supervisión', key: 'Supervisión', width: 12 },
   ];
 
+  const activeFiltersCount = [
+    filtroGrupo !== 'todos',
+    filtroTiquet !== 'todos'
+  ].filter(Boolean).length;
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="glass-panel flex flex-wrap items-center justify-between gap-4 px-6 py-5">
-        <div>
-          <h1 className="text-2xl font-semibold text-text">Servicios asignados</h1>
-          <p className="mt-1 text-sm text-text-muted">Asignación de servicios del catálogo a grupos específicos.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Suspense fallback={<div className="h-10 w-32 animate-pulse rounded-pill border border-border bg-card" />}>
-            <ExportButton
-              data={exportData}
-              columns={exportColumns}
-              filename={`Servicios_Asignados_${new Date().toISOString().split('T')[0]}`}
-              format="excel"
-              disabled={loading}
-            />
-          </Suspense>
-          <button
-            onClick={() => setMostrarFormulario(!mostrarFormulario)}
-            className="btn-gradient inline-flex items-center gap-2 px-5 py-2.5 text-sm"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Asignar Servicio</span>
-          </button>
-        </div>
-      </div>
+      {/* Header compacto */}
+      <div className="surface-card p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+              <Package className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">Servicios Asignados</h1>
+              <p className="text-sm text-gray-500">Gestión de servicios por grupo</p>
+            </div>
+          </div>
 
-      {/* Estadísticas */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <div className="glass-panel p-5">
-          <div className="flex items-center gap-2">
-            <CheckSquare className="w-5 h-5 text-brand" />
-            <p className="text-sm text-text-muted">Total servicios</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Suspense fallback={<div className="h-10 w-32 animate-pulse rounded-lg border border-gray-200 bg-gray-50" />}>
+              <ExportButton
+                data={exportData}
+                columns={exportColumns}
+                filename={`Servicios_${new Date().toISOString().split('T')[0]}`}
+                format="excel"
+                disabled={loading}
+              />
+            </Suspense>
+            
+            <button
+              onClick={() => setMostrarFormulario(!mostrarFormulario)}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4" />
+              Asignar
+            </button>
           </div>
-          <p className="mt-2 text-2xl font-semibold text-text">{loading ? '—' : servicios.length}</p>
         </div>
-        <div className="glass-panel p-5">
-          <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-brand" />
-            <p className="text-sm text-text-muted">Grupos activos</p>
+
+        {/* KPIs integrados */}
+        <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+              <Package className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Total</p>
+              <p className="text-xl font-semibold text-gray-900">{kpis.total}</p>
+            </div>
           </div>
-          <p className="mt-2 text-2xl font-semibold text-text">{loading ? '—' : grupos.length}</p>
-        </div>
-        <div className="glass-panel p-5">
-          <div className="flex items-center gap-2">
-            <UserCheck className="w-5 h-5 text-success" />
-            <p className="text-sm text-text-muted">Profesionales</p>
+
+          <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600">
+              <CheckCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Actuales</p>
+              <p className="text-xl font-semibold text-gray-900">{kpis.actuales}</p>
+            </div>
           </div>
-          <p className="mt-2 text-2xl font-semibold text-text">{loading ? '—' : profesionales.length}</p>
-        </div>
-        <div className="glass-panel p-5">
-          <div className="flex items-center gap-2">
-            <CheckSquare className="w-5 h-5 text-warn" />
-            <p className="text-sm text-text-muted">Actuales</p>
+
+          <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-600">
+              <Users className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Grupos</p>
+              <p className="text-xl font-semibold text-gray-900">{kpis.grupos}</p>
+            </div>
           </div>
-          <p className="mt-2 text-2xl font-semibold text-text">
-            {loading ? '—' : servicios.filter(s => s.esActual).length}
-          </p>
+
+          <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100 text-yellow-600">
+              <Users className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Profesionales</p>
+              <p className="text-xl font-semibold text-gray-900">{kpis.profesionales}</p>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Aviso si faltan datos */}
       {!loading && (catalogoServicios.length === 0 || grupos.length === 0 || profesionales.length === 0) && (
-        <div className="rounded-2xl border border-warn bg-warn-bg p-4">
-          <p className="font-medium text-warn">⚠️ Faltan datos necesarios:</p>
-          <ul className="mt-2 space-y-1 text-sm text-warn">
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+          <p className="font-medium text-yellow-800">⚠️ Faltan datos necesarios:</p>
+          <ul className="mt-2 space-y-1 text-sm text-yellow-700">
             {catalogoServicios.length === 0 && <li>• Crea servicios en el Catálogo de Servicios</li>}
             {profesionales.length === 0 && <li>• Añade profesionales en la sección Profesionales</li>}
             {grupos.length === 0 && <li>• Crea grupos de pacientes</li>}
@@ -375,38 +396,38 @@ export default function ServiciosClient({
         </div>
       )}
 
-      {/* Formulario Asignar Servicio */}
+      {/* Formulario */}
       {mostrarFormulario && (
-        <div className="panel-block p-6 shadow-sm">
-          <h2 className="mb-4 text-xl font-semibold text-text">Asignar servicio a grupo</h2>
+        <div className="surface-card p-6">
+          <h2 className="mb-4 text-lg font-semibold text-gray-900">Asignar servicio a grupo</h2>
           <form onSubmit={handleCrearServicio} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-text mb-1">Servicio del Catálogo *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Servicio *</label>
                 <select
                   value={nuevoServicio.catalogoServicioId}
                   onChange={(e) => setNuevoServicio({...nuevoServicio, catalogoServicioId: e.target.value})}
-                  className="w-full px-3 py-2 border border-border rounded-lg text-text"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   required
                 >
-                  <option value="">Seleccionar servicio...</option>
+                  <option value="">Seleccionar...</option>
                   {catalogoServicios.map(servicio => (
                     <option key={servicio.id} value={servicio.id}>
-                      {servicio.nombre} ({servicio.tiempoEstimado} min)
+                      {servicio.nombre}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text mb-1">Grupo *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Grupo *</label>
                 <select
                   value={nuevoServicio.grupoId}
                   onChange={(e) => setNuevoServicio({...nuevoServicio, grupoId: e.target.value})}
-                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   required
                 >
-                  <option value="">Seleccionar grupo...</option>
+                  <option value="">Seleccionar...</option>
                   {grupos.map(grupo => (
                     <option key={grupo.id} value={grupo.id}>{grupo.nombre}</option>
                   ))}
@@ -414,11 +435,11 @@ export default function ServiciosClient({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text mb-1">Tiquet CRM</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tiquet</label>
                 <select
                   value={nuevoServicio.tiquet}
                   onChange={(e) => setNuevoServicio({...nuevoServicio, tiquet: e.target.value as TiquetValue})}
-                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                 >
                   <option value="SI">SI</option>
                   <option value="NO">NO</option>
@@ -428,100 +449,41 @@ export default function ServiciosClient({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text mb-1">Citar con (Principal) *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Profesional *</label>
                 <select
                   value={nuevoServicio.profesionalPrincipalId}
                   onChange={(e) => setNuevoServicio({...nuevoServicio, profesionalPrincipalId: e.target.value})}
-                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   required
                 >
-                  <option value="">Seleccionar profesional...</option>
+                  <option value="">Seleccionar...</option>
                   {profesionales.map(prof => (
                     <option key={prof.id} value={prof.id}>{prof.nombre} {prof.apellidos}</option>
                   ))}
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Segunda Opción</label>
-                <select
-                  value={nuevoServicio.profesionalSegundaOpcionId}
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, profesionalSegundaOpcionId: e.target.value})}
-                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
-                >
-                  <option value="">Seleccionar profesional...</option>
-                  {profesionales.map(prof => (
-                    <option key={prof.id} value={prof.id}>{prof.nombre} {prof.apellidos}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Tercera Opción</label>
-                <select
-                  value={nuevoServicio.profesionalTerceraOpcionId}
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, profesionalTerceraOpcionId: e.target.value})}
-                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
-                >
-                  <option value="">Seleccionar profesional...</option>
-                  {profesionales.map(prof => (
-                    <option key={prof.id} value={prof.id}>{prof.nombre} {prof.apellidos}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Sala (opcional)</label>
-                <input
-                  type="text"
-                  value={nuevoServicio.sala}
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, sala: e.target.value})}
-                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
-                  placeholder="Sobreescribir sala predeterminada"
-                />
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-4">
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={nuevoServicio.esActual}
                   onChange={(e) => setNuevoServicio({...nuevoServicio, esActual: e.target.checked})}
-                  className="h-4 w-4 rounded border-border"
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600"
                 />
-                <span className="text-sm text-text">Es actual</span>
-              </label>
-
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={nuevoServicio.requiereApoyo}
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, requiereApoyo: e.target.checked})}
-                  className="h-4 w-4 rounded border-border"
-                />
-                <span className="text-sm text-text">Requiere apoyo</span>
-              </label>
-
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={nuevoServicio.supervision}
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, supervision: e.target.checked})}
-                  className="h-4 w-4 rounded border-border"
-                />
-                <span className="text-sm text-text">Supervisión</span>
+                <span className="text-sm text-gray-700">Es actual</span>
               </label>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <button type="submit" className="btn-gradient px-6 py-2.5 text-sm">
-                Asignar Servicio
+            <div className="flex gap-3">
+              <button type="submit" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                Asignar
               </button>
               <button
                 type="button"
                 onClick={() => setMostrarFormulario(false)}
-                className="rounded-pill border border-border bg-card px-5 py-2 text-sm font-medium text-text hover:bg-cardHover focus-visible:focus-ring"
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 Cancelar
               </button>
@@ -531,93 +493,84 @@ export default function ServiciosClient({
       )}
 
       {/* Filtros */}
-      <div className="panel-block p-4 shadow-sm">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-text-muted" />
-            <span className="text-sm font-medium text-text">Filtros:</span>
-          </div>
-          
-          <select
-            value={filtroGrupo}
-            onChange={(e) => setFiltroGrupo(e.target.value)}
-            className="rounded-pill border border-border bg-card px-3 py-1 text-sm text-text focus-visible:focus-ring"
-          >
-            <option value="todos">Todos los grupos</option>
-            {grupos.map(grupo => (
-              <option key={grupo.id} value={grupo.id}>{grupo.nombre}</option>
-            ))}
-          </select>
+      <CompactFilters
+        filters={[
+          {
+            label: 'Grupo',
+            value: filtroGrupo,
+            options: grupos.map(g => ({ label: g.nombre, value: g.id })),
+            onChange: setFiltroGrupo
+          },
+          {
+            label: 'Tiquet',
+            value: filtroTiquet,
+            options: [
+              { label: 'SI', value: 'SI' },
+              { label: 'NO', value: 'NO' },
+              { label: 'CORD', value: 'CORD' },
+              { label: 'ESPACH', value: 'ESPACH' }
+            ],
+            onChange: setFiltroTiquet
+          }
+        ]}
+        activeFiltersCount={activeFiltersCount}
+        onClearAll={() => {
+          setFiltroGrupo('todos');
+          setFiltroTiquet('todos');
+        }}
+      />
 
-          <select
-            value={filtroEstado}
-            onChange={(e) => setFiltroEstado(e.target.value)}
-            className="rounded-pill border border-border bg-card px-3 py-1 text-sm text-text focus-visible:focus-ring"
-          >
-            <option value="todos">Todos los tickets</option>
-            <option value="SI">SI</option>
-            <option value="NO">NO</option>
-            <option value="CORD">CORD</option>
-            <option value="ESPACH">ESPACH</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Tabla de Servicios */}
+      {/* Tabla */}
       {loading ? (
         <LoadingTable rows={10} />
       ) : (
-        <div className="overflow-hidden panel-block shadow-sm">
+        <div className="overflow-hidden surface-card">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="border-b border-border bg-cardHover">
+              <thead className="bg-gray-50 text-xs uppercase tracking-wider text-gray-700">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Actual</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Servicio</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Grupo</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Tiquet</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Citar con</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">2ª Opción</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">3ª Opción</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Apoyo</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Sala</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Tiempo</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Acciones</th>
+                  <th className="px-4 py-3 text-left font-semibold">Actual</th>
+                  <th className="px-4 py-3 text-left font-semibold">Servicio</th>
+                  <th className="px-4 py-3 text-left font-semibold">Grupo</th>
+                  <th className="px-4 py-3 text-left font-semibold">Tiquet</th>
+                  <th className="px-4 py-3 text-left font-semibold">Profesional</th>
+                  <th className="px-4 py-3 text-left font-semibold">Sala</th>
+                  <th className="px-4 py-3 text-center font-semibold">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-gray-100 text-sm text-gray-900">
                 {serviciosFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="px-4 py-8 text-center text-text-muted">
-                      No hay servicios asignados. Usa el botón "Asignar Servicio"
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                      No hay servicios asignados
                     </td>
                   </tr>
                 ) : (
                   serviciosFiltrados.map((servicio) => (
-                    <tr key={servicio.id} className="hover:bg-cardHover">
+                    <tr key={servicio.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <button
                           onClick={() => toggleActual(servicio.id, servicio.esActual)}
-                          className="text-text-muted hover:text-brand"
+                          className="text-gray-400 hover:text-blue-600"
                         >
                           {servicio.esActual ? (
-                            <CheckSquare className="h-5 w-5 text-brand" />
+                            <CheckSquare className="h-5 w-5 text-blue-600" />
                           ) : (
-                            <Square className="h-5 w-5 text-text-muted" />
+                            <Square className="h-5 w-5" />
                           )}
                         </button>
                       </td>
-                      <td className="px-4 py-3 text-sm font-medium text-text">
+                      <td className="px-4 py-3 font-medium">
                         {servicio.catalogoServicioNombre}
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-muted">
+                      <td className="px-4 py-3 text-gray-600">
                         {servicio.grupoNombre}
                       </td>
                       <td className="px-4 py-3">
                         <select
                           value={servicio.tiquet}
                           onChange={(e) => actualizarTiquet(servicio.id, e.target.value)}
-                          className={`px-2 py-1 rounded text-xs font-medium ${getColorTiquet(servicio.tiquet)}`}
+                          className={`px-2 py-1 rounded-full text-xs font-semibold ${getColorTiquet(servicio.tiquet)}`}
                         >
                           <option value="SI">SI</option>
                           <option value="NO">NO</option>
@@ -629,9 +582,8 @@ export default function ServiciosClient({
                         <select
                           value={servicio.profesionalPrincipalId}
                           onChange={(e) => actualizarProfesional(servicio.id, 'profesionalPrincipalId', e.target.value)}
-                          className="rounded-lg border border-border bg-card px-2 py-1 text-sm text-text focus-visible:focus-ring"
+                          className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm text-gray-900"
                         >
-                          <option value="">Seleccionar...</option>
                           {profesionales.map(prof => (
                             <option key={prof.id} value={prof.id}>
                               {prof.nombre} {prof.apellidos}
@@ -639,47 +591,13 @@ export default function ServiciosClient({
                           ))}
                         </select>
                       </td>
-                      <td className="px-4 py-3">
-                        <select
-                          value={servicio.profesionalSegundaOpcionId || ''}
-                          onChange={(e) => actualizarProfesional(servicio.id, 'profesionalSegundaOpcionId', e.target.value)}
-                          className="rounded-lg border border-border bg-card px-2 py-1 text-sm text-text focus-visible:focus-ring"
-                        >
-                          <option value="">-</option>
-                          {profesionales.map(prof => (
-                            <option key={prof.id} value={prof.id}>
-                              {prof.nombre} {prof.apellidos}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-4 py-3">
-                        <select
-                          value={servicio.profesionalTerceraOpcionId || ''}
-                          onChange={(e) => actualizarProfesional(servicio.id, 'profesionalTerceraOpcionId', e.target.value)}
-                          className="rounded-lg border border-border bg-card px-2 py-1 text-sm text-text focus-visible:focus-ring"
-                        >
-                          <option value="">-</option>
-                          {profesionales.map(prof => (
-                            <option key={prof.id} value={prof.id}>
-                              {prof.nombre} {prof.apellidos}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {servicio.requiereApoyo && <span className="text-warn">✓</span>}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-text-muted">
+                      <td className="px-4 py-3 text-gray-600">
                         {servicio.sala || '-'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-muted">
-                        {servicio.tiempoReal ? `${servicio.tiempoReal}min` : '-'}
-                      </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-center">
                         <button
                           onClick={() => eliminarServicio(servicio.id)}
-                          className="text-danger transition-colors hover:text-danger/80"
+                          className="text-red-600 transition-colors hover:text-red-700"
                           title="Eliminar"
                         >
                           <Trash2 className="w-4 h-4" />

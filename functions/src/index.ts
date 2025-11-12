@@ -1,5 +1,6 @@
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import * as logger from 'firebase-functions/logger';
+import { config as functionsConfig } from 'firebase-functions';
 import admin from 'firebase-admin';
 import nodemailer from 'nodemailer';
 import type { CanonicalEvent } from '../../lib/events/handlers';
@@ -10,22 +11,30 @@ if (admin.apps.length === 0) {
 }
 
 const db = admin.firestore();
-const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
-const notifyEmailTo = process.env.NOTIFY_EMAIL_TO;
+const runtimeConfig = functionsConfig();
+const automationsConfig = runtimeConfig?.automations ?? {};
+
+const slackWebhookUrl =
+  process.env.SLACK_WEBHOOK_URL ?? automationsConfig.slack_webhook_url ?? '';
+const notifyEmailTo =
+  process.env.NOTIFY_EMAIL_TO ?? automationsConfig.notify_email_to ?? '';
+const smtpHost = process.env.SMTP_HOST ?? automationsConfig.smtp_host;
+const smtpPort = process.env.SMTP_PORT ?? automationsConfig.smtp_port;
+const smtpSecure = process.env.SMTP_SECURE ?? automationsConfig.smtp_secure;
+const smtpUser = process.env.SMTP_USER ?? automationsConfig.smtp_user;
+const smtpPass = process.env.SMTP_PASS ?? automationsConfig.smtp_pass;
+const smtpFrom =
+  process.env.SMTP_FROM ?? automationsConfig.smtp_from ?? smtpUser;
 
 let mailer: nodemailer.Transporter | null = null;
-if (process.env.SMTP_HOST) {
+if (smtpHost) {
   mailer = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT ?? 587),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth:
-      process.env.SMTP_USER && process.env.SMTP_PASS
-        ? {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-          }
-        : undefined,
+    host: smtpHost,
+    port: Number(smtpPort ?? 587),
+    secure:
+      (typeof smtpSecure === 'string' && smtpSecure === 'true') ||
+      Number(smtpPort) === 465,
+    auth: smtpUser && smtpPass ? { user: smtpUser, pass: smtpPass } : undefined,
   });
 }
 
@@ -49,7 +58,7 @@ async function notifyEmail(subject: string, text: string) {
   if (!mailer || !notifyEmailTo) return;
   try {
     await mailer.sendMail({
-      from: process.env.SMTP_FROM ?? process.env.SMTP_USER,
+      from: smtpFrom ?? smtpUser,
       to: notifyEmailTo,
       subject,
       text,

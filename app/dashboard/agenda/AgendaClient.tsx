@@ -11,7 +11,7 @@ import {
   useSalas,
   usePacientes,
 } from '@/lib/hooks/useQueries';
-import ModuleHeader from '@/components/shared/ModuleHeader';
+import CompactFilters from '@/components/shared/CompactFilters';
 import ViewSelector from '@/components/shared/ViewSelector';
 import SkeletonLoader from '@/components/shared/SkeletonLoader';
 import AgendaDayView from '@/components/agenda/v2/AgendaDayView';
@@ -22,10 +22,9 @@ import AgendaEventDrawer from '@/components/agenda/v2/AgendaEventDrawer';
 import MiniCalendar from '@/components/agenda/v2/MiniCalendar';
 import AgendaSearch from '@/components/agenda/v2/AgendaSearch';
 import { AgendaEvent } from '@/components/agenda/v2/agendaHelpers';
-import AgendaMetrics from '@/components/agenda/v2/AgendaMetrics';
-import { Calendar, List, Users as UsersIcon, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, List, Users as UsersIcon, Plus, ChevronLeft, ChevronRight, Clock, CheckCircle, XCircle } from 'lucide-react';
 import type { SerializedAgendaEvent } from '@/lib/server/agenda';
-import type { Paciente, Profesional } from '@/types';
+import type { Paciente } from '@/types';
 
 type VistaAgenda = 'dia' | 'semana' | 'recursos';
 type AgendaResource = { id: string; nombre: string; tipo: 'profesional' | 'sala' };
@@ -52,13 +51,6 @@ const TIPO_FILTERS: Array<{ id: AgendaEvent['tipo'] | 'todos'; label: string }> 
   { id: 'tratamiento', label: 'Tratamiento' },
   { id: 'urgencia', label: 'Urgencia' },
   { id: 'administrativo', label: 'Administrativo' },
-];
-
-const RECURSO_PRESETS = [
-  { id: 'todos', label: 'Todos los recursos' },
-  { id: 'medicina', label: 'Equipo médico' },
-  { id: 'fisioterapia', label: 'Fisioterapia' },
-  { id: 'enfermeria', label: 'Enfermería' },
 ];
 
 function deserializeEvents(serialized: SerializedAgendaEvent[]): AgendaEvent[] {
@@ -207,6 +199,16 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
       return matchProfesional && matchSala && matchEstado && matchTipo;
     });
   }, [eventos, selectedProfesionales, selectedSala, estadoFilter, tipoFilter]);
+
+  // Calcular KPIs
+  const kpis = useMemo(() => {
+    const total = eventosFiltrados.length;
+    const programadas = eventosFiltrados.filter(e => e.estado === 'programada').length;
+    const confirmadas = eventosFiltrados.filter(e => e.estado === 'confirmada').length;
+    const canceladas = eventosFiltrados.filter(e => e.estado === 'cancelada').length;
+
+    return { total, programadas, confirmadas, canceladas };
+  }, [eventosFiltrados]);
 
   const recursos = useMemo<AgendaResource[]>(() => {
     const cumplePreset = (prof?: (typeof profesionales)[number]) => {
@@ -450,18 +452,41 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
     }
   }, [vista, currentDate, weekStart]);
 
+  const activeFiltersCount = [
+    selectedProfesionales.length > 0,
+    selectedSala !== 'todas',
+    estadoFilter !== 'todos',
+    tipoFilter !== 'todos',
+  ].filter(Boolean).length;
+
+  const handleClearFilters = () => {
+    setSelectedProfesionales([]);
+    setSelectedSala('todas');
+    setEstadoFilter('todos');
+    setTipoFilter('todos');
+  };
+
   if (loading) {
     return <SkeletonLoader />;
   }
 
   return (
-    <div className="space-y-4">
-      <ModuleHeader
-        title="Agenda"
-        description="Planifica y gestiona citas, recursos y disponibilidad del equipo"
-        actions={
-          <div className="flex items-center gap-3">
-            <div className="hidden w-64 md:block">
+    <div className="space-y-6">
+      {/* Header compacto con KPIs */}
+      <div className="surface-card p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+              <Calendar className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">Agenda</h1>
+              <p className="text-sm text-gray-500">Gestión de citas y recursos</p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="hidden w-48 md:block">
               <AgendaSearch
                 events={eventos}
                 onEventSelect={handleEventClick}
@@ -471,24 +496,191 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
                 }}
               />
             </div>
+
+            <ViewSelector
+              views={[
+                { id: 'dia', label: 'Día', icon: <Calendar className="w-4 h-4" /> },
+                { id: 'semana', label: 'Semana', icon: <List className="w-4 h-4" /> },
+                { id: 'recursos', label: 'Recursos', icon: <UsersIcon className="w-4 h-4" /> },
+              ]}
+              currentView={vista}
+              onViewChange={(v) => setVista(v as VistaAgenda)}
+            />
+
             <button
               onClick={() => {
                 setModalInitialDate(new Date());
                 setEventToEdit(null);
                 setIsModalOpen(true);
               }}
-              className="inline-flex items-center gap-2 rounded-pill bg-brand px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-brand/90 focus-visible:focus-ring"
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
             >
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Nueva cita</span>
+              Nueva cita
             </button>
           </div>
-        }
-      />
+        </div>
 
-      <AgendaMetrics events={eventos} weekStart={weekStart} profesionales={profesionales as Profesional[]} />
+        {/* KPIs integrados */}
+        <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+              <Clock className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Total</p>
+              <p className="text-xl font-semibold text-gray-900">{kpis.total}</p>
+            </div>
+          </div>
 
-      <div className="md:hidden">
+          <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100 text-yellow-600">
+              <Clock className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Programadas</p>
+              <p className="text-xl font-semibold text-gray-900">{kpis.programadas}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600">
+              <CheckCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Confirmadas</p>
+              <p className="text-xl font-semibold text-gray-900">{kpis.confirmadas}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
+              <XCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Canceladas</p>
+              <p className="text-xl font-semibold text-gray-900">{kpis.canceladas}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navegación de fecha */}
+      <div className="surface-card p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleToday}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+            >
+              Hoy
+            </button>
+            <button
+              onClick={handlePrev}
+              className="rounded-lg border border-gray-200 bg-white p-2 text-gray-700 hover:bg-gray-50"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div className="min-w-[200px] text-center">
+              <span className="text-base font-semibold capitalize text-gray-900">{dateLabel}</span>
+            </div>
+            <button
+              onClick={handleNext}
+              className="rounded-lg border border-gray-200 bg-white p-2 text-gray-700 hover:bg-gray-50"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+
+          <span className="text-sm text-gray-600">{eventosFiltrados.length} eventos</span>
+        </div>
+      </div>
+
+      {/* Filtros compactos */}
+      <CompactFilters
+        filters={[
+          {
+            label: 'Sala',
+            value: selectedSala,
+            options: salas.map(s => ({ label: s.nombre, value: s.id })),
+            onChange: setSelectedSala
+          },
+          {
+            label: 'Tipo',
+            value: tipoFilter,
+            options: TIPO_FILTERS.filter(t => t.id !== 'todos').map(t => ({ label: t.label, value: t.id })),
+            onChange: (v) => setTipoFilter(v as typeof tipoFilter)
+          }
+        ]}
+        activeFiltersCount={activeFiltersCount}
+        onClearAll={handleClearFilters}
+      >
+        {/* Estado buttons */}
+        <div className="flex flex-wrap gap-2">
+          {ESTADO_FILTERS.map((filter) => (
+            <button
+              key={filter.id}
+              onClick={() => setEstadoFilter(filter.id)}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                estadoFilter === filter.id
+                  ? filter.className
+                  : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Profesionales dropdown */}
+        <details className="group relative">
+          <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <span>
+              {selectedProfesionales.length === 0
+                ? 'Profesionales'
+                : `${selectedProfesionales.length} seleccionado${selectedProfesionales.length > 1 ? 's' : ''}`}
+            </span>
+            <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
+          </summary>
+          <div className="absolute right-0 z-50 mt-1 max-h-60 w-64 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+            <div className="space-y-1 p-2">
+              <label className="flex items-center gap-2 rounded px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedProfesionales.length === 0}
+                  onChange={() => setSelectedProfesionales([])}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                />
+                <span>Todos</span>
+              </label>
+              {profesionales.map((prof) => (
+                <label
+                  key={prof.id}
+                  className="flex items-center gap-2 rounded px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedProfesionales.includes(prof.id)}
+                    onChange={(e) => {
+                      setSelectedProfesionales((prev) =>
+                        e.target.checked
+                          ? [...prev, prof.id]
+                          : prev.filter((id) => id !== prof.id)
+                      );
+                    }}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                  />
+                  <span>
+                    {prof.nombre} {prof.apellidos}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </details>
+      </CompactFilters>
+
+      <div className="md:hidden mb-4">
         <AgendaSearch
           events={eventos}
           onEventSelect={handleEventClick}
@@ -499,208 +691,24 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
         />
       </div>
 
-      <div className="panel-block p-4">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
-          <div className="flex items-center gap-2 md:col-span-2">
-            <button
-              onClick={handleToday}
-              className="rounded-pill border border-border bg-card px-3 py-2 text-sm font-medium text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
-            >
-              Hoy
-            </button>
-            <button
-              onClick={handlePrev}
-              className="rounded-full border border-border bg-card p-2 text-text hover:bg-cardHover focus-visible:focus-ring"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <div className="flex-1 text-center">
-              <span className="text-sm font-semibold capitalize text-text">{dateLabel}</span>
-            </div>
-            <button
-              onClick={handleNext}
-              className="rounded-full border border-border bg-card p-2 text-text hover:bg-cardHover focus-visible:focus-ring"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="relative z-40">
-            <details className="group">
-              <summary className="flex w-full list-none items-center justify-between panel-block px-3 py-2 text-sm font-medium text-text transition-colors hover:bg-cardHover">
-                <span className="text-text">
-                  {selectedProfesionales.length === 0
-                    ? 'Todos los profesionales'
-                    : `${selectedProfesionales.length} seleccionado${
-                        selectedProfesionales.length > 1 ? 's' : ''
-                      }`}
-                </span>
-                <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
-              </summary>
-              <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto panel-block shadow-lg">
-                <div className="space-y-1 p-2">
-                  <label className="flex items-center gap-2 rounded-2xl px-3 py-2 text-sm text-text transition-colors hover:bg-cardHover cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedProfesionales.length === 0}
-                      onChange={() => setSelectedProfesionales([])}
-                      className="h-4 w-4 rounded border-border text-brand focus-visible:ring-2 focus-visible:ring-brand/50"
-                    />
-                    <span>Todos</span>
-                  </label>
-                  {profesionales.map((prof) => (
-                    <label
-                      key={prof.id}
-                      className="flex items-center gap-2 rounded-2xl px-3 py-2 text-sm text-text transition-colors hover:bg-cardHover cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedProfesionales.includes(prof.id)}
-                        onChange={(e) => {
-                          setSelectedProfesionales((prev) =>
-                            e.target.checked
-                              ? [...prev, prof.id]
-                              : prev.filter((id) => id !== prof.id)
-                          );
-                        }}
-                        className="h-4 w-4 rounded border-border text-brand focus-visible:ring-2 focus-visible:ring-brand/50"
-                      />
-                      <span>
-                        {prof.nombre} {prof.apellidos}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </details>
-          </div>
-
-          <div>
-            <select
-              value={selectedSala}
-              onChange={(e) => setSelectedSala(e.target.value)}
-              className="w-full panel-block px-3 py-2 text-sm text-text focus-visible:focus-ring"
-            >
-              <option value="todas">Todas las salas</option>
-              {salas.map((sala) => (
-                <option key={sala.id} value={sala.id}>
-                  {sala.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="md:col-span-2">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
-              Estado
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {ESTADO_FILTERS.map((filter) => (
-                <button
-                  key={filter.id}
-                  onClick={() => setEstadoFilter(filter.id)}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors focus-visible:focus-ring ${
-                    estadoFilter === filter.id
-                      ? filter.className
-                      : 'border border-border text-text-muted hover:bg-cardHover'
-                  }`}
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
-              Tipo de cita
-            </p>
-            <select
-              value={tipoFilter}
-              onChange={(e) => setTipoFilter(e.target.value as AgendaEvent['tipo'] | 'todos')}
-              className="w-full rounded-2xl border border-border bg-card px-3 py-2 text-sm text-text focus-visible:focus-ring"
-            >
-              {TIPO_FILTERS.map((tipo) => (
-                <option key={tipo.id} value={tipo.id}>
-                  {tipo.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {vista === 'recursos' && (
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
-                Preset de recursos
-              </p>
-              <select
-                value={resourcePreset}
-                onChange={(e) =>
-                  setResourcePreset(e.target.value as 'todos' | 'medicina' | 'fisioterapia' | 'enfermeria')
-                }
-                className="w-full rounded-2xl border border-border bg-card px-3 py-2 text-sm text-text focus-visible:focus-ring"
-              >
-                {RECURSO_PRESETS.map((preset) => (
-                  <option key={preset.id} value={preset.id}>
-                    {preset.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="flex items-center justify-center panel-blockHover px-3 py-2 text-sm font-medium text-text-muted">
-            {eventosFiltrados.length} eventos
-          </div>
-        </div>
-      </div>
-
-      <ViewSelector
-        views={[
-          { id: 'dia', label: 'Día', icon: <Calendar className="w-4 h-4" /> },
-          { id: 'semana', label: 'Semana', icon: <List className="w-4 h-4" /> },
-          { id: 'recursos', label: 'Recursos', icon: <UsersIcon className="w-4 h-4" /> },
-        ]}
-        currentView={vista}
-        onViewChange={(v) => setVista(v as VistaAgenda)}
-      />
-
+      {/* Contenido principal */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <div className="lg:col-span-3">
-          <details className="group mb-4 lg:hidden" open>
-            <summary className="flex cursor-pointer items-center justify-between panel-block px-3 py-2 text-sm font-medium text-text shadow-sm">
-              <span>📅 Calendario</span>
-              <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
-            </summary>
-            <div className="mt-2">
-              <MiniCalendar
-                currentDate={currentDate}
-                onDateSelect={(date) => {
-                  setCurrentDate(date);
-                  setVista('dia');
-                }}
-                onMonthChange={setCurrentDate}
-                events={eventosFiltrados}
-              />
-            </div>
-          </details>
-          <div className="hidden lg:block">
-            <MiniCalendar
-              currentDate={currentDate}
-              onDateSelect={(date) => {
-                setCurrentDate(date);
-                setVista('dia');
-              }}
-              onMonthChange={setCurrentDate}
-              events={eventosFiltrados}
-            />
-          </div>
+          <MiniCalendar
+            currentDate={currentDate}
+            onDateSelect={(date) => {
+              setCurrentDate(date);
+              setVista('dia');
+            }}
+            onMonthChange={setCurrentDate}
+            events={eventosFiltrados}
+          />
         </div>
 
         <div className="lg:col-span-9">
           <div
-            className="panel-block shadow-sm"
-            style={{ height: 'calc(100vh - 350px)', minHeight: '400px' }}
+            className="surface-card shadow-sm"
+            style={{ height: 'calc(100vh - 450px)', minHeight: '400px' }}
           >
             {vista === 'dia' && (
               <AgendaDayView

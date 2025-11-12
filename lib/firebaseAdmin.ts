@@ -34,13 +34,17 @@ function readServiceAccount(): ServiceAccountConfig | null {
   return null;
 }
 
-let adminApp: App | null = null;
+const globalForAdmin = globalThis as typeof globalThis & {
+  _adminApp?: App | null;
+  _adminDb?: ReturnType<typeof getFirestore> | null;
+  _adminDbSettingsApplied?: boolean;
+};
 
 const serviceAccount = readServiceAccount();
 
-if (serviceAccount) {
+if (serviceAccount && !globalForAdmin._adminApp) {
   const existing = getApps();
-  adminApp =
+  globalForAdmin._adminApp =
     existing.length > 0
       ? existing[0]
       : initializeApp({
@@ -50,23 +54,23 @@ if (serviceAccount) {
             privateKey: serviceAccount.privateKey,
           }),
         });
-} else if (process.env.NODE_ENV !== 'production') {
+} else if (!serviceAccount && process.env.NODE_ENV !== 'production') {
   console.warn(
     'Firebase Admin no está configurado. Define FIREBASE_SERVICE_ACCOUNT_KEY o las variables FIREBASE_ADMIN_* para habilitar la verificación de sesiones.'
   );
 }
 
+const adminApp: App | null = globalForAdmin._adminApp ?? null;
+
 export const adminAuth = adminApp ? getAuth(adminApp) : null;
 
-let adminDbInstance: ReturnType<typeof getFirestore> | null = null;
-let adminDbSettingsApplied = false;
-
-if (adminApp) {
-  adminDbInstance = getFirestore(adminApp);
-  if (!adminDbSettingsApplied && adminDbInstance) {
-    adminDbInstance.settings({ ignoreUndefinedProperties: true });
-    adminDbSettingsApplied = true;
-  }
+if (adminApp && !globalForAdmin._adminDb) {
+  globalForAdmin._adminDb = getFirestore(adminApp);
 }
 
-export const adminDb = adminDbInstance;
+if (globalForAdmin._adminDb && !globalForAdmin._adminDbSettingsApplied) {
+  globalForAdmin._adminDb.settings({ ignoreUndefinedProperties: true });
+  globalForAdmin._adminDbSettingsApplied = true;
+}
+
+export const adminDb = globalForAdmin._adminDb ?? null;

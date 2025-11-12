@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
-import { CatalogoServicio } from '@/types';
+import type { CatalogoServicio } from '@/types';
 import { Plus, Edit2, Trash2, Save, X, List, Clock } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Tratamiento {
   id: string;
@@ -24,6 +23,56 @@ interface Tratamiento {
   updatedAt: Date;
 }
 
+type TratamientoApi = Omit<Tratamiento, 'createdAt' | 'updatedAt'> & {
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
+type CatalogoServicioApi = Omit<CatalogoServicio, 'createdAt' | 'updatedAt'> & {
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
+const safeDate = (value?: string | null) => {
+  if (!value) return new Date();
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? new Date() : date;
+};
+
+const parseTratamiento = (item: TratamientoApi): Tratamiento => ({
+  ...item,
+  createdAt: safeDate(item.createdAt),
+  updatedAt: safeDate(item.updatedAt),
+});
+
+const parseCatalogoServicio = (item: CatalogoServicioApi): CatalogoServicio => {
+  const categorias: CatalogoServicio['categoria'][] = ['medicina', 'fisioterapia', 'enfermeria'];
+  const categoria = categorias.includes(item.categoria as CatalogoServicio['categoria'])
+    ? (item.categoria as CatalogoServicio['categoria'])
+    : 'medicina';
+
+  return {
+    id: item.id,
+    nombre: item.nombre ?? 'Servicio',
+    categoria,
+    descripcion: item.descripcion,
+    protocolosRequeridos: Array.isArray(item.protocolosRequeridos) ? (item.protocolosRequeridos as string[]) : undefined,
+    tiempoEstimado: Number(item.tiempoEstimado ?? 0),
+    requiereSala: Boolean(item.requiereSala),
+    salaPredeterminada: item.salaPredeterminada ?? undefined,
+    requiereSupervision: Boolean(item.requiereSupervision),
+    requiereApoyo: Boolean(item.requiereApoyo),
+    frecuenciaMensual: item.frecuenciaMensual ?? undefined,
+    cargaMensualEstimada: item.cargaMensualEstimada ?? undefined,
+    profesionalesHabilitados: Array.isArray(item.profesionalesHabilitados)
+      ? (item.profesionalesHabilitados as string[])
+      : [],
+    activo: Boolean(item.activo ?? true),
+    createdAt: safeDate(item.createdAt),
+    updatedAt: safeDate(item.updatedAt),
+  } as CatalogoServicio;
+};
+
 export default function TratamientosPage() {
   const { user } = useAuth();
   const [tratamientos, setTratamientos] = useState<Tratamiento[]>([]);
@@ -31,6 +80,9 @@ export default function TratamientosPage() {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [filtroCategoria, setFiltroCategoria] = useState<string>('todos');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [errorMensaje, setErrorMensaje] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -42,127 +94,146 @@ export default function TratamientosPage() {
       orden: number;
       opcional: boolean;
     }[],
-    activo: true});
+    activo: true,
+  });
 
-  // Cargar datos
-  useEffect(() => {
-    // Cargar tratamientos
-    const qTratamientos = query(collection(db, 'tratamientos'), orderBy('nombre'));
-    const unsubTratamientos = onSnapshot(qTratamientos, (snapshot) => {
-      const tratamientosData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate()})) as Tratamiento[];
-      setTratamientos(tratamientosData);
-    });
+  const requestJson = useCallback(async <T = unknown>(input: RequestInfo, init?: RequestInit) => {
+    const response = await fetch(input, init);
+    let payload: unknown = null;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
 
-    // Cargar catálogo de servicios
-    const qServicios = query(collection(db, 'catalogo-servicios'), orderBy('nombre'));
-    const unsubServicios = onSnapshot(qServicios, (snapshot) => {
-      const serviciosData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate()})) as CatalogoServicio[];
-      setCatalogoServicios(serviciosData.filter(s => s.activo));
-    });
+    if (!response.ok) {
+      const message =
+        typeof payload === 'object' && payload && 'error' in payload
+          ? String((payload as { error?: unknown }).error)
+          : 'Operación no disponible';
+      throw new Error(message);
+    }
 
-    return () => {
-      unsubTratamientos();
-      unsubServicios();
-    };
+    return (payload as T) ?? ({} as T);
   }, []);
 
-  // Resetear formulario
+  const cargarDatos = useCallback(async () => {
+    setLoading(true);
+    setErrorMensaje(null);
+    try {
+      const [tratamientosData, serviciosData] = await Promise.all([
+        requestJson<TratamientoApi[]>('/api/tratamientos'),
+        requestJson<CatalogoServicioApi[]>('/api/catalogo-servicios?limit=500&incluirInactivos=true'),
+      ]);
+      setTratamientos(tratamientosData.map(parseTratamiento));
+      setCatalogoServicios(serviciosData.filter((servicio) => servicio.activo).map(parseCatalogoServicio));
+    } catch (error) {
+      console.error('Error cargando tratamientos:', error);
+      setErrorMensaje(error instanceof Error ? error.message : 'No se pudieron cargar los tratamientos.');
+    } finally {
+      setLoading(false);
+    }
+  }, [requestJson]);
+
+  useEffect(() => {
+    void cargarDatos();
+  }, [cargarDatos]);
+
   const resetForm = () => {
     setFormData({
       nombre: '',
       descripcion: '',
       categoria: 'mixto',
       serviciosIncluidos: [],
-      activo: true});
+      activo: true,
+    });
     setEditandoId(null);
     setMostrarFormulario(false);
   };
 
-  // Calcular tiempo total
-  const calcularTiempoTotal = (serviciosIds: string[]) => {
-    return serviciosIds.reduce((total, servicioId) => {
-      const servicio = catalogoServicios.find(s => s.id === servicioId);
-      return total + (servicio?.tiempoEstimado || 0);
-    }, 0);
-  };
-
-  // Crear o actualizar tratamiento
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
-
-    if (formData.serviciosIncluidos.length === 0) {
-      alert('Debes añadir al menos un servicio al tratamiento');
+    if (!user) {
+      toast.error('Debes iniciar sesión para gestionar tratamientos.');
       return;
     }
 
-    const tiempoTotal = calcularTiempoTotal(
-      formData.serviciosIncluidos.map(s => s.servicioId)
-    );
+    if (formData.serviciosIncluidos.length === 0) {
+      toast.error('Añade al menos un servicio al tratamiento');
+      return;
+    }
 
-    const datos = {
-      ...formData,
-      tiempoTotalEstimado: tiempoTotal,
-      updatedAt: new Date()};
+    const payload = {
+      nombre: formData.nombre,
+      descripcion: formData.descripcion || undefined,
+      categoria: formData.categoria,
+      serviciosIncluidos: formData.serviciosIncluidos,
+      activo: formData.activo,
+    };
 
+    setSaving(true);
     try {
       if (editandoId) {
-        await updateDoc(doc(db, 'tratamientos', editandoId), datos);
+        await requestJson(`/api/tratamientos/${editandoId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        toast.success('Tratamiento actualizado correctamente');
       } else {
-        await addDoc(collection(db, 'tratamientos'), {
-          ...datos,
-          createdAt: new Date()});
+        await requestJson('/api/tratamientos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        toast.success('Tratamiento creado correctamente');
       }
+
       resetForm();
+      await cargarDatos();
     } catch (error) {
-      console.error('Error al guardar tratamiento:', error);
-      alert('Error al guardar tratamiento');
+      const message = error instanceof Error ? error.message : 'No se pudo guardar el tratamiento.';
+      setErrorMensaje(message);
+      toast.error(message);
+    } finally {
+      setSaving(false);
     }
   };
 
-  // Iniciar edición
   const iniciarEdicion = (tratamiento: Tratamiento) => {
     setFormData({
       nombre: tratamiento.nombre,
       descripcion: tratamiento.descripcion || '',
       categoria: tratamiento.categoria,
       serviciosIncluidos: tratamiento.serviciosIncluidos,
-      activo: tratamiento.activo});
+      activo: tratamiento.activo,
+    });
     setEditandoId(tratamiento.id);
     setMostrarFormulario(true);
   };
 
-  // Eliminar tratamiento
   const eliminarTratamiento = async (id: string) => {
     if (!confirm('¿Eliminar este tratamiento? Esta acción no se puede deshacer.')) return;
-
     try {
-      await deleteDoc(doc(db, 'tratamientos', id));
+      await requestJson(`/api/tratamientos/${id}`, { method: 'DELETE' });
+      toast.success('Tratamiento eliminado');
+      await cargarDatos();
     } catch (error) {
-      console.error('Error al eliminar:', error);
-      alert('Error al eliminar tratamiento');
+      const message = error instanceof Error ? error.message : 'No se pudo eliminar el tratamiento.';
+      setErrorMensaje(message);
+      toast.error(message);
     }
   };
 
-  // Añadir servicio al tratamiento
   const añadirServicio = (servicioId: string) => {
-    const servicio = catalogoServicios.find(s => s.id === servicioId);
+    const servicio = catalogoServicios.find((s) => s.id === servicioId);
     if (!servicio) return;
-
-    if (formData.serviciosIncluidos.some(s => s.servicioId === servicioId)) {
-      alert('Este servicio ya está incluido en el tratamiento');
+    if (formData.serviciosIncluidos.some((s) => s.servicioId === servicioId)) {
+      toast.error('Este servicio ya está incluido en el tratamiento');
       return;
     }
 
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       serviciosIncluidos: [
         ...prev.serviciosIncluidos,
@@ -170,133 +241,127 @@ export default function TratamientosPage() {
           servicioId: servicio.id,
           servicioNombre: servicio.nombre,
           orden: prev.serviciosIncluidos.length + 1,
-          opcional: false}
-      ]
+          opcional: false,
+        },
+      ],
     }));
   };
 
-  // Eliminar servicio del tratamiento
   const eliminarServicioDelTratamiento = (servicioId: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       serviciosIncluidos: prev.serviciosIncluidos
-        .filter(s => s.servicioId !== servicioId)
-        .map((s, index) => ({ ...s, orden: index + 1 }))
+        .filter((s) => s.servicioId !== servicioId)
+        .map((s, index) => ({ ...s, orden: index + 1 })),
     }));
   };
 
-  // Mover servicio arriba/abajo
   const moverServicio = (index: number, direccion: 'arriba' | 'abajo') => {
     const nuevosServicios = [...formData.serviciosIncluidos];
     const nuevoIndex = direccion === 'arriba' ? index - 1 : index + 1;
-
     if (nuevoIndex < 0 || nuevoIndex >= nuevosServicios.length) return;
-
-    [nuevosServicios[index], nuevosServicios[nuevoIndex]] = 
-    [nuevosServicios[nuevoIndex], nuevosServicios[index]];
-
-    nuevosServicios.forEach((s, i) => s.orden = i + 1);
-
-    setFormData(prev => ({ ...prev, serviciosIncluidos: nuevosServicios }));
+    [nuevosServicios[index], nuevosServicios[nuevoIndex]] = [nuevosServicios[nuevoIndex], nuevosServicios[index]];
+    nuevosServicios.forEach((servicio, i) => (servicio.orden = i + 1));
+    setFormData((prev) => ({ ...prev, serviciosIncluidos: nuevosServicios }));
   };
 
-  // Toggle opcional
   const toggleOpcional = (servicioId: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      serviciosIncluidos: prev.serviciosIncluidos.map(s =>
-        s.servicioId === servicioId ? { ...s, opcional: !s.opcional } : s
-      )
+      serviciosIncluidos: prev.serviciosIncluidos.map((servicio) =>
+        servicio.servicioId === servicioId ? { ...servicio, opcional: !servicio.opcional } : servicio
+      ),
     }));
   };
 
-  // Cambiar estado activo
   const toggleActivo = async (id: string, estadoActual: boolean) => {
     try {
-      await updateDoc(doc(db, 'tratamientos', id), {
-        activo: !estadoActual,
-        updatedAt: new Date()});
+      await requestJson(`/api/tratamientos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activo: !estadoActual }),
+      });
+      await cargarDatos();
+      toast.success('Estado actualizado');
     } catch (error) {
-      console.error('Error al cambiar estado:', error);
+      const message = error instanceof Error ? error.message : 'No se pudo cambiar el estado.';
+      setErrorMensaje(message);
+      toast.error(message);
     }
   };
 
-  // Filtrar tratamientos
-  const tratamientosFiltrados = tratamientos.filter(tratamiento => {
-    const cumpleCategoria = filtroCategoria === 'todos' || tratamiento.categoria === filtroCategoria;
-    return cumpleCategoria;
-  });
+  const tratamientosFiltrados = useMemo(
+    () =>
+      tratamientos.filter((tratamiento) =>
+        filtroCategoria === 'todos' ? true : tratamiento.categoria === filtroCategoria
+      ),
+    [tratamientos, filtroCategoria]
+  );
 
-  // Estadísticas
-  const stats = {
-    total: tratamientos.length,
-    activos: tratamientos.filter(t => t.activo).length,
-    medicina: tratamientos.filter(t => t.categoria === 'medicina').length,
-    fisioterapia: tratamientos.filter(t => t.categoria === 'fisioterapia').length,
-    enfermeria: tratamientos.filter(t => t.categoria === 'enfermeria').length,
-    mixtos: tratamientos.filter(t => t.categoria === 'mixto').length};
+  const stats = useMemo(
+    () => ({
+      total: tratamientos.length,
+      activos: tratamientos.filter((t) => t.activo).length,
+      medicina: tratamientos.filter((t) => t.categoria === 'medicina').length,
+      fisioterapia: tratamientos.filter((t) => t.categoria === 'fisioterapia').length,
+      enfermeria: tratamientos.filter((t) => t.categoria === 'enfermeria').length,
+      mixtos: tratamientos.filter((t) => t.categoria === 'mixto').length,
+    }),
+    [tratamientos]
+  );
 
   const getColorCategoria = (categoria: string) => {
     switch (categoria) {
-      case 'medicina': return 'bg-blue-100 text-blue-800';
-      case 'fisioterapia': return 'bg-green-100 text-green-800';
-      case 'enfermeria': return 'bg-purple-100 text-purple-800';
-      case 'mixto': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'medicina':
+        return 'bg-blue-100 text-blue-800';
+      case 'fisioterapia':
+        return 'bg-green-100 text-green-800';
+      case 'enfermeria':
+        return 'bg-purple-100 text-purple-800';
+      case 'mixto':
+        return 'bg-orange-100 text-orange-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Tratamientos</h1>
           <p className="text-gray-600 mt-1">Protocolos completos combinando múltiples servicios</p>
         </div>
-        <button
-          onClick={() => setMostrarFormulario(!mostrarFormulario)}
-          className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Nuevo Tratamiento</span>
-        </button>
+        <div className="flex items-center gap-3">
+          {loading && <span className="text-sm text-gray-500">Actualizando…</span>}
+          <button
+            onClick={() => setMostrarFormulario(!mostrarFormulario)}
+            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Nuevo Tratamiento</span>
+          </button>
+        </div>
       </div>
 
-      {/* Estadísticas */}
+      {errorMensaje && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMensaje}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-600">Total</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-600">Activos</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">{stats.activos}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-600">Medicina</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">{stats.medicina}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-600">Fisioterapia</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">{stats.fisioterapia}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-600">Enfermería</p>
-          <p className="text-2xl font-bold text-purple-600 mt-1">{stats.enfermeria}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-600">Mixtos</p>
-          <p className="text-2xl font-bold text-orange-600 mt-1">{stats.mixtos}</p>
-        </div>
+        <StatCard label="Total" value={stats.total} />
+        <StatCard label="Activos" value={stats.activos} accent="text-green-600" />
+        <StatCard label="Medicina" value={stats.medicina} accent="text-blue-600" />
+        <StatCard label="Fisioterapia" value={stats.fisioterapia} accent="text-green-600" />
+        <StatCard label="Enfermería" value={stats.enfermeria} accent="text-purple-600" />
+        <StatCard label="Mixtos" value={stats.mixtos} accent="text-orange-600" />
       </div>
 
-      {/* Formulario */}
       {mostrarFormulario && (
         <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">
-            {editandoId ? 'Editar Tratamiento' : 'Nuevo Tratamiento'}
-          </h2>
+          <h2 className="text-xl font-semibold mb-4">{editandoId ? 'Editar Tratamiento' : 'Nuevo Tratamiento'}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -304,7 +369,7 @@ export default function TratamientosPage() {
                 <input
                   type="text"
                   value={formData.nombre}
-                  onChange={(e) => setFormData({...formData, nombre: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   placeholder="Ej: Tratamiento Completo Grupo 1"
                   required
@@ -315,247 +380,249 @@ export default function TratamientosPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
                 <select
                   value={formData.categoria}
-                  onChange={(e) => setFormData({...formData, categoria: e.target.value as 'medicina' | 'fisioterapia' | 'enfermeria' | 'mixto'})}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      categoria: e.target.value as 'medicina' | 'fisioterapia' | 'enfermeria' | 'mixto',
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  required
                 >
+                  <option value="mixto">Mixto</option>
                   <option value="medicina">Medicina</option>
                   <option value="fisioterapia">Fisioterapia</option>
                   <option value="enfermeria">Enfermería</option>
-                  <option value="mixto">Mixto</option>
                 </select>
               </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-                <textarea
-                  value={formData.descripcion}
-                  onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  rows={3}
-                  placeholder="Descripción del tratamiento..."
-                />
-              </div>
             </div>
 
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="activo"
-                checked={formData.activo}
-                onChange={(e) => setFormData({...formData, activo: e.target.checked})}
-                className="w-4 h-4 mr-2"
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+              <textarea
+                value={formData.descripcion}
+                onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                rows={3}
+                placeholder="Notas internas o contexto del protocolo"
               />
-              <label htmlFor="activo" className="text-sm text-gray-700">Tratamiento activo</label>
             </div>
 
-            {/* Añadir servicios */}
-            <div className="border-t pt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Servicios Incluidos en el Tratamiento
-              </label>
-              
-              <div className="mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Servicios incluidos</label>
+              <div className="flex gap-3">
                 <select
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      añadirServicio(e.target.value);
-                      e.target.value = '';
-                    }
-                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  onChange={(e) => {
+                    if (e.target.value) añadirServicio(e.target.value);
+                    e.target.value = '';
+                  }}
+                  defaultValue=""
                 >
-                  <option value="">Seleccionar servicio para añadir...</option>
-                  {catalogoServicios.map(servicio => (
+                  <option value="">Añadir servicio…</option>
+                  {catalogoServicios.map((servicio) => (
                     <option key={servicio.id} value={servicio.id}>
-                      {servicio.nombre} ({servicio.tiempoEstimado}min)
+                      {servicio.nombre}
                     </option>
                   ))}
                 </select>
+                <button
+                  type="button"
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm"
+                  onClick={() => setFormData({ ...formData, serviciosIncluidos: [] })}
+                >
+                  Limpiar
+                </button>
               </div>
 
-              {formData.serviciosIncluidos.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No hay servicios añadidos. Selecciona uno arriba.
-                </div>
-              ) : (
-                <div className="space-y-2">
+              {formData.serviciosIncluidos.length > 0 && (
+                <ul className="mt-4 space-y-2">
                   {formData.serviciosIncluidos.map((servicio, index) => (
-                    <div key={servicio.servicioId} className="flex items-center space-x-2 bg-gray-50 p-3 rounded-lg">
-                      <span className="text-sm font-medium text-gray-600 w-8">{servicio.orden}.</span>
-                      <span className="flex-1 text-sm text-gray-900">{servicio.servicioNombre}</span>
-                      
-                      <button
-                        type="button"
-                        onClick={() => toggleOpcional(servicio.servicioId)}
-                        className={`text-xs px-2 py-1 rounded ${
-                          servicio.opcional 
-                            ? 'bg-yellow-100 text-yellow-700' 
-                            : 'bg-gray-200 text-gray-600'
-                        }`}
-                      >
-                        {servicio.opcional ? 'Opcional' : 'Obligatorio'}
-                      </button>
-
-                      <div className="flex space-x-1">
-                        <button
-                          type="button"
-                          onClick={() => moverServicio(index, 'arriba')}
-                          disabled={index === 0}
-                          className="text-gray-600 hover:text-blue-600 disabled:opacity-30"
-                        >
-                          ↑
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => moverServicio(index, 'abajo')}
-                          disabled={index === formData.serviciosIncluidos.length - 1}
-                          className="text-gray-600 hover:text-blue-600 disabled:opacity-30"
-                        >
-                          ↓
-                        </button>
+                    <li key={servicio.servicioId} className="border border-gray-200 rounded-lg p-3 flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{servicio.servicioNombre}</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className="text-sm text-gray-500 hover:text-gray-700"
+                            onClick={() => moverServicio(index, 'arriba')}
+                            title="Mover arriba"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="text-sm text-gray-500 hover:text-gray-700"
+                            onClick={() => moverServicio(index, 'abajo')}
+                            title="Mover abajo"
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            className="text-sm text-gray-500 hover:text-gray-700"
+                            onClick={() => toggleOpcional(servicio.servicioId)}
+                          >
+                            {servicio.opcional ? 'Opcional' : 'Obligatorio'}
+                          </button>
+                          <button
+                            type="button"
+                            className="text-red-600 hover:text-red-800 text-sm"
+                            onClick={() => eliminarServicioDelTratamiento(servicio.servicioId)}
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={() => eliminarServicioDelTratamiento(servicio.servicioId)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
+                      <p className="text-xs text-gray-500">Orden: {servicio.orden}</p>
+                    </li>
                   ))}
-                  <div className="text-sm text-gray-600 mt-2">
-                    Tiempo total estimado: {calcularTiempoTotal(formData.serviciosIncluidos.map(s => s.servicioId))} minutos
-                  </div>
-                </div>
+                </ul>
               )}
             </div>
 
-            <div className="flex space-x-3">
-              <button
-                type="submit"
-                className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-              >
-                <Save className="w-4 h-4" />
-                <span>{editandoId ? 'Actualizar' : 'Crear'} Tratamiento</span>
-              </button>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="flex items-center space-x-2 bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300"
-              >
-                <X className="w-4 h-4" />
-                <span>Cancelar</span>
-              </button>
+            <div className="flex items-center justify-between">
+              <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={formData.activo}
+                  onChange={(e) => setFormData({ ...formData, activo: e.target.checked })}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                Tratamiento activo
+              </label>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg"
+                  disabled={saving}
+                >
+                  <X className="w-4 h-4" />
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-60"
+                  disabled={saving}
+                >
+                  <Save className="w-4 h-4" />
+                  {saving ? 'Guardando…' : 'Guardar'}
+                </button>
+              </div>
             </div>
           </form>
         </div>
       )}
 
-      {/* Filtros */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <div className="flex items-center space-x-4">
-          <span className="text-sm font-medium text-gray-700">Filtrar por categoría:</span>
-          <select
-            value={filtroCategoria}
-            onChange={(e) => setFiltroCategoria(e.target.value)}
-            className="px-3 py-1 border border-gray-300 rounded-lg text-sm"
-          >
-            <option value="todos">Todas</option>
-            <option value="medicina">Medicina</option>
-            <option value="fisioterapia">Fisioterapia</option>
-            <option value="enfermeria">Enfermería</option>
-            <option value="mixto">Mixto</option>
-          </select>
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm font-medium text-gray-700">Filtrar por categoría:</p>
+        <div className="flex flex-wrap gap-2">
+          {['todos', 'medicina', 'fisioterapia', 'enfermeria', 'mixto'].map((categoria) => (
+            <button
+              key={categoria}
+              onClick={() => setFiltroCategoria(categoria)}
+              className={`px-3 py-1 rounded-full text-sm border ${
+                filtroCategoria === categoria ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600'
+              }`}
+            >
+              {categoria.charAt(0).toUpperCase() + categoria.slice(1)}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Lista de Tratamientos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {tratamientosFiltrados.length === 0 ? (
-          <div className="col-span-full bg-white p-8 rounded-lg shadow text-center">
-            <p className="text-gray-500">No hay tratamientos registrados</p>
-          </div>
-        ) : (
-          tratamientosFiltrados.map((tratamiento) => (
-            <div
-              key={tratamiento.id}
-              className={`bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow ${
-                !tratamiento.activo ? 'opacity-60' : ''
-              }`}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {tratamiento.nombre}
-                  </h3>
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getColorCategoria(tratamiento.categoria)}`}>
-                    {tratamiento.categoria.charAt(0).toUpperCase() + tratamiento.categoria.slice(1)}
+      <div className="grid grid-cols-1 gap-4">
+        {tratamientosFiltrados.map((tratamiento) => (
+          <div key={tratamiento.id} className="bg-white p-4 rounded-lg shadow space-y-4">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl font-semibold text-gray-900">{tratamiento.nombre}</h3>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getColorCategoria(tratamiento.categoria)}`}>
+                    {tratamiento.categoria}
+                  </span>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      tratamiento.activo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    {tratamiento.activo ? 'Activo' : 'Inactivo'}
                   </span>
                 </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => iniciarEdicion(tratamiento)}
-                    className="text-blue-600 hover:text-blue-800"
-                    title="Editar"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => eliminarTratamiento(tratamiento.id)}
-                    className="text-red-600 hover:text-red-800"
-                    title="Eliminar"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                {tratamiento.descripcion && <p className="text-sm text-gray-600 mt-1">{tratamiento.descripcion}</p>}
               </div>
 
-              {tratamiento.descripcion && (
-                <p className="text-sm text-gray-600 mb-3">{tratamiento.descripcion}</p>
-              )}
-
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => toggleActivo(tratamiento.id, tratamiento.activo)}
+                  className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+                >
                   <List className="w-4 h-4" />
-                  <span>{tratamiento.serviciosIncluidos.length} servicios</span>
-                </div>
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <Clock className="w-4 h-4" />
-                  <span>{tratamiento.tiempoTotalEstimado} minutos</span>
-                </div>
+                  {tratamiento.activo ? 'Desactivar' : 'Activar'}
+                </button>
+                <button
+                  onClick={() => iniciarEdicion(tratamiento)}
+                  className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Editar
+                </button>
+                <button
+                  onClick={() => eliminarTratamiento(tratamiento.id)}
+                  className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-800"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Eliminar
+                </button>
               </div>
-
-              <div className="border-t pt-3 mb-4">
-                <p className="text-xs font-medium text-gray-700 mb-2">Servicios incluidos:</p>
-                <ol className="space-y-1">
-                  {tratamiento.serviciosIncluidos.map((servicio) => (
-                    <li key={servicio.servicioId} className="text-sm text-gray-600 flex items-center space-x-2">
-                      <span className="font-medium">{servicio.orden}.</span>
-                      <span className="flex-1">{servicio.servicioNombre}</span>
-                      {servicio.opcional && (
-                        <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">Opcional</span>
-                      )}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-
-              <button
-                onClick={() => toggleActivo(tratamiento.id, tratamiento.activo)}
-                className={`w-full px-4 py-2 rounded-lg text-sm font-medium ${
-                  tratamiento.activo
-                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {tratamiento.activo ? 'Activo' : 'Inactivo'}
-              </button>
             </div>
-          ))
+
+            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+              <span className="inline-flex items-center gap-1">
+                <Clock className="w-4 h-4" />
+                {tratamiento.tiempoTotalEstimado} min. estimados
+              </span>
+              <span>
+                Actualizado:{' '}
+                {tratamiento.updatedAt
+                  ? new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' }).format(tratamiento.updatedAt)
+                  : '---'}
+              </span>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">Servicios incluidos</p>
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                {tratamiento.serviciosIncluidos.map((servicio) => (
+                  <div key={`${tratamiento.id}-${servicio.servicioId}`} className="rounded border border-gray-200 px-3 py-2 text-sm">
+                    <p className="font-medium text-gray-900">{servicio.servicioNombre}</p>
+                    <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
+                      <span>Orden {servicio.orden}</span>
+                      <span>{servicio.opcional ? 'Opcional' : 'Obligatorio'}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {!loading && tratamientosFiltrados.length === 0 && (
+          <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+            No hay tratamientos que coincidan con el filtro seleccionado.
+          </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, accent }: { label: string; value: number; accent?: string }) {
+  return (
+    <div className="bg-white p-4 rounded-lg shadow">
+      <p className="text-sm text-gray-600">{label}</p>
+      <p className={`text-2xl font-bold mt-1 ${accent ?? 'text-gray-900'}`}>{value}</p>
     </div>
   );
 }

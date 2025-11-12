@@ -33,6 +33,7 @@ export default function Sidebar() {
   const menuItems = [
     { name: 'Inicio', href: '/dashboard', icon: Home },
     { name: 'Agenda', href: '/dashboard/agenda', icon: CalendarDays },
+    { name: 'Episodios', href: '/dashboard/episodios', icon: FolderKanban },
     { name: 'Pacientes', href: '/dashboard/pacientes', icon: UserCircle },
   ];
 

@@ -1,5 +1,5 @@
-import { initializeApp, getApps } from 'firebase/app';
-import { getFirestore, initializeFirestore, type Firestore } from 'firebase/firestore';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getFirestore, initializeFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
@@ -13,17 +13,28 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-// Inicializar Firebase
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-let firestoreInstance: Firestore;
-try {
-  firestoreInstance = initializeFirestore(app, {
-    ignoreUndefinedProperties: true
-  });
-} catch {
-  firestoreInstance = getFirestore(app);
+// Inicializar Firebase solo una vez
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+
+// Firestore con ignoreUndefinedProperties una sola vez
+const globalForFirestore = globalThis as typeof globalThis & {
+  _firestore?: ReturnType<typeof getFirestore>;
+  _firestoreInitialized?: boolean;
+};
+
+if (!globalForFirestore._firestoreInitialized) {
+  try {
+    globalForFirestore._firestore = initializeFirestore(app, {
+      ignoreUndefinedProperties: true,
+    });
+  } catch {
+    // ya estaba inicializado
+    globalForFirestore._firestore = getFirestore(app);
+  }
+  globalForFirestore._firestoreInitialized = true;
 }
-const db = firestoreInstance;
+
+const db = globalForFirestore._firestore ?? getFirestore(app);
 const auth = getAuth(app);
 const storage = getStorage(app);
 

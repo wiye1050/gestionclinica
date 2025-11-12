@@ -2,7 +2,10 @@
 
 import Link from 'next/link';
 import { Paciente, Profesional } from '@/types';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import CompactFilters from '@/components/shared/CompactFilters';
+import DataTable, { Column } from '@/components/shared/DataTable';
+import { Eye, AlertCircle } from 'lucide-react';
 
 interface PacientesTableProps {
   pacientes: Paciente[];
@@ -22,16 +25,16 @@ interface PacientesTableProps {
   error?: string | null;
 }
 
-const estadoLabels: Record<string, string> = {
-  activo: 'Activo',
-  inactivo: 'Inactivo',
-  egresado: 'Egresado'
-};
-
 const riesgoColors: Record<string, string> = {
   alto: 'bg-red-100 text-red-700',
   medio: 'bg-yellow-100 text-yellow-700',
   bajo: 'bg-green-100 text-green-700'
+};
+
+const estadoColors: Record<string, string> = {
+  activo: 'bg-green-100 text-green-700',
+  inactivo: 'bg-gray-100 text-gray-700',
+  egresado: 'bg-blue-100 text-blue-700'
 };
 
 export function PacientesTable({
@@ -51,6 +54,9 @@ export function PacientesTable({
   loading,
   error
 }: PacientesTableProps) {
+  const [sortKey, setSortKey] = useState<string>('nombre');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
   const profesionalesMap = useMemo(
     () =>
       profesionales.reduce<Record<string, string>>((acc, profesional) => {
@@ -61,7 +67,7 @@ export function PacientesTable({
   );
 
   const filteredPacientes = useMemo(() => {
-    return pacientes.filter((paciente) => {
+    const filtered = pacientes.filter((paciente) => {
       const matchesSearch =
         searchTerm.trim().length === 0 ||
         `${paciente.nombre} ${paciente.apellidos}`
@@ -85,6 +91,30 @@ export function PacientesTable({
         matchesProfesional
       );
     });
+
+    // Ordenar
+    const sorted = [...filtered].sort((a, b) => {
+      let aVal: string | number = '';
+      let bVal: string | number = '';
+
+      if (sortKey === 'nombre') {
+        aVal = `${a.nombre} ${a.apellidos}`.toLowerCase();
+        bVal = `${b.nombre} ${b.apellidos}`.toLowerCase();
+      } else if (sortKey === 'riesgo') {
+        const riesgoOrder = { alto: 3, medio: 2, bajo: 1 };
+        aVal = riesgoOrder[a.riesgo as keyof typeof riesgoOrder] || 0;
+        bVal = riesgoOrder[b.riesgo as keyof typeof riesgoOrder] || 0;
+      } else if (sortKey === 'estado') {
+        aVal = a.estado;
+        bVal = b.estado;
+      }
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
   }, [
     pacientes,
     searchTerm,
@@ -92,164 +122,179 @@ export function PacientesTable({
     riesgoFilter,
     followUpOnly,
     pacientesSeguimiento,
-    profesionalFilter
+    profesionalFilter,
+    sortKey,
+    sortDirection
   ]);
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  };
+
+  const activeFiltersCount = [
+    estadoFilter !== 'todos',
+    riesgoFilter !== 'todos',
+    profesionalFilter !== 'todos',
+    followUpOnly
+  ].filter(Boolean).length;
+
+  const handleClearFilters = () => {
+    onEstadoFilterChange('todos');
+    onRiesgoFilterChange('todos');
+    onProfesionalFilterChange('todos');
+    onFollowUpOnlyChange(false);
+  };
+
+  const columns: Column<Paciente>[] = [
+    {
+      key: 'nombre',
+      label: 'Paciente',
+      sortable: true,
+      render: (paciente) => (
+        <div className="flex flex-col gap-1">
+          <span className="font-semibold text-gray-900">
+            {paciente.nombre} {paciente.apellidos}
+          </span>
+          {pacientesSeguimiento.has(paciente.id) && (
+            <span className="inline-flex w-fit items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">
+              <AlertCircle className="h-3 w-3" />
+              Seguimiento pendiente
+            </span>
+          )}
+          {paciente.telefono && (
+            <span className="text-xs text-gray-500">{paciente.telefono}</span>
+          )}
+        </div>
+      )
+    },
+    {
+      key: 'riesgo',
+      label: 'Riesgo',
+      sortable: true,
+      render: (paciente) => {
+        const riesgoClass = riesgoColors[paciente.riesgo ?? ''] ?? 'bg-gray-100 text-gray-700';
+        return (
+          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${riesgoClass}`}>
+            {paciente.riesgo ? paciente.riesgo.toUpperCase() : 'Sin asignar'}
+          </span>
+        );
+      }
+    },
+    {
+      key: 'profesional',
+      label: 'Profesional',
+      render: (paciente) => (
+        <span className="text-sm text-gray-700">
+          {paciente.profesionalReferenteId
+            ? profesionalesMap[paciente.profesionalReferenteId] ?? 'Asignación pendiente'
+            : 'No asignado'}
+        </span>
+      )
+    },
+    {
+      key: 'estado',
+      label: 'Estado',
+      sortable: true,
+      render: (paciente) => {
+        const estadoClass = estadoColors[paciente.estado] ?? 'bg-gray-100 text-gray-700';
+        return (
+          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${estadoClass}`}>
+            {paciente.estado.charAt(0).toUpperCase() + paciente.estado.slice(1)}
+          </span>
+        );
+      }
+    },
+    {
+      key: 'acciones',
+      label: 'Acciones',
+      render: (paciente) => (
+        <Link
+          href={`/dashboard/pacientes/${paciente.id}`}
+          className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 transition hover:bg-blue-100"
+        >
+          <Eye className="h-4 w-4" />
+          Ver ficha
+        </Link>
+      )
+    }
+  ];
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-700">
+        {error}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
-        <input
-          type="search"
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Buscar por nombre o apellidos"
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 md:col-span-2"
-        />
-        <select
-          value={estadoFilter}
-          onChange={(e) => onEstadoFilterChange(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2"
-        >
-          <option value="todos">Estado: todos</option>
-          <option value="activo">Activos</option>
-          <option value="inactivo">Inactivos</option>
-          <option value="egresado">Egresados</option>
-        </select>
-        <select
-          value={riesgoFilter}
-          onChange={(e) => onRiesgoFilterChange(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2"
-        >
-          <option value="todos">Riesgo: todos</option>
-          <option value="alto">Alto</option>
-          <option value="medio">Medio</option>
-          <option value="bajo">Bajo</option>
-        </select>
-        <select
-          value={profesionalFilter}
-          onChange={(e) => onProfesionalFilterChange(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2"
-        >
-          <option value="todos">Profesional: todos</option>
-          {profesionales.map((prof) => (
-            <option key={prof.id} value={prof.id}>
-              {prof.nombre} {prof.apellidos}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="flex items-center gap-2 text-sm text-gray-600">
-        <label className="flex items-center gap-2">
+      <CompactFilters
+        searchValue={searchTerm}
+        onSearchChange={onSearchChange}
+        searchPlaceholder="Buscar por nombre o apellidos..."
+        filters={[
+          {
+            label: 'Estado',
+            value: estadoFilter,
+            options: [
+              { label: 'Activos', value: 'activo' },
+              { label: 'Inactivos', value: 'inactivo' },
+              { label: 'Egresados', value: 'egresado' }
+            ],
+            onChange: onEstadoFilterChange
+          },
+          {
+            label: 'Riesgo',
+            value: riesgoFilter,
+            options: [
+              { label: 'Alto', value: 'alto' },
+              { label: 'Medio', value: 'medio' },
+              { label: 'Bajo', value: 'bajo' }
+            ],
+            onChange: onRiesgoFilterChange
+          },
+          {
+            label: 'Profesional',
+            value: profesionalFilter,
+            options: profesionales.map(p => ({
+              label: `${p.nombre} ${p.apellidos}`,
+              value: p.id
+            })),
+            onChange: onProfesionalFilterChange
+          }
+        ]}
+        activeFiltersCount={activeFiltersCount}
+        onClearAll={handleClearFilters}
+      >
+        <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
           <input
             type="checkbox"
             checked={followUpOnly}
             onChange={(e) => onFollowUpOnlyChange(e.target.checked)}
             className="h-4 w-4 text-blue-600"
           />
-          Mostrar solo pacientes con seguimiento pendiente
+          <span className="text-gray-700">Solo con seguimiento</span>
+          <span className="text-xs text-gray-400">({pacientesSeguimiento.size})</span>
         </label>
-        <span className="text-xs text-gray-400">
-          ({pacientesSeguimiento.size} paciente{pacientesSeguimiento.size === 1 ? '' : 's'} con seguimiento)
-        </span>
-      </div>
+      </CompactFilters>
 
-      {loading && (
-        <div className="rounded-lg border border-gray-200 bg-white p-6 text-gray-500">
-          Cargando pacientes...
-        </div>
-      )}
-
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-700">
-          {error}
-        </div>
-      )}
-
-      {!loading && !error && filteredPacientes.length === 0 && (
-        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-6 text-gray-500">
-          No se encontraron pacientes con los criterios seleccionados.
-        </div>
-      )}
-
-      {!loading && !error && filteredPacientes.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Paciente
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Riesgo
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Profesional referente
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Estado
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {filteredPacientes.map((paciente) => {
-                const riesgoClass =
-                  riesgoColors[paciente.riesgo ?? ''] ?? 'bg-gray-100 text-gray-700';
-                const requiereSeguimiento = pacientesSeguimiento.has(paciente.id);
-                return (
-                  <tr key={paciente.id}>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-gray-900">
-                          {paciente.nombre} {paciente.apellidos}
-                        </span>
-                        {requiereSeguimiento && (
-                          <span className="mt-1 inline-flex w-fit rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">
-                            Seguimiento pendiente
-                          </span>
-                        )}
-                        {paciente.telefono && (
-                          <span className="text-sm text-gray-500">{paciente.telefono}</span>
-                        )}
-                        {paciente.email && (
-                          <span className="text-sm text-gray-500">{paciente.email}</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${riesgoClass}`}>
-                        {paciente.riesgo ? paciente.riesgo.toUpperCase() : 'Sin asignar'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-700">
-                        {paciente.profesionalReferenteId
-                          ? profesionalesMap[paciente.profesionalReferenteId] ?? 'Asignación pendiente'
-                          : 'No asignado'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-700">
-                        {estadoLabels[paciente.estado] ?? 'Sin estado'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right text-sm font-medium">
-                      <Link
-                        href={`/dashboard/pacientes/${paciente.id}`}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        Ver ficha
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={filteredPacientes}
+        keyExtractor={(p) => p.id}
+        onRowClick={(p) => window.location.href = `/dashboard/pacientes/${p.id}`}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={handleSort}
+        loading={loading}
+        emptyMessage="No se encontraron pacientes con los criterios seleccionados"
+      />
     </div>
   );
 }

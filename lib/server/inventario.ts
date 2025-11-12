@@ -17,12 +17,16 @@ export type InventarioSnapshot = {
   total: number;
 };
 
-export async function getInventarioSnapshot(): Promise<InventarioSnapshot> {
+export async function getInventarioSnapshot(limit = 200): Promise<InventarioSnapshot> {
   if (!adminDb) {
     return { productos: [], stockBajo: 0, total: 0 };
   }
 
-  const snapshot = await adminDb.collection('inventario-productos').orderBy('nombre').limit(200).get();
+  const snapshot = await adminDb
+    .collection('inventario-productos')
+    .orderBy('nombre')
+    .limit(limit)
+    .get();
   const productos: InventarioItem[] = snapshot.docs.map((docSnap) => {
     const data = docSnap.data() ?? {};
     return {

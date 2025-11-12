@@ -1,3 +1,5 @@
+'use client';
+
 // lib/utils/userRoles.ts
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';

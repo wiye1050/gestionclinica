@@ -11,11 +11,15 @@ Hemos añadido un listener ligero en `scripts/events-listener.ts`:
 cd "/Users/<tu-usuario>/Visual Studio/gestionclinica"
 
 # 2) Carga las variables (una sola vez por terminal)
-source .env.local
+#    - Método rápido: copia scripts/load-listener-env.example.sh → scripts/load-listener-env.sh,
+#      rellena los secretos y ejecútalo.
+#    - Método manual: exporta cada variable como hicimos durante la sesión.
+source scripts/load-listener-env.sh
 
 # 3) Lanza el listener
 npm run events:listen
 ```
+> Nota: `scripts/load-listener-env.sh` está en `.gitignore` para que puedas guardar tus credenciales sin subirlas al repositorio. Mantén `service-account.json` fuera de control de versiones.
 
 Requisitos:
 
@@ -52,10 +56,27 @@ Cada handler se implementa en `scripts/events-listener.ts` (`handlers` object). 
   ```
 
 - Variables de entorno en producción:
-  - Crea un fichero `.env.functions` (mismo formato que `.env.local`) con `FIREBASE_SERVICE_ACCOUNT_KEY`, `SMTP_*`, `NOTIFY_EMAIL_TO` y opcional `SLACK_WEBHOOK_URL`.
-  - Lanza `firebase deploy --only functions --env-vars-file .env.functions` para subirlas (CLI ≥ v13) o define los valores vía `firebase functions:config:set automations.smtp_host="..."`.
-  - La función lee directamente de `process.env`, por lo que cualquier método que exporte variables al runtime es válido.
+  - Usa `firebase functions:config:set` para guardar los secretos bajo el bloque `automations`. Ejemplo:
+    ```bash
+    firebase functions:config:set \
+      automations.smtp_host="smtp.gmail.com" \
+      automations.smtp_port="587" \
+      automations.smtp_user="guillemenendez1050@gmail.com" \
+      automations.smtp_pass="tu_app_password" \
+      automations.smtp_from="guillemenendez1050@gmail.com" \
+      automations.notify_email_to="guillemenendez1050@gmail.com" \
+      automations.slack_webhook_url=""
+    ```
+  - Si necesitas limpiar el valor, usa `firebase functions:config:unset automations.slack_webhook_url`.
+  - Tras configurar los valores, despliega con `firebase deploy --only functions`. La función lee primero `process.env` (para uso local) y, si no existe, cae en `functions.config().automations`.
 - Observabilidad: los logs se ven en la consola de Firebase (`Functions > Logs`) gracias a `firebase-functions/logger`.
+- Limpieza automática (`automation-processed`): cada evento almacenado incluye `expireAt` (30 días). Activa el TTL de Firestore para esa colección desde la consola o con:
+  ```bash
+  gcloud firestore fields ttls update \
+    --collection-group=automation-processed \
+    --field=expireAt
+  ```
+  Así no tendrás que ejecutar scripts manuales para borrar deduplicaciones antiguas.
 
 #### Próximo paso recomendado
 

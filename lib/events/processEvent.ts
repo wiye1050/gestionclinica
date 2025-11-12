@@ -1,4 +1,4 @@
-import type { Firestore } from 'firebase-admin/firestore';
+import { Timestamp, type Firestore } from 'firebase-admin/firestore';
 import type { CanonicalEvent } from './handlers';
 import { createEventHandlers } from './handlers';
 
@@ -21,6 +21,7 @@ export function createEventProcessor({
   dedupeCollection = 'automation-processed',
 }: Options): EventProcessor {
   const handlers = createEventHandlers({ db, notifySlack, notifyEmail });
+  const ttlMillis = 30 * 24 * 60 * 60 * 1000; // 30 días
 
   async function markProcessed(eventId: string, type: string): Promise<boolean> {
     const ref = db.collection(dedupeCollection).doc(eventId);
@@ -31,6 +32,7 @@ export function createEventProcessor({
     await ref.set({
       processedAt: Date.now(),
       type,
+      expireAt: Timestamp.fromMillis(Date.now() + ttlMillis),
     });
     return true;
   }

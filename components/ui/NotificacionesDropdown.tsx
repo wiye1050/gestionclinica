@@ -43,25 +43,27 @@ export function NotificacionesDropdown({ userUid }: NotificacionesDropdownProps)
         }
 
         // 2. Stock bajo
-        const inventarioSnap = await getDocs(
-          query(
-            collection(db, 'inventario-productos'),
-            where('alertaStockBajo', '==', true),
-            limit(100)
-          )
-        );
-        if (inventarioSnap.size > 0) {
-          notifs.push({
-            id: 'auto-stock',
-            tipo: 'stock',
-            prioridad: 'media',
-            titulo: 'Stock bajo',
-            mensaje: `${inventarioSnap.size} producto(s) con stock bajo`,
-            leida: false,
-            url: '/dashboard/inventario',
-            destinatarioUid: userUid,
-            createdAt: new Date()
-          });
+        try {
+          const response = await fetch('/api/inventario?limit=200');
+          const inventario = await response.json();
+          if (response.ok && Array.isArray(inventario?.productos)) {
+            const bajo = inventario.productos.filter((item: { alertaStockBajo?: boolean }) => item.alertaStockBajo).length;
+            if (bajo > 0) {
+              notifs.push({
+                id: 'auto-stock',
+                tipo: 'stock',
+                prioridad: 'media',
+                titulo: 'Stock bajo',
+                mensaje: `${bajo} producto(s) con stock bajo`,
+                leida: false,
+                url: '/dashboard/inventario',
+                destinatarioUid: userUid,
+                createdAt: new Date(),
+              });
+            }
+          }
+        } catch (err) {
+          console.warn('[notificaciones] No se pudo leer el inventario', err);
         }
 
         // 3. Incidencias críticas pendientes
