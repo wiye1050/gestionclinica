@@ -8,20 +8,20 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    function userRoles() {
+      return isAuthenticated() && request.auth.token.roles is list ? request.auth.token.roles : [];
     }
     
     function hasRole(role) {
-      return isAuthenticated() &&
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+      return isAuthenticated() && userRoles().hasAny([role]);
     }
     
     function hasAnyRole(roles) {
-      return isAuthenticated() &&
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in roles;
+      return isAuthenticated() && userRoles().hasAny(roles);
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
     }
     
     // ========== VALIDATION FUNCTIONS ==========
@@ -32,11 +32,10 @@ service cloud.firestore {
              data.nombre is string && data.nombre.size() > 0 && data.nombre.size() <= 100 &&
              data.apellidos is string && data.apellidos.size() > 0 && data.apellidos.size() <= 100 &&
              data.fechaNacimiento is timestamp &&
-             data.genero in ['masculino', 'femenino', 'otro', 'no-especificado'] &&
+             data.genero in ['masculino', 'femenino', 'otro'] &&
              (data.dni == null || (data.dni is string && data.dni.size() <= 20)) &&
              (data.telefono == null || (data.telefono is string && data.telefono.size() <= 20)) &&
-             // Validación mejorada de email: formato RFC 5322 simplificado
-             (data.email == null || (data.email is string && data.email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$')));
+             (data.email == null || (data.email is string && data.email.matches('.*@.*\\..*')));
     }
     
     function isValidHistorial() {
@@ -135,9 +134,8 @@ service cloud.firestore {
     match /mejoras/{improvementId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      // CORREGIDO: Usar UID en vez de email (emails pueden cambiar)
-      allow update: if hasRole('admin') ||
-                       resource.data.creadoPorId == request.auth.uid;
+      allow update: if hasRole('admin') || 
+                       resource.data.creadoPor == request.auth.email;
       allow delete: if hasRole('admin');
     }
     

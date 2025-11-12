@@ -1,9 +1,10 @@
+'use client';
+
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { startOfWeek, addDays } from 'date-fns';
 import type {
-  Paciente,
   ServicioAsignado,
   Profesional,
   GrupoPaciente,
@@ -13,6 +14,7 @@ import type {
   Sala
 } from '@/types';
 import type { AgendaEvent } from '@/components/agenda/v2/agendaHelpers';
+export { usePacientes } from '@/lib/hooks/usePacientes';
 
 // Hook para KPIs con caché agresivo (datos que no cambian tanto)
 export function useKPIs() {
@@ -70,32 +72,14 @@ export function useInventario(options?: { initialData?: { productos: InventarioI
   return useQuery<{ productos: InventarioItem[]; stockBajo: number; total: number }>({
     queryKey: ['inventario'],
     queryFn: async () => {
-      const snapshot = await getDocs(
-        query(collection(db, 'inventario-productos'), orderBy('nombre'), limit(200))
-      );
-
-      const productos: InventarioItem[] = snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() ?? {};
-        return {
-          id: docSnap.id,
-          nombre: data.nombre ?? 'Sin nombre',
-          categoria: data.categoria ?? 'general',
-          stock: data.cantidadActual ?? data.stock ?? 0,
-          stockMinimo: data.cantidadMinima ?? data.stockMinimo ?? 0,
-          proveedor: data.proveedorNombre ?? data.proveedor ?? '',
-          precio: typeof data.precio === 'number' ? data.precio : undefined,
-          alertaStockBajo: Boolean(data.alertaStockBajo)
-        };
-      });
-
-      const stockBajo = productos.filter((p) => p.alertaStockBajo).length;
-      return {
-        productos,
-        stockBajo,
-        total: productos.length,
-      };
+      const response = await fetch('/api/inventario');
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'No se pudo cargar el inventario');
+      }
+      return payload as { productos: InventarioItem[]; stockBajo: number; total: number };
     },
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 5 * 60 * 1000,
     initialData: options?.initialData,
     initialDataUpdatedAt: options?.initialData ? Date.now() : undefined,
   });
@@ -394,74 +378,5 @@ export function useSalas() {
       });
     },
     staleTime: 10 * 60 * 1000, // 10 minutos - salas muy estáticas
-  });
-}
-
-// Hook para pacientes
-export function usePacientes() {
-  return useQuery<Paciente[]>({
-    queryKey: ['pacientes'],
-    queryFn: async () => {
-      const snapshot = await getDocs(
-        query(collection(db, 'pacientes'), orderBy('apellidos'), limit(500))
-      );
-
-      type ConsentimientoSnapshot = {
-        tipo?: string;
-        fecha?: { toDate?: () => Date };
-        documentoId?: string;
-        firmadoPor?: string;
-      };
-
-      return snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() ?? {};
-        return {
-          id: docSnap.id,
-          nombre: data.nombre ?? 'Sin nombre',
-          apellidos: data.apellidos ?? '',
-          fechaNacimiento: data.fechaNacimiento?.toDate?.() ?? new Date('1970-01-01'),
-          genero: data.genero ?? 'no-especificado',
-          documentoId: data.documentoId,
-          tipoDocumento: data.tipoDocumento,
-          telefono: data.telefono,
-          email: data.email,
-          direccion: data.direccion,
-          ciudad: data.ciudad,
-          codigoPostal: data.codigoPostal,
-          aseguradora: data.aseguradora,
-          numeroPoliza: data.numeroPoliza,
-          alergias: Array.isArray(data.alergias) ? data.alergias : [],
-          alertasClinicas: Array.isArray(data.alertasClinicas) ? data.alertasClinicas : [],
-          diagnosticosPrincipales: Array.isArray(data.diagnosticosPrincipales)
-            ? data.diagnosticosPrincipales
-            : [],
-          riesgo: data.riesgo ?? 'medio',
-          contactoEmergencia: data.contactoEmergencia
-            ? {
-                nombre: data.contactoEmergencia.nombre ?? '',
-                parentesco: data.contactoEmergencia.parentesco ?? '',
-                telefono: data.contactoEmergencia.telefono ?? ''
-              }
-            : undefined,
-          consentimientos: Array.isArray(data.consentimientos)
-            ? (data.consentimientos as ConsentimientoSnapshot[]).map((item) => ({
-                tipo: item?.tipo ?? 'general',
-                fecha: item?.fecha?.toDate?.() ?? new Date(),
-                documentoId: item?.documentoId,
-                firmadoPor: item?.firmadoPor
-              }))
-            : [],
-          estado: data.estado ?? 'activo',
-          profesionalReferenteId: data.profesionalReferenteId,
-          grupoPacienteId: data.grupoPacienteId,
-          notasInternas: data.notasInternas,
-          creadoPor: data.creadoPor ?? 'desconocido',
-          createdAt: data.createdAt?.toDate?.() ?? new Date(),
-          updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
-          modificadoPor: data.modificadoPor
-        } as Paciente;
-      });
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutos
   });
 }

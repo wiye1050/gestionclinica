@@ -8,8 +8,6 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { usePacientes } from '@/lib/hooks/usePacientes';
 import { useProfesionales } from '@/lib/hooks/useQueries';
 import { getPendingFollowUpPatientIds } from '@/lib/utils/followUps';
-import ModuleHeader from '@/components/shared/ModuleHeader';
-import StatCard from '@/components/shared/StatCard';
 import ViewSelector from '@/components/shared/ViewSelector';
 import SkeletonLoader from '@/components/shared/SkeletonLoader';
 import {
@@ -25,14 +23,12 @@ import {
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 
-// Esquema de validación para localStorage
 const SavedFiltersSchema = z.object({
   followUpOnly: z.boolean().optional(),
   profesionalId: z.string().optional(),
   vista: z.enum(['lista', 'kanban']).optional(),
 }).strict();
 
-// Lazy loading de componentes
 const PacientesTable = lazy(() => import('@/components/pacientes/PacientesTable').then(m => ({ default: m.PacientesTable })));
 const PacientesKanban = lazy(() => import('@/components/pacientes/PacientesKanban'));
 
@@ -55,11 +51,9 @@ function PacientesContent() {
 
   const STORAGE_KEY = 'pacientesFilters.v2';
 
-  // Hooks con React Query
   const { data: pacientes = [], isLoading: loadingPacientes } = usePacientes();
   const { data: profesionalesData = [], isLoading: loadingProfesionales } = useProfesionales();
 
-  // Cargar filtros guardados con validación Zod
   useEffect(() => {
     if (typeof window === 'undefined' || filtersLoaded) return;
     try {
@@ -67,13 +61,9 @@ function PacientesContent() {
       if (!raw) return;
 
       const parsed = JSON.parse(raw);
-
-      // Validar con Zod antes de usar
       const validation = SavedFiltersSchema.safeParse(parsed);
 
       if (!validation.success) {
-        console.warn('Filtros guardados inválidos:', validation.error);
-        // Limpiar localStorage corrupto
         window.localStorage.removeItem(STORAGE_KEY);
         return;
       }
@@ -89,16 +79,13 @@ function PacientesContent() {
       if (saved.vista) {
         setVista(saved.vista);
       }
-    } catch (err) {
-      console.warn('Error cargando filtros guardados:', err);
-      // Limpiar localStorage corrupto
+    } catch {
       window.localStorage.removeItem(STORAGE_KEY);
     } finally {
       setFiltersLoaded(true);
     }
   }, [filtersLoaded, searchParams]);
 
-  // Guardar filtros
   useEffect(() => {
     if (!filtersLoaded || typeof window === 'undefined') return;
     try {
@@ -108,12 +95,11 @@ function PacientesContent() {
         vista
       });
       window.localStorage.setItem(STORAGE_KEY, payload);
-    } catch (err) {
-      console.warn('No se pudieron guardar los filtros', err);
+    } catch (error) {
+      console.warn('No se pudieron guardar los filtros', error);
     }
   }, [followUpOnly, profesionalFilter, vista, filtersLoaded]);
 
-  // Auto-seleccionar profesional del usuario logueado
   useEffect(() => {
     if (!filtersLoaded) return;
     if (!user || profesionalesData.length === 0 || profesionalFilter !== 'todos') return;
@@ -123,15 +109,14 @@ function PacientesContent() {
     }
   }, [user, profesionalesData, profesionalFilter, filtersLoaded]);
 
-  // Cargar seguimientos pendientes
   useEffect(() => {
     const cargarSeguimientos = async () => {
       setLoadingSeguimientos(true);
       try {
         const ids = await getPendingFollowUpPatientIds();
         setPacientesSeguimiento(ids);
-      } catch (err) {
-        console.error('Error al cargar seguimientos pendientes:', err);
+      } catch (error) {
+        console.error('Error al cargar seguimientos pendientes:', error);
       } finally {
         setLoadingSeguimientos(false);
       }
@@ -140,30 +125,25 @@ function PacientesContent() {
     cargarSeguimientos();
   }, []);
 
-  // Actualizar filtro desde URL
   useEffect(() => {
     setFollowUpOnly(searchParams.get('filtro') === 'seguimiento');
   }, [searchParams]);
 
-  // Calcular estadísticas
   const stats = useMemo(() => {
     const activos = pacientes.filter(p => p.estado === 'activo').length;
     const riesgoAlto = pacientes.filter(p => p.riesgo === 'alto').length;
     const total = pacientes.length;
-    const activosPct = total > 0 ? Math.round((activos / total) * 100) : 0;
     
     return {
       total,
       activos,
       riesgoAlto,
       seguimiento: pacientesSeguimiento.size,
-      activosPct,
     };
   }, [pacientes, pacientesSeguimiento]);
 
   const loading = loadingPacientes || loadingProfesionales || loadingSeguimientos;
 
-  // Exportar
   const handleExportar = () => {
     try {
       const datos = pacientes.map(p => ({
@@ -197,75 +177,93 @@ function PacientesContent() {
   }
 
   return (
-    <div className="space-y-4">
-      <ModuleHeader
-        title="Pacientes"
-        description="Gestiona las fichas, alertas y seguimientos de los pacientes"
-        actions={
-          <div className="flex items-center gap-2">
+    <div className="space-y-6">
+      {/* Header compacto */}
+      <div className="surface-card p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+              <Users className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">Pacientes</h1>
+              <p className="text-sm text-gray-500">Gestión de fichas clínicas</p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <ViewSelector
+              views={[
+                { id: 'lista', label: 'Lista', icon: <List className="w-4 h-4" /> },
+                { id: 'kanban', label: 'Kanban', icon: <LayoutGrid className="w-4 h-4" /> },
+              ]}
+              currentView={vista}
+              onViewChange={(v) => setVista(v as Vista)}
+            />
+
             <button
               onClick={handleExportar}
-              className="inline-flex items-center gap-2 rounded-pill border border-border bg-card px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
             >
               <Download className="h-4 w-4" />
               Exportar
             </button>
+
             <Link
               href="/dashboard/pacientes/nuevo"
-              className="inline-flex items-center gap-2 rounded-pill bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand/90 focus-visible:focus-ring"
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
             >
               <Plus className="h-4 w-4" />
               Nuevo
             </Link>
           </div>
-        }
-        stats={
-          <>
-            <StatCard
-              title="Total Pacientes"
-              value={stats.total}
-              icon={Users}
-              color="blue"
-              subtitle={`${stats.activos} activos`}
-            />
-            <StatCard
-              title="Activos"
-              value={stats.activos}
-              icon={UserCheck}
-              color="green"
-              subtitle={`${stats.activosPct}% del total`}
-            />
-            <StatCard
-              title="Riesgo Alto"
-              value={stats.riesgoAlto}
-              icon={AlertTriangle}
-              color="red"
-              subtitle="Requieren atención"
-            />
-            <StatCard
-              title="Seguimiento"
-              value={stats.seguimiento}
-              icon={Calendar}
-              color="yellow"
-              subtitle="Pendientes de revisión"
-            />
-          </>
-        }
-      />
+        </div>
 
-      <ViewSelector
-        views={[
-          { id: 'lista', label: 'Lista', icon: <List className="w-4 h-4" /> },
-          { id: 'kanban', label: 'Kanban', icon: <LayoutGrid className="w-4 h-4" /> },
-        ]}
-        currentView={vista}
-        onViewChange={(v) => setVista(v as Vista)}
-        counter={{
-          current: pacientes.length,
-          total: pacientes.length
-        }}
-      />
+        {/* KPIs integrados en el header */}
+        <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+              <Users className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Total</p>
+              <p className="text-xl font-semibold text-gray-900">{stats.total}</p>
+            </div>
+          </div>
 
+          <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600">
+              <UserCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Activos</p>
+              <p className="text-xl font-semibold text-gray-900">{stats.activos}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Riesgo Alto</p>
+              <p className="text-xl font-semibold text-gray-900">{stats.riesgoAlto}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100 text-yellow-600">
+              <Calendar className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Seguimiento</p>
+              <p className="text-xl font-semibold text-gray-900">{stats.seguimiento}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Contenido */}
       <Suspense fallback={<SkeletonLoader />}>
         {vista === 'lista' ? (
           <PacientesTable

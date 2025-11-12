@@ -12,6 +12,7 @@ Aplicación operativa para coordinación de una clínica, desarrollada con **Nex
 - **KPIs**: panel actualizado con métricas de agenda (citas programadas, confirmadas, canceladas) y operaciones.
 - **Calidad e informes**: reportes diarios, supervisión y generación de PDF mensual.
 - **Auditoría**: vista dedicada que toma los últimos eventos de `auditLogs`, con métricas rápidas, filtros por módulo y búsqueda libre para rastrear acciones recientes.
+- **Episodios clínicos**: flujo completo desde captación hasta mantenimiento, respaldado por endpoints y event bus (`docs/architecture/EPISODIOS.md` describe estados, triggers y consumos recomendados). Para automatizaciones/alertas consulta `docs/architecture/EVENT_AUTOMATIONS.md`.
 
 ### Scripts útiles
 

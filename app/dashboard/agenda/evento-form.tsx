@@ -2,10 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useAgendaForm, AgendaEventFormValues } from '@/components/agenda/useAgendaForm';
-import { Profesional, Paciente, CatalogoServicio, SalaClinica } from '@/types';
+import { Profesional, Paciente, CatalogoServicio, SalaClinica, EstadoPaciente } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { SubmitHandler } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -46,111 +44,149 @@ export function AgendaEventForm({ onSuccess }: AgendaEventFormProps) {
   const pacienteSeleccionado = watch('pacienteId');
 
   useEffect(() => {
+    const toDate = (value?: string | null) => (value ? new Date(value) : new Date());
+    const fetchJson = async <T,>(url: string) => {
+      const response = await fetch(url);
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'No se pudo cargar la información');
+      }
+      return payload as T;
+    };
+    const especialidades: ReadonlyArray<Profesional['especialidad']> = ['medicina', 'fisioterapia', 'enfermeria'];
+    const categoriasServicio: ReadonlyArray<CatalogoServicio['categoria']> = ['medicina', 'fisioterapia', 'enfermeria'];
+    const riesgosPaciente: ReadonlyArray<Paciente['riesgo']> = ['alto', 'medio', 'bajo'];
+    const estadosPaciente: ReadonlyArray<EstadoPaciente> = ['activo', 'inactivo', 'egresado'];
+    const tiposSala: ReadonlyArray<SalaClinica['tipo']> = ['consulta', 'quirurgica', 'rehabilitacion', 'diagnostico', 'general'];
+    const estadosSala: ReadonlyArray<SalaClinica['estado']> = ['activa', 'mantenimiento', 'inactiva'];
+
     const cargarDatos = async () => {
       setLoading(true);
       try {
-        const [profSnap, pacSnap, servSnap, salasSnap] = await Promise.all([
-          getDocs(query(collection(db, 'profesionales'), orderBy('apellidos'), limit(200))),
-          getDocs(query(collection(db, 'pacientes'), orderBy('apellidos'), limit(200))),
-          getDocs(query(collection(db, 'catalogo-servicios'), orderBy('nombre'), limit(200))),
-          getDocs(query(collection(db, 'salas'), orderBy('nombre'), limit(200)))
+        const [profData, pacData, servData, salasData] = await Promise.all([
+          fetchJson<Array<Record<string, unknown>>>('/api/profesionales?limit=200'),
+          fetchJson<Array<Record<string, unknown>>>('/api/pacientes?limit=200'),
+          fetchJson<Array<Record<string, unknown>>>('/api/catalogo-servicios?limit=200'),
+          fetchJson<Array<Record<string, unknown>>>('/api/salas?limit=200'),
         ]);
 
         setProfesionales(
-          profSnap.docs.map((docSnap) => {
-            const data = docSnap.data() ?? {};
+          profData.map((item) => {
+            const especialidad = especialidades.includes(item.especialidad as Profesional['especialidad'])
+              ? (item.especialidad as Profesional['especialidad'])
+              : 'medicina';
             return {
-              id: docSnap.id,
-              nombre: data.nombre ?? 'Sin nombre',
-              apellidos: data.apellidos ?? '',
-              especialidad: data.especialidad ?? 'medicina',
-              email: data.email ?? '',
-              telefono: data.telefono,
-              activo: data.activo ?? true,
-              horasSemanales: data.horasSemanales ?? 0,
-              diasTrabajo: Array.isArray(data.diasTrabajo) ? data.diasTrabajo : [],
-              horaInicio: data.horaInicio ?? '09:00',
-              horaFin: data.horaFin ?? '17:00',
-              serviciosAsignados: data.serviciosAsignados ?? 0,
-              cargaTrabajo: data.cargaTrabajo ?? 0,
-              createdAt: data.createdAt?.toDate?.() ?? new Date(),
-              updatedAt: data.updatedAt?.toDate?.() ?? new Date()
+              id: String(item.id),
+              nombre: (item.nombre as string) ?? 'Sin nombre',
+              apellidos: (item.apellidos as string) ?? '',
+              especialidad,
+              email: (item.email as string) ?? '',
+              telefono: typeof item.telefono === 'string' ? item.telefono : undefined,
+              activo: Boolean(item.activo ?? true),
+              horasSemanales: Number(item.horasSemanales ?? 0),
+              diasTrabajo: Array.isArray(item.diasTrabajo) ? (item.diasTrabajo as string[]) : [],
+              horaInicio: (item.horaInicio as string) ?? '09:00',
+              horaFin: (item.horaFin as string) ?? '17:00',
+              serviciosAsignados: Number(item.serviciosAsignados ?? 0),
+              cargaTrabajo: Number(item.cargaTrabajo ?? 0),
+              createdAt: toDate(item.createdAt as string | null | undefined),
+              updatedAt: toDate(item.updatedAt as string | null | undefined),
             };
           })
         );
 
         setPacientes(
-          pacSnap.docs.map((docSnap) => {
-            const data = docSnap.data() ?? {};
+          pacData.map((item) => {
+            const riesgo = riesgosPaciente.includes(item.riesgo as Paciente['riesgo'])
+              ? (item.riesgo as Paciente['riesgo'])
+              : 'medio';
+            const estadoPaciente = estadosPaciente.includes(item.estado as EstadoPaciente)
+              ? (item.estado as EstadoPaciente)
+              : 'activo';
             return {
-              id: docSnap.id,
-              nombre: data.nombre ?? 'Sin nombre',
-              apellidos: data.apellidos ?? '',
-              fechaNacimiento: data.fechaNacimiento?.toDate?.() ?? new Date('1970-01-01'),
-              genero: data.genero ?? 'no-especificado',
-              telefono: data.telefono,
-              email: data.email,
-              estado: data.estado ?? 'activo',
-              alergias: Array.isArray(data.alergias) ? data.alergias : [],
-              alertasClinicas: Array.isArray(data.alertasClinicas) ? data.alertasClinicas : [],
-              diagnosticosPrincipales: Array.isArray(data.diagnosticosPrincipales)
-                ? data.diagnosticosPrincipales
+              id: String(item.id),
+              nombre: (item.nombre as string) ?? 'Sin nombre',
+              apellidos: (item.apellidos as string) ?? '',
+              fechaNacimiento: toDate(item.fechaNacimiento as string | null | undefined),
+              genero: (item.genero as string) ?? 'no-especificado',
+              documentoId: typeof item.documentoId === 'string' ? item.documentoId : undefined,
+              tipoDocumento: typeof item.tipoDocumento === 'string' ? item.tipoDocumento : undefined,
+              telefono: typeof item.telefono === 'string' ? item.telefono : undefined,
+              email: typeof item.email === 'string' ? item.email : undefined,
+              direccion: typeof item.direccion === 'string' ? item.direccion : undefined,
+              ciudad: typeof item.ciudad === 'string' ? item.ciudad : undefined,
+              codigoPostal: typeof item.codigoPostal === 'string' ? item.codigoPostal : undefined,
+              aseguradora: typeof item.aseguradora === 'string' ? item.aseguradora : undefined,
+              numeroPoliza: typeof item.numeroPoliza === 'string' ? item.numeroPoliza : undefined,
+              alergias: Array.isArray(item.alergias) ? (item.alergias as string[]) : [],
+              alertasClinicas: Array.isArray(item.alertasClinicas) ? (item.alertasClinicas as string[]) : [],
+              diagnosticosPrincipales: Array.isArray(item.diagnosticosPrincipales)
+                ? (item.diagnosticosPrincipales as string[])
                 : [],
-              riesgo: data.riesgo ?? 'medio',
+              riesgo,
               consentimientos: [],
-              createdAt: data.createdAt?.toDate?.() ?? new Date(),
-              updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
-              creadoPor: data.creadoPor ?? 'desconocido',
-              modificadoPor: data.modificadoPor
-            } as Paciente;
-          })
+              estado: estadoPaciente,
+              profesionalReferenteId: typeof item.profesionalReferenteId === 'string' ? item.profesionalReferenteId : undefined,
+              grupoPacienteId: typeof item.grupoPacienteId === 'string' ? item.grupoPacienteId : undefined,
+              notasInternas: typeof item.notasInternas === 'string' ? item.notasInternas : undefined,
+              createdAt: toDate(item.createdAt as string | null | undefined),
+              updatedAt: toDate(item.updatedAt as string | null | undefined),
+              creadoPor: (item.creadoPor as string) ?? 'desconocido',
+            };
+          }) as Paciente[]
         );
 
         setServicios(
-          servSnap.docs.map((docSnap) => {
-            const data = docSnap.data() ?? {};
+          servData.map((item) => {
+            const categoria = categoriasServicio.includes(item.categoria as CatalogoServicio['categoria'])
+              ? (item.categoria as CatalogoServicio['categoria'])
+              : 'medicina';
             return {
-              id: docSnap.id,
-              nombre: data.nombre ?? 'Servicio sin nombre',
-              categoria: data.categoria ?? 'medicina',
-              descripcion: data.descripcion,
-              tiempoEstimado: data.tiempoEstimado ?? 60,
-              requiereSala: data.requiereSala ?? false,
-              salaPredeterminada: data.salaPredeterminada,
-              requiereSupervision: data.requiereSupervision ?? false,
-              requiereApoyo: data.requiereApoyo ?? false,
-              profesionalesHabilitados: Array.isArray(data.profesionalesHabilitados)
-                ? data.profesionalesHabilitados
+              id: String(item.id),
+              nombre: (item.nombre as string) ?? 'Servicio sin nombre',
+              categoria,
+              descripcion: typeof item.descripcion === 'string' ? item.descripcion : undefined,
+              tiempoEstimado: Number(item.tiempoEstimado ?? 60),
+              requiereSala: Boolean(item.requiereSala ?? false),
+              salaPredeterminada: typeof item.salaPredeterminada === 'string' ? item.salaPredeterminada : undefined,
+              requiereSupervision: Boolean(item.requiereSupervision ?? false),
+              requiereApoyo: Boolean(item.requiereApoyo ?? false),
+              profesionalesHabilitados: Array.isArray(item.profesionalesHabilitados)
+                ? (item.profesionalesHabilitados as string[])
                 : [],
-              activo: data.activo ?? true,
-              createdAt: data.createdAt?.toDate?.() ?? new Date(),
-              updatedAt: data.updatedAt?.toDate?.() ?? new Date()
-            } as CatalogoServicio;
-          })
+              activo: Boolean(item.activo ?? true),
+              createdAt: toDate(item.createdAt as string | null | undefined),
+              updatedAt: toDate(item.updatedAt as string | null | undefined),
+            };
+          }) as CatalogoServicio[]
         );
 
         setSalas(
-          salasSnap.docs.map((docSnap) => {
-            const data = docSnap.data() ?? {};
+          salasData.map((item) => {
+            const tipo = tiposSala.includes(item.tipo as SalaClinica['tipo'])
+              ? (item.tipo as SalaClinica['tipo'])
+              : 'general';
+            const estadoSala = estadosSala.includes(item.estado as SalaClinica['estado'])
+              ? (item.estado as SalaClinica['estado'])
+              : 'activa';
             return {
-              id: docSnap.id,
-              nombre: data.nombre ?? 'Sala',
-              tipo: data.tipo ?? 'general',
-              capacidad: data.capacidad ?? 1,
-              equipamiento: Array.isArray(data.equipamiento) ? data.equipamiento : [],
-              estado: data.estado ?? 'activa',
-              colorAgenda: data.colorAgenda,
-              notas: data.notas,
-              createdAt: data.createdAt?.toDate?.() ?? new Date(),
-              updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
-              modificadoPor: data.modificadoPor
-            } as SalaClinica;
-          })
+              id: String(item.id),
+              nombre: (item.nombre as string) ?? 'Sala',
+              tipo,
+              capacidad: Number(item.capacidad ?? 1),
+              equipamiento: Array.isArray(item.equipamiento) ? (item.equipamiento as string[]) : [],
+              estado: estadoSala,
+              colorAgenda: typeof item.colorAgenda === 'string' ? item.colorAgenda : undefined,
+              notas: typeof item.notas === 'string' ? item.notas : undefined,
+              createdAt: toDate(item.createdAt as string | null | undefined),
+              updatedAt: toDate(item.updatedAt as string | null | undefined),
+              modificadoPor: typeof item.modificadoPor === 'string' ? item.modificadoPor : undefined,
+            };
+          }) as SalaClinica[]
         );
       } catch (err) {
         console.error('Error cargando datos de agenda:', err);
-        const mensaje =
-          err instanceof Error ? err.message : 'No se pudieron cargar los datos necesarios';
+        const mensaje = err instanceof Error ? err.message : 'No se pudieron cargar los datos necesarios';
         setError(mensaje);
       } finally {
         setLoading(false);

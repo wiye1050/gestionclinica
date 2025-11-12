@@ -1,37 +1,62 @@
+'use client';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Paciente } from '@/types';
 
+type ApiPaciente = Omit<Paciente, 'fechaNacimiento' | 'createdAt' | 'updatedAt'> & {
+  fechaNacimiento?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
+const deserializePaciente = (raw: ApiPaciente): Paciente => ({
+  ...raw,
+  fechaNacimiento: raw.fechaNacimiento ? new Date(raw.fechaNacimiento) : new Date('1970-01-01'),
+  createdAt: raw.createdAt ? new Date(raw.createdAt) : new Date(),
+  updatedAt: raw.updatedAt ? new Date(raw.updatedAt) : new Date(),
+});
+
 // Hook para obtener todos los pacientes con caché
+type UsePacientesOptions = {
+  initialData?: Paciente[];
+  onMeta?: (meta: { nextCursor: string | null; limit: number }) => void;
+};
+
 export function usePacientes(
-  filters?: { estado?: string; busqueda?: string },
-  options?: { initialData?: Paciente[] }
+  filters?: { estado?: string; busqueda?: string; cursor?: string },
+  options?: UsePacientesOptions
 ) {
   return useQuery({
     queryKey: ['pacientes', filters],
     queryFn: async () => {
-      let q = query(collection(db, 'pacientes'), orderBy('apellidos'), limit(200));
-
-      if (filters?.estado) {
-        q = query(q, where('estado', '==', filters.estado));
+      const params = new URLSearchParams();
+      if (filters?.estado) params.set('estado', filters.estado);
+      if (filters?.busqueda) params.set('q', filters.busqueda);
+      if (filters?.cursor) params.set('cursor', filters.cursor);
+      const queryString = params.toString();
+      const response = await fetch(queryString ? `/api/pacientes?${queryString}` : '/api/pacientes');
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'No se pudieron cargar los pacientes');
       }
 
-      const snapshot = await getDocs(q);
-      let pacientes = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        fechaNacimiento: doc.data().fechaNacimiento?.toDate?.() ?? new Date(),
-        createdAt: doc.data().createdAt?.toDate?.() ?? new Date(),
-        updatedAt: doc.data().updatedAt?.toDate?.() ?? new Date(),
-      })) as Paciente[];
+      const items = Array.isArray(payload) ? payload : Array.isArray(payload.items) ? payload.items : [];
+      const pacientes = (items as ApiPaciente[]).map(deserializePaciente);
 
-      // Filtro de búsqueda en cliente (más eficiente que múltiples queries)
+      if (!Array.isArray(payload) && typeof payload === 'object' && payload !== null) {
+        options?.onMeta?.({
+          nextCursor: typeof payload.nextCursor === 'string' ? payload.nextCursor : null,
+          limit: typeof payload.limit === 'number' ? payload.limit : pacientes.length,
+        });
+      }
+
+      // Filtro adicional en cliente por si el backend no pudo aplicar el search
       if (filters?.busqueda) {
         const busqueda = filters.busqueda.toLowerCase();
-        pacientes = pacientes.filter(p => 
-          `${p.nombre} ${p.apellidos}`.toLowerCase().includes(busqueda) ||
-          p.documentoId?.toLowerCase().includes(busqueda)
+        return pacientes.filter(
+          (p) =>
+            `${p.nombre} ${p.apellidos}`.toLowerCase().includes(busqueda) ||
+            p.documentoId?.toLowerCase().includes(busqueda)
         );
       }
 

@@ -1,8 +1,16 @@
-export type AppRole = 'admin' | 'coordinacion' | 'terapeuta' | 'admin_ops' | 'marketing' | 'invitado';
+export type AppRole =
+  | 'admin'
+  | 'coordinacion'
+  | 'doctor'
+  | 'terapeuta'
+  | 'admin_ops'
+  | 'marketing'
+  | 'invitado';
 
 export const ROLE_HIERARCHY: Record<AppRole, AppRole[]> = {
-  admin: ['admin', 'coordinacion', 'terapeuta', 'admin_ops', 'marketing', 'invitado'],
-  coordinacion: ['coordinacion', 'terapeuta', 'admin_ops', 'marketing', 'invitado'],
+  admin: ['admin', 'coordinacion', 'doctor', 'terapeuta', 'admin_ops', 'marketing', 'invitado'],
+  coordinacion: ['coordinacion', 'doctor', 'terapeuta', 'admin_ops', 'marketing', 'invitado'],
+  doctor: ['doctor', 'invitado'],
   terapeuta: ['terapeuta', 'invitado'],
   admin_ops: ['admin_ops', 'invitado'],
   marketing: ['marketing', 'invitado'],
