@@ -2,19 +2,16 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { createPaciente } from '@/lib/server/pacientesAdmin';
 import { adminDb } from '@/lib/firebaseAdmin';
+import type { Query } from 'firebase-admin/firestore';
 
-const ALLOWED_ROLES = new Set(['admin', 'coordinacion', 'operador']);
-const READ_ROLES = new Set(['admin', 'coordinacion', 'operador', 'doctor', 'terapeuta']);
+const CREATE_UPDATE_ROLES = new Set(['admin', 'coordinacion']);
+const ADMIN_ROLES = new Set(['admin', 'coordinacion']);
+const CLINICAL_ROLES = new Set(['doctor', 'terapeuta']);
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
-  }
-
-  const hasAccess = (user.roles ?? []).some((role) => READ_ROLES.has(role));
-  if (!hasAccess) {
-    return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
   }
 
   if (!adminDb) {
@@ -29,7 +26,30 @@ export async function GET(request: Request) {
   const cursorId = url.searchParams.get('cursor');
 
   try {
-    let query = adminDb.collection('pacientes').orderBy('apellidos').orderBy('nombre');
+    const userDocSnap = await adminDb.collection('users').doc(user.uid).get();
+    const userDoc = userDocSnap.exists ? userDocSnap.data() ?? {} : {};
+
+    const userRoles = (user.roles ?? userDoc.roles ?? []) as string[];
+    const esAdmin = userRoles.some((role) => ADMIN_ROLES.has(role));
+    const esClinico = userRoles.some((role) => CLINICAL_ROLES.has(role));
+    const professionalId = userDoc.profesionalId ?? null;
+    const patientId = userDoc.pacienteId ?? null;
+
+    let query: Query = adminDb.collection('pacientes');
+
+    if (esClinico && !esAdmin) {
+      query = query.where('profesionalReferenteId', '==', professionalId);
+    }
+
+    if (!esAdmin && !esClinico) {
+      if (!patientId) {
+        return NextResponse.json({ items: [], nextCursor: null, limit }, { status: 200 });
+      }
+      query = query.where('__name__', '==', patientId);
+    }
+
+    query = query.orderBy('apellidos').orderBy('nombre');
+
     if (estado) {
       query = query.where('estado', '==', estado);
     }
@@ -67,12 +87,8 @@ export async function GET(request: Request) {
           nombre: data.nombre ?? '',
           apellidos: data.apellidos ?? '',
           documentoId: data.documentoId ?? null,
-          telefono: data.telefono ?? null,
-          email: data.email ?? null,
           estado: data.estado ?? 'activo',
           riesgo: data.riesgo ?? null,
-          ciudad: data.ciudad ?? null,
-          aseguradora: data.aseguradora ?? null,
           profesionalReferenteId:
             data.profesionalReferenteId ?? data.profesionalReferente ?? data.responsableId ?? null,
           fechaNacimiento: toDateISO(data.fechaNacimiento),
@@ -108,7 +124,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
   }
 
-  const hasAccess = (user.roles ?? []).some((role) => ALLOWED_ROLES.has(role));
+  const hasAccess = (user.roles ?? []).some((role) => CREATE_UPDATE_ROLES.has(role));
   if (!hasAccess) {
     return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
   }
