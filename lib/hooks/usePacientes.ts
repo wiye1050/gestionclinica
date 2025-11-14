@@ -1,9 +1,65 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { Paciente } from '@/types';
 
-// Hook para obtener todos los pacientes con caché
+type ApiPaciente = Omit<Paciente, 'fechaNacimiento' | 'createdAt' | 'updatedAt'> & {
+  fechaNacimiento?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
+type FetchFilters = {
+  estado?: string;
+  busqueda?: string;
+  cursor?: string | null;
+};
+
+type PacientesResult = {
+  items: Paciente[];
+  nextCursor: string | null;
+  limit: number;
+};
+
+const deserializePaciente = (raw: ApiPaciente): Paciente => ({
+  ...raw,
+  fechaNacimiento: raw.fechaNacimiento ? new Date(raw.fechaNacimiento) : new Date('1970-01-01'),
+  createdAt: raw.createdAt ? new Date(raw.createdAt) : new Date(),
+  updatedAt: raw.updatedAt ? new Date(raw.updatedAt) : new Date(),
+});
+
+async function fetchPacientes(filters?: FetchFilters): Promise<PacientesResult> {
+  const params = new URLSearchParams();
+  if (filters?.estado) params.set('estado', filters.estado);
+  if (filters?.busqueda) params.set('q', filters.busqueda);
+  if (filters?.cursor) params.set('cursor', filters.cursor);
+
+  const queryString = params.toString();
+  const response = await fetch(queryString ? `/api/pacientes?${queryString}` : '/api/pacientes');
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload?.error || 'No se pudieron cargar los pacientes');
+  }
+
+  const rawItems = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload.items)
+    ? payload.items
+    : [];
+
+  const items = (rawItems as ApiPaciente[]).map(deserializePaciente);
+
+  const nextCursor =
+    typeof payload === 'object' && payload !== null && typeof payload.nextCursor === 'string'
+      ? payload.nextCursor
+      : null;
+  const limit =
+    typeof payload === 'object' && payload !== null && typeof payload.limit === 'number'
+      ? payload.limit
+      : items.length;
+
+  return { items, nextCursor, limit };
+}
+
 export function usePacientes(
   filters?: { estado?: string; busqueda?: string },
   options?: { initialData?: Paciente[] }
@@ -11,35 +67,22 @@ export function usePacientes(
   return useQuery({
     queryKey: ['pacientes', filters],
     queryFn: async () => {
-      let q = query(collection(db, 'pacientes'), orderBy('apellidos'), limit(200));
-
-      if (filters?.estado) {
-        q = query(q, where('estado', '==', filters.estado));
-      }
-
-      const snapshot = await getDocs(q);
-      let pacientes = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        fechaNacimiento: doc.data().fechaNacimiento?.toDate?.() ?? new Date(),
-        createdAt: doc.data().createdAt?.toDate?.() ?? new Date(),
-        updatedAt: doc.data().updatedAt?.toDate?.() ?? new Date(),
-      })) as Paciente[];
-
-      // Filtro de búsqueda en cliente (más eficiente que múltiples queries)
-      if (filters?.busqueda) {
-        const busqueda = filters.busqueda.toLowerCase();
-        pacientes = pacientes.filter(p => 
-          `${p.nombre} ${p.apellidos}`.toLowerCase().includes(busqueda) ||
-          p.documentoId?.toLowerCase().includes(busqueda)
-        );
-      }
-
-      return pacientes;
+      const result = await fetchPacientes(filters);
+      return result.items;
     },
-    staleTime: 3 * 60 * 1000, // 3 minutos - los pacientes no cambian tan rápido
+    staleTime: 3 * 60 * 1000,
     initialData: options?.initialData,
     initialDataUpdatedAt: options?.initialData ? Date.now() : undefined,
+  });
+}
+
+export function useInfinitePacientes(filters?: { estado?: string; busqueda?: string }) {
+  return useInfiniteQuery<PacientesResult>({
+    queryKey: ['pacientes-infinite', filters],
+    initialPageParam: undefined as string | undefined,
+    queryFn: async ({ pageParam }) =>
+      fetchPacientes({ ...filters, cursor: (pageParam as string | undefined) ?? undefined }),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
 }
 
@@ -61,8 +104,8 @@ export function useCreatePaciente() {
       return payload.id as string;
     },
     onSuccess: () => {
-      // Invalidar y refetch automático
       queryClient.invalidateQueries({ queryKey: ['pacientes'] });
+      queryClient.invalidateQueries({ queryKey: ['pacientes-infinite'] });
     },
   });
 }
@@ -85,6 +128,7 @@ export function useUpdatePaciente() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pacientes'] });
+      queryClient.invalidateQueries({ queryKey: ['pacientes-infinite'] });
     },
   });
 }
@@ -103,6 +147,7 @@ export function useDeletePaciente() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pacientes'] });
+      queryClient.invalidateQueries({ queryKey: ['pacientes-infinite'] });
     },
   });
 }

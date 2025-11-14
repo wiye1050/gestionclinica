@@ -17,6 +17,7 @@ const eslintConfig = [
       ".next/**",
       "out/**",
       "build/**",
+      "functions/dist/**",
       "next-env.d.ts",
       "set-roles.js",
     ],
@@ -25,6 +26,7 @@ const eslintConfig = [
     files: ["types/**/*.d.ts"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": "off",
     },
   },
   {

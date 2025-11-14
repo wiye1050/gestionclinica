@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { z } from 'zod';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { usePacientes } from '@/lib/hooks/usePacientes';
+import { useInfinitePacientes } from '@/lib/hooks/usePacientes';
 import { useProfesionales } from '@/lib/hooks/useQueries';
 import { getPendingFollowUpPatientIds } from '@/lib/utils/followUps';
 import ModuleHeader from '@/components/shared/ModuleHeader';
@@ -56,7 +56,27 @@ function PacientesContent() {
   const STORAGE_KEY = 'pacientesFilters.v2';
 
   // Hooks con React Query
-  const { data: pacientes = [], isLoading: loadingPacientes } = usePacientes();
+  const pacienteQueryFilters = useMemo(
+    () => ({
+      estado: estadoFilter === 'todos' ? undefined : estadoFilter,
+      busqueda: searchTerm.trim() ? searchTerm.trim() : undefined,
+    }),
+    [estadoFilter, searchTerm]
+  );
+
+  const {
+    data: pacientesPages,
+    isLoading: loadingPacientes,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+    error: pacientesError,
+  } = useInfinitePacientes(pacienteQueryFilters);
+
+  const pacientes = useMemo(
+    () => pacientesPages?.pages.flatMap((page) => page.items) ?? [],
+    [pacientesPages]
+  );
   const { data: profesionalesData = [], isLoading: loadingProfesionales } = useProfesionales();
 
   // Cargar filtros guardados con validación Zod
@@ -161,7 +181,10 @@ function PacientesContent() {
     };
   }, [pacientes, pacientesSeguimiento]);
 
-  const loading = loadingPacientes || loadingProfesionales || loadingSeguimientos;
+  const baseLoading = loadingPacientes && pacientes.length === 0;
+  const loading = baseLoading || loadingProfesionales || loadingSeguimientos;
+  const pacientesErrorMessage =
+    pacientesError instanceof Error ? pacientesError.message : undefined;
 
   // Exportar
   const handleExportar = () => {
@@ -283,6 +306,7 @@ function PacientesContent() {
             profesionalFilter={profesionalFilter}
             onProfesionalFilterChange={setProfesionalFilter}
             loading={loading}
+            error={pacientesErrorMessage}
           />
         ) : (
           <PacientesKanban
@@ -292,6 +316,19 @@ function PacientesContent() {
           />
         )}
       </Suspense>
+
+      {hasNextPage && (
+        <div className="flex justify-center pt-2">
+          <button
+            type="button"
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="rounded-pill border border-border px-6 py-2 text-sm font-medium text-text transition-colors hover:bg-cardHover disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isFetchingNextPage ? 'Cargando…' : 'Cargar más pacientes'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
