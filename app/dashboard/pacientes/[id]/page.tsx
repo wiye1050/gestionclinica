@@ -294,6 +294,14 @@ export default function PacienteDetallePage() {
     return historial.map((registro) => mapRegistroToCita(registro));
   }, [historial]);
 
+  const proximasCitas = useMemo(() => {
+    const now = new Date();
+    return citas
+      .filter((cita) => cita.fecha >= now)
+      .sort((a, b) => a.fecha.getTime() - b.fecha.getTime())
+      .slice(0, 8);
+  }, [citas]);
+
   const documentos = useMemo<DocumentoPaciente[]>(() => {
     if (!paciente) return [];
     const consentimientosDocs = paciente.consentimientos.map((consent, index) => ({
@@ -532,7 +540,7 @@ export default function PacienteDetallePage() {
       <PatientResumenTab
         paciente={paciente}
         profesionalReferente={profesionalReferente}
-        proximasCitas={[]}
+        proximasCitas={proximasCitas}
         tratamientosActivos={serviciosRelacionados.map((servicio) => ({
           id: servicio.id,
           nombre: servicio.catalogoServicioNombre ?? 'Servicio',
@@ -716,40 +724,37 @@ export default function PacienteDetallePage() {
       paciente={paciente ?? undefined}
       onNuevaCita={paciente ? handleNuevaCitaDesdePaciente : undefined}
       onRequestRefresh={async () => {
-        const reloadPatient = async () => {
-          if (!pacienteId) return;
-          const historialSnap = await getDocs(
-            query(
-              collection(db, 'pacientes-historial'),
-              where('pacienteId', '==', pacienteId),
-              orderBy('fecha', 'desc'),
-              limit(100)
-            )
-          );
-          setHistorial(
-            historialSnap.docs.map((docSnap) => {
-              const histData = docSnap.data() ?? {};
-              return {
-                id: docSnap.id,
-                pacienteId: histData.pacienteId ?? pacienteId,
-                eventoAgendaId: histData.eventoAgendaId,
-                servicioId: histData.servicioId,
-                servicioNombre: histData.servicioNombre,
-                profesionalId: histData.profesionalId,
-                profesionalNombre: histData.profesionalNombre,
-                fecha: histData.fecha?.toDate?.() ?? new Date(),
-                tipo: histData.tipo ?? 'consulta',
-                descripcion: histData.descripcion ?? '',
-                resultado: histData.resultado,
-                planesSeguimiento: histData.planesSeguimiento,
-                adjuntos: Array.isArray(histData.adjuntos) ? histData.adjuntos : [],
-                createdAt: histData.createdAt?.toDate?.() ?? new Date(),
-                creadoPor: histData.creadoPor ?? 'sistema',
-              } satisfies RegistroHistorialPaciente;
-            })
-          );
-        };
-        await reloadPatient();
+        if (!pacienteId) return;
+        const historialSnap = await getDocs(
+          query(
+            collection(db, 'pacientes-historial'),
+            where('pacienteId', '==', pacienteId),
+            orderBy('fecha', 'desc'),
+            limit(100)
+          )
+        );
+        setHistorial(
+          historialSnap.docs.map((docSnap) => {
+            const histData = docSnap.data() ?? {};
+            return {
+              id: docSnap.id,
+              pacienteId: histData.pacienteId ?? pacienteId,
+              eventoAgendaId: histData.eventoAgendaId,
+              servicioId: histData.servicioId,
+              servicioNombre: histData.servicioNombre,
+              profesionalId: histData.profesionalId,
+              profesionalNombre: histData.profesionalNombre,
+              fecha: histData.fecha?.toDate?.() ?? new Date(),
+              tipo: histData.tipo ?? 'consulta',
+              descripcion: histData.descripcion ?? '',
+              resultado: histData.resultado,
+              planesSeguimiento: histData.planesSeguimiento,
+              adjuntos: Array.isArray(histData.adjuntos) ? histData.adjuntos : [],
+              createdAt: histData.createdAt?.toDate?.() ?? new Date(),
+              creadoPor: histData.creadoPor ?? 'sistema',
+            } satisfies RegistroHistorialPaciente;
+          })
+        );
       }}
     />
   );

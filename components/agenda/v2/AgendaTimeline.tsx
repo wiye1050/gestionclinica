@@ -1,20 +1,28 @@
 'use client';
 
 import { useMemo, useEffect, useRef, useState } from 'react';
-import { AGENDA_CONFIG, generateTimeSlots, getCurrentTimePosition } from './agendaHelpers';
+import {
+  AGENDA_CONFIG,
+  generateTimeSlots,
+  getCurrentTimePosition,
+} from './agendaHelpers';
 
 interface AgendaTimelineProps {
   showNowIndicator?: boolean;
   onSlotClick?: (hour: number, minute: number) => void;
   children?: React.ReactNode;
   hourHeight?: number;
+  disableSlotClick?: boolean;
+  onContainerRef?: (node: HTMLDivElement | null) => void;
 }
 
-export default function AgendaTimeline({ 
-  showNowIndicator = true, 
+export default function AgendaTimeline({
+  showNowIndicator = true,
   onSlotClick,
   children,
   hourHeight = AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR,
+  disableSlotClick = false,
+  onContainerRef,
 }: AgendaTimelineProps) {
   const timeSlots = useMemo(() => generateTimeSlots(), []);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -42,7 +50,7 @@ export default function AgendaTimeline({
   }, [nowPosition, showNowIndicator]);
 
   const handleTimelineClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!onSlotClick || !containerRef.current) return;
+    if (!onSlotClick || !containerRef.current || disableSlotClick) return;
 
     const rect = containerRef.current.getBoundingClientRect();
     const offsetY = event.clientY - rect.top;
@@ -58,6 +66,13 @@ export default function AgendaTimeline({
 
     onSlotClick(hour, minute);
   };
+
+  useEffect(() => {
+    onContainerRef?.(containerRef.current);
+    return () => {
+      onContainerRef?.(null);
+    };
+  }, [onContainerRef]);
 
   const now = new Date();
 

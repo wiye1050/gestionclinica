@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -45,6 +45,10 @@ export default function AgendaDayView({
 }: AgendaDayViewProps) {
   // Eventos del día
   const dayEvents = useMemo(() => getEventsForDay(events, day), [events, day]);
+  const [isDragging, setIsDragging] = useState(false);
+  const timelineRef = useRef<HTMLDivElement | null>(null);
+  const pointerPositionRef = useRef({ x: 0, y: 0 });
+  const hasPointerRef = useRef(false);
 
   // Detectar conflictos
   const conflicts = useMemo(() => detectConflicts(dayEvents), [dayEvents]);
@@ -73,23 +77,52 @@ export default function AgendaDayView({
     };
   }, [dayEvents, day, conflicts]);
 
+  const pointerMoveHandler = useCallback((event: PointerEvent) => {
+    pointerPositionRef.current = { x: event.clientX, y: event.clientY };
+    hasPointerRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      window.removeEventListener('pointermove', pointerMoveHandler);
+    };
+  }, [pointerMoveHandler]);
+
+  const computePointerDate = useCallback(() => {
+    if (!timelineRef.current) return null;
+    const rect = timelineRef.current.getBoundingClientRect();
+    const relativeY = pointerPositionRef.current.y - rect.top;
+    if (Number.isNaN(relativeY)) return null;
+    const clampedY = Math.min(Math.max(relativeY, 0), rect.height);
+    const minutesFromStart = (clampedY / hourHeight) * 60;
+    const baseDate = new Date(day);
+    baseDate.setHours(AGENDA_CONFIG.START_HOUR, 0, 0, 0);
+    const newStart = new Date(baseDate.getTime() + minutesFromStart * 60000);
+    return roundToNearestSlot(newStart);
+  }, [day, hourHeight]);
+
   // Handle drag end
   const handleDragEnd = (result: DropResult) => {
+    window.removeEventListener('pointermove', pointerMoveHandler);
+    setIsDragging(false);
     if (!result.destination || !onEventMove) return;
 
     const { draggableId } = result;
-    const event = dayEvents.find(e => e.id === draggableId);
+    const event = dayEvents.find((e) => e.id === draggableId);
     if (!event) return;
 
-    // Calcular nueva hora basada en la posición
-    const dropPosition = result.destination.index;
-    const minutesFromStart = (dropPosition / hourHeight) * 60;
-    const newStart = new Date(day);
-    newStart.setHours(AGENDA_CONFIG.START_HOUR + Math.floor(minutesFromStart / 60));
-    newStart.setMinutes(minutesFromStart % 60);
+    let newStart = hasPointerRef.current ? computePointerDate() : null;
 
-    const roundedStart = roundToNearestSlot(newStart);
-    onEventMove(event.id, roundedStart);
+    if (!newStart) {
+      const dropPosition = result.destination.index;
+      const minutesFromStart = (dropPosition / hourHeight) * 60;
+      const fallbackStart = new Date(day);
+      fallbackStart.setHours(AGENDA_CONFIG.START_HOUR + Math.floor(minutesFromStart / 60));
+      fallbackStart.setMinutes(minutesFromStart % 60);
+      newStart = roundToNearestSlot(fallbackStart);
+    }
+
+    onEventMove(event.id, newStart);
   };
 
   // Handle resize
@@ -154,11 +187,15 @@ export default function AgendaDayView({
 
       {/* Timeline con eventos */}
       <div className="relative flex-1">
-        <DragDropContext onDragEnd={handleDragEnd}>
+        <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
           <AgendaTimeline
             showNowIndicator={true}
             onSlotClick={handleSlotClick}
             hourHeight={hourHeight}
+            disableSlotClick={isDragging}
+            onContainerRef={(node) => {
+              timelineRef.current = node;
+            }}
           >
             <Droppable droppableId="day-timeline" type="EVENT">
               {(provided, snapshot) => (
