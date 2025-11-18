@@ -711,7 +711,47 @@ export default function PacienteDetallePage() {
   };
 
   const renderCitasTab = () => (
-    <PatientCitasTab citas={citas} onNuevaCita={paciente ? handleNuevaCitaDesdePaciente : undefined} />
+    <PatientCitasTab
+      citas={citas}
+      paciente={paciente ?? undefined}
+      onNuevaCita={paciente ? handleNuevaCitaDesdePaciente : undefined}
+      onRequestRefresh={async () => {
+        const reloadPatient = async () => {
+          if (!pacienteId) return;
+          const historialSnap = await getDocs(
+            query(
+              collection(db, 'pacientes-historial'),
+              where('pacienteId', '==', pacienteId),
+              orderBy('fecha', 'desc'),
+              limit(100)
+            )
+          );
+          setHistorial(
+            historialSnap.docs.map((docSnap) => {
+              const histData = docSnap.data() ?? {};
+              return {
+                id: docSnap.id,
+                pacienteId: histData.pacienteId ?? pacienteId,
+                eventoAgendaId: histData.eventoAgendaId,
+                servicioId: histData.servicioId,
+                servicioNombre: histData.servicioNombre,
+                profesionalId: histData.profesionalId,
+                profesionalNombre: histData.profesionalNombre,
+                fecha: histData.fecha?.toDate?.() ?? new Date(),
+                tipo: histData.tipo ?? 'consulta',
+                descripcion: histData.descripcion ?? '',
+                resultado: histData.resultado,
+                planesSeguimiento: histData.planesSeguimiento,
+                adjuntos: Array.isArray(histData.adjuntos) ? histData.adjuntos : [],
+                createdAt: histData.createdAt?.toDate?.() ?? new Date(),
+                creadoPor: histData.creadoPor ?? 'sistema',
+              } satisfies RegistroHistorialPaciente;
+            })
+          );
+        };
+        await reloadPatient();
+      }}
+    />
   );
 
   const renderTratamientosTab = () => (
