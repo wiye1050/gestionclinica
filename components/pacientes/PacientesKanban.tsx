@@ -31,6 +31,17 @@ export default function PacientesKanban({ pacientes, profesionales, pacientesSeg
     return acc;
   }, {});
 
+  const buildAgendaLink = (paciente: Paciente) => {
+    const params = new URLSearchParams({
+      newEvent: '1',
+      pacienteId: paciente.id,
+    });
+    const nombre = `${paciente.nombre ?? ''} ${paciente.apellidos ?? ''}`.trim();
+    if (nombre) params.set('pacienteNombre', nombre);
+    if (paciente.profesionalReferenteId) params.set('profesionalId', paciente.profesionalReferenteId);
+    return `/dashboard/agenda?${params.toString()}`;
+  };
+
   return (
     <div className="flex h-[calc(100vh-400px)] gap-4 overflow-x-auto pb-4">
       {COLUMNAS.map((columna) => {
@@ -60,16 +71,18 @@ export default function PacientesKanban({ pacientes, profesionales, pacientesSeg
                 const riesgoClass = paciente.riesgo ? COLORES_RIESGO[paciente.riesgo] : '';
                 
                 return (
-                  <Link
+                  <div
                     key={paciente.id}
-                    href={`/dashboard/pacientes/${paciente.id}`}
-                    className={`block panel-block p-3 shadow-sm transition-all hover:shadow-md ${riesgoClass}`}
+                    className={`panel-block p-3 shadow-sm transition-all hover:shadow-md ${riesgoClass}`}
                   >
                     {/* Nombre */}
                     <div className="mb-2">
-                      <h4 className="text-sm font-medium text-text line-clamp-1">
+                      <Link
+                        href={`/dashboard/pacientes/${paciente.id}`}
+                        className="text-sm font-medium text-text line-clamp-1 hover:underline"
+                      >
                         {paciente.nombre} {paciente.apellidos}
-                      </h4>
+                      </Link>
                       {paciente.documentoId && (
                         <p className="text-xs text-text-muted">{paciente.documentoId}</p>
                       )}
@@ -97,20 +110,37 @@ export default function PacientesKanban({ pacientes, profesionales, pacientesSeg
                     )}
 
                     {/* Footer */}
-                    <div className="flex items-center justify-between border-t border-border/40 pt-2 text-xs text-text-muted">
-                      {paciente.profesionalReferenteId && (
-                        <div className="flex items-center gap-1 truncate">
-                          <User className="w-3 h-3 flex-shrink-0" />
-                          <span className="truncate">
-                            {profesionalesMap[paciente.profesionalReferenteId] || 'Sin asignar'}
-                          </span>
-                        </div>
-                      )}
-                      {paciente.telefono && (
-                        <span className="text-xs">{paciente.telefono}</span>
-                      )}
+                    <div className="space-y-2 border-t border-border/40 pt-2 text-xs text-text-muted">
+                      <div className="flex items-center justify-between">
+                        {paciente.profesionalReferenteId && (
+                          <div className="flex items-center gap-1 truncate">
+                            <User className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">
+                              {profesionalesMap[paciente.profesionalReferenteId] || 'Sin asignar'}
+                            </span>
+                          </div>
+                        )}
+                        {paciente.telefono && (
+                          <span className="text-xs">{paciente.telefono}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Link
+                          href={`/dashboard/pacientes/${paciente.id}`}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          Ver ficha
+                        </Link>
+                        <Link
+                          href={buildAgendaLink(paciente)}
+                          className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                        >
+                          <Calendar className="h-3 w-3" />
+                          Agendar
+                        </Link>
+                      </div>
                     </div>
-                  </Link>
+                  </div>
                 );
               })}
 

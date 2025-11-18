@@ -79,18 +79,21 @@ export function generateTimeSlots(): TimeSlot[] {
 }
 
 // Calcular posición vertical de un evento en el timeline
-export function calculateEventPosition(event: AgendaEvent): {
+export function calculateEventPosition(
+  event: AgendaEvent,
+  hourHeight: number = AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR
+): {
   top: number;
   height: number;
 } {
-  const { START_HOUR, TIMELINE_HEIGHT_PER_HOUR } = AGENDA_CONFIG;
+  const { START_HOUR } = AGENDA_CONFIG;
   const startMinutes = event.fechaInicio.getHours() * 60 + event.fechaInicio.getMinutes();
   const endMinutes = event.fechaFin.getHours() * 60 + event.fechaFin.getMinutes();
   const startOffset = startMinutes - START_HOUR * 60;
   
-  const top = (startOffset / 60) * TIMELINE_HEIGHT_PER_HOUR;
+  const top = (startOffset / 60) * hourHeight;
   const duration = endMinutes - startMinutes;
-  const height = (duration / 60) * TIMELINE_HEIGHT_PER_HOUR;
+  const height = (duration / 60) * hourHeight;
 
   return { top, height: Math.max(height, 40) }; // mínimo 40px
 }

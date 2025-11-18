@@ -33,6 +33,7 @@ interface AgendaResourceViewProps {
   onQuickAction?: (event: AgendaEvent, action: 'confirm' | 'complete' | 'cancel') => void;
   onEdit?: (event: AgendaEvent) => void;
   onDelete?: (event: AgendaEvent) => void;
+  hourHeight?: number;
 }
 
 export default function AgendaResourceView({
@@ -45,6 +46,7 @@ export default function AgendaResourceView({
   onQuickAction,
   onEdit,
   onDelete,
+  hourHeight = AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR,
 }: AgendaResourceViewProps) {
   const dayEvents = useMemo(() => getEventsForDay(events, day), [events, day]);
 
@@ -110,7 +112,7 @@ export default function AgendaResourceView({
 
     // Calcular nueva hora
     const dropPosition = destination.index;
-    const minutesFromStart = (dropPosition / AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR) * 60;
+    const minutesFromStart = (dropPosition / hourHeight) * 60;
     const newStart = new Date(day);
     newStart.setHours(AGENDA_CONFIG.START_HOUR + Math.floor(minutesFromStart / 60));
     newStart.setMinutes(minutesFromStart % 60);
@@ -158,14 +160,14 @@ export default function AgendaResourceView({
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="flex h-full">
             {/* Columna de horas (compartida) */}
-            <div className="w-20 flex-shrink-0 bg-cardHover border-r border-border">
+            <div className="w-20 flex-shrink-0 bg-cardHover border-r border-border sticky left-0 z-20 shadow">
               <div className="h-14 border-b border-border flex items-center justify-center sticky top-0 z-10 bg-cardHover">
                 <span className="text-xs font-semibold text-text-muted uppercase">Hora</span>
               </div>
               <div 
                 className="relative"
                 style={{ 
-                  height: `${AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR * (AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR)}px` 
+                  height: `${hourHeight * (AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR)}px` 
                 }}
               >
                 {Array.from({ 
@@ -177,8 +179,8 @@ export default function AgendaResourceView({
                       key={hour}
                       className="absolute w-full text-right pr-2"
                       style={{
-                        top: `${index * AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR}px`,
-                        height: `${AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR}px`,
+                        top: `${index * hourHeight}px`,
+                        height: `${hourHeight}px`,
                       }}
                     >
                       <span className="text-xs font-medium text-text-muted">
@@ -230,7 +232,7 @@ export default function AgendaResourceView({
                             snapshot.isDraggingOver ? 'bg-brand-subtle/40' : ''
                           }`}
                           style={{
-                            height: `${AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR * (AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR)}px`,
+                            height: `${hourHeight * (AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR)}px`,
                           }}
                         >
                           {/* Grid de fondo */}
@@ -241,8 +243,8 @@ export default function AgendaResourceView({
                               key={index}
                               className="absolute w-full border-t border-border"
                               style={{
-                                top: `${index * AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR}px`,
-                                height: `${AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR}px`,
+                                top: `${index * hourHeight}px`,
+                                height: `${hourHeight}px`,
                               }}
                             >
                               {[1, 2, 3].map((quarter) => (
@@ -250,7 +252,7 @@ export default function AgendaResourceView({
                                   key={quarter}
                                   className="absolute w-full border-t border-border/40"
                                   style={{
-                                    top: `${quarter * (AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR / 4)}px`,
+                                    top: `${quarter * (hourHeight / 4)}px`,
                                   }}
                                 />
                               ))}
@@ -259,7 +261,7 @@ export default function AgendaResourceView({
 
                           {/* Eventos */}
                           {resourceEvents.map((event, index) => {
-                            const position = calculateEventPosition(event);
+                            const position = calculateEventPosition(event, hourHeight);
                             const hasConflict = conflictEventIds.has(event.id);
 
                             return (

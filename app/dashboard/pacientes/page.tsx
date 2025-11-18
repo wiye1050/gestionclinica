@@ -1,17 +1,19 @@
 'use client';
 
 import { Suspense, lazy, useState, useEffect, useMemo } from 'react';
+import { startOfWeek, isSameDay } from 'date-fns';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { z } from 'zod';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useInfinitePacientes } from '@/lib/hooks/usePacientes';
-import { useProfesionales } from '@/lib/hooks/useQueries';
+import { useProfesionales, useEventosAgenda } from '@/lib/hooks/useQueries';
 import { getPendingFollowUpPatientIds } from '@/lib/utils/followUps';
 import ModuleHeader from '@/components/shared/ModuleHeader';
 import StatCard from '@/components/shared/StatCard';
 import ViewSelector from '@/components/shared/ViewSelector';
 import SkeletonLoader from '@/components/shared/SkeletonLoader';
+import CrossModuleAlert from '@/components/shared/CrossModuleAlert';
 import {
   Users,
   UserCheck,
@@ -78,6 +80,12 @@ function PacientesContent() {
     [pacientesPages]
   );
   const { data: profesionalesData = [], isLoading: loadingProfesionales } = useProfesionales();
+  const weekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }), []);
+  const { data: eventosAgenda = [] } = useEventosAgenda(weekStart);
+  const citasHoy = useMemo(
+    () => eventosAgenda.filter((evento) => isSameDay(evento.fechaInicio, new Date())),
+    [eventosAgenda]
+  );
 
   // Cargar filtros guardados con validación Zod
   useEffect(() => {
@@ -275,6 +283,24 @@ function PacientesContent() {
           </>
         }
       />
+
+      {citasHoy.length > 0 && (
+        <CrossModuleAlert
+          title="Citas programadas para hoy"
+          description={`Hay ${citasHoy.length} citas agendadas para hoy. Gestiona cambios o urgencias directamente en la agenda.`}
+          actionLabel="Ir a Agenda"
+          href="/dashboard/agenda"
+          tone="info"
+          chips={citasHoy
+            .slice(0, 4)
+            .map(
+              (evento) =>
+                evento.pacienteNombre ??
+                evento.titulo ??
+                `Cita ${evento.fechaInicio.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+            )}
+        />
+      )}
 
       <ViewSelector
         views={[

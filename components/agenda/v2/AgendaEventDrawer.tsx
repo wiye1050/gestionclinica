@@ -206,6 +206,31 @@ export default function AgendaEventDrawer({
           )}
         </div>
 
+        {/* Enlaces contextuales */}
+        <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-text">
+          <p className="text-xs font-semibold uppercase text-text-muted mb-2">
+            Accesos directos
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {event.pacienteId && (
+              <a
+                href={`/dashboard/pacientes/${event.pacienteId}`}
+                className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-brand hover:bg-brand-subtle focus-visible:focus-ring"
+              >
+                Ver paciente
+              </a>
+            )}
+            {event.profesionalId && (
+              <a
+                href={`/dashboard/profesionales/${event.profesionalId}`}
+                className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-brand hover:bg-brand-subtle focus-visible:focus-ring"
+              >
+                Ver profesional
+              </a>
+            )}
+          </div>
+        </div>
+
         {/* Historial breve */}
         {paciente?.diagnosticosPrincipales?.length ? (
           <div className="rounded-2xl border border-border p-4 space-y-2 text-sm">

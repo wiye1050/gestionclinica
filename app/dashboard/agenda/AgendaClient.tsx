@@ -1,7 +1,8 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
-import { addDays, addWeeks, startOfWeek, format } from 'date-fns';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import { addDays, addWeeks, startOfWeek, format, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -11,23 +12,33 @@ import {
   useSalas,
   usePacientes,
 } from '@/lib/hooks/useQueries';
-import ModuleHeader from '@/components/shared/ModuleHeader';
-import ViewSelector from '@/components/shared/ViewSelector';
 import SkeletonLoader from '@/components/shared/SkeletonLoader';
+import CrossModuleAlert from '@/components/shared/CrossModuleAlert';
 import AgendaDayView from '@/components/agenda/v2/AgendaDayView';
 import AgendaWeekViewV2 from '@/components/agenda/v2/AgendaWeekViewV2';
 import AgendaResourceView from '@/components/agenda/v2/AgendaResourceView';
 import EventModal from '@/components/agenda/v2/EventModal';
 import AgendaEventDrawer from '@/components/agenda/v2/AgendaEventDrawer';
 import MiniCalendar from '@/components/agenda/v2/MiniCalendar';
-import AgendaSearch from '@/components/agenda/v2/AgendaSearch';
+import PrimaryTabs from '@/components/shared/PrimaryTabs';
 import { AgendaEvent } from '@/components/agenda/v2/agendaHelpers';
-import AgendaMetrics from '@/components/agenda/v2/AgendaMetrics';
-import { Calendar, List, Users as UsersIcon, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  CalendarDays,
+  List,
+  LayoutGrid,
+  Boxes,
+  UserCircle,
+  Plus,
+  AlertTriangle,
+  Lock,
+  SunMedium,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import type { SerializedAgendaEvent } from '@/lib/server/agenda';
-import type { Paciente, Profesional } from '@/types';
+import type { Paciente } from '@/types';
 
-type VistaAgenda = 'dia' | 'semana' | 'recursos';
+type VistaAgenda = 'diaria' | 'semanal' | 'multi' | 'boxes' | 'paciente';
 type AgendaResource = { id: string; nombre: string; tipo: 'profesional' | 'sala' };
 
 const AGENDA_STORAGE_KEY = 'agenda.filters.v1';
@@ -61,6 +72,14 @@ const RECURSO_PRESETS = [
   { id: 'enfermeria', label: 'Enfermería' },
 ];
 
+const VIEW_TABS: Array<{ id: VistaAgenda; label: string; helper: string; icon: ReactNode }> = [
+  { id: 'diaria', label: 'Diaria', helper: 'Detalle por horas', icon: <CalendarDays className="h-4 w-4" /> },
+  { id: 'semanal', label: 'Semanal', helper: 'Vista cronológica', icon: <List className="h-4 w-4" /> },
+  { id: 'multi', label: 'Multi', helper: 'Columnas por profesional', icon: <LayoutGrid className="h-4 w-4" /> },
+  { id: 'boxes', label: 'Boxes', helper: 'Flujo por salas', icon: <Boxes className="h-4 w-4" /> },
+  { id: 'paciente', label: 'Paciente', helper: 'Seguimiento individual', icon: <UserCircle className="h-4 w-4" /> },
+];
+
 function deserializeEvents(serialized: SerializedAgendaEvent[]): AgendaEvent[] {
   return serialized.map((event) => ({
     ...event,
@@ -75,13 +94,23 @@ function deserializeEvents(serialized: SerializedAgendaEvent[]): AgendaEvent[] {
 interface AgendaClientProps {
   initialWeekStart: string;
   initialEvents: SerializedAgendaEvent[];
+  prefillRequest?: {
+    openModal?: boolean;
+    pacienteId?: string;
+    pacienteNombre?: string;
+    profesionalId?: string;
+  };
 }
 
-export default function AgendaClient({ initialWeekStart, initialEvents }: AgendaClientProps) {
+export default function AgendaClient({
+  initialWeekStart,
+  initialEvents,
+  prefillRequest,
+}: AgendaClientProps) {
   const prefetchedEvents = useMemo(() => deserializeEvents(initialEvents), [initialEvents]);
   const initialWeekStartDate = useMemo(() => new Date(initialWeekStart), [initialWeekStart]);
 
-  const [vista, setVista] = useState<VistaAgenda>('semana');
+  const [vista, setVista] = useState<VistaAgenda>('multi');
   const [currentDate, setCurrentDate] = useState(() => initialWeekStartDate);
   const [selectedProfesionales, setSelectedProfesionales] = useState<string[]>([]);
   const [selectedSala, setSelectedSala] = useState<string>('todas');
@@ -95,6 +124,10 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
   const [eventToEdit, setEventToEdit] = useState<AgendaEvent | null>(null);
   const [drawerEvent, setDrawerEvent] = useState<AgendaEvent | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [modalPrefill, setModalPrefill] =
+    useState<{ pacienteId?: string; profesionalId?: string } | null>(null);
+  const [viewDensity, setViewDensity] = useState<'comfort' | 'compact'>('comfort');
+  const [prefillRequestKey, setPrefillRequestKey] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -196,6 +229,18 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
     ? pacienteMap.get(drawerEvent.pacienteId) ?? null
     : null;
 
+  const highRiskPacientes = useMemo(
+    () => pacientes.filter((paciente) => paciente.riesgo === 'alto'),
+    [pacientes]
+  );
+  const highRiskNames = useMemo(
+    () =>
+      highRiskPacientes
+        .slice(0, 3)
+        .map((paciente) => `${paciente.nombre ?? ''} ${paciente.apellidos ?? ''}`.trim() || 'Paciente'),
+    [highRiskPacientes]
+  );
+
   const eventosFiltrados = useMemo(() => {
     return eventos.filter((evento) => {
       const matchProfesional =
@@ -219,13 +264,15 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
       selectedProfesionales.length > 0
         ? selectedProfesionales
             .map((id) => profesionales.find((p) => p.id === id))
-            .filter((prof): prof is (typeof profesionales)[number] => Boolean(prof) && cumplePreset(prof))
+            .filter((prof): prof is (typeof profesionales)[number] => Boolean(prof))
         : [];
+
+    const fallbackProfesionales = profesionales.filter(cumplePreset);
 
     const baseProfesionales =
       seleccionados.length > 0
         ? seleccionados
-        : profesionales.filter(cumplePreset).slice(0, 5);
+        : (fallbackProfesionales.length > 0 ? fallbackProfesionales : profesionales).slice(0, 5);
 
     return baseProfesionales.map((prof) => ({
       id: prof.id,
@@ -274,18 +321,18 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
   };
 
   const handlePrev = () => {
-    if (vista === 'dia') {
-      setCurrentDate((prev) => addDays(prev, -1));
-    } else {
+    if (vista === 'semanal') {
       setCurrentDate((prev) => addWeeks(prev, -1));
+    } else {
+      setCurrentDate((prev) => addDays(prev, -1));
     }
   };
 
   const handleNext = () => {
-    if (vista === 'dia') {
-      setCurrentDate((prev) => addDays(prev, 1));
-    } else {
+    if (vista === 'semanal') {
       setCurrentDate((prev) => addWeeks(prev, 1));
+    } else {
+      setCurrentDate((prev) => addDays(prev, 1));
     }
   };
 
@@ -340,6 +387,20 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
     }
   };
 
+  const focusAgendaOnEvent = (profesionalId?: string | null, fechaInicio?: Date) => {
+    if (fechaInicio instanceof Date) {
+      setCurrentDate(fechaInicio);
+    }
+    if (profesionalId) {
+      setSelectedProfesionales((prev) => {
+        if (prev.length === 0) return [profesionalId];
+        if (prev.includes(profesionalId)) return prev;
+        return [...prev, profesionalId];
+      });
+    }
+    setVista('multi');
+  };
+
   const handleQuickAction = async (
     evento: AgendaEvent,
     action: 'confirm' | 'complete' | 'cancel'
@@ -373,11 +434,30 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
     }
   };
 
+  const openNewEventModal = useCallback(
+    (initialDate?: Date, prefill?: { pacienteId?: string; profesionalId?: string }) => {
+      setModalPrefill(prefill ?? null);
+      setModalInitialDate(initialDate ?? new Date());
+      setEventToEdit(null);
+      setIsModalOpen(true);
+    },
+    []
+  );
+
   const handleCreateEvent = async (start: Date) => {
-    setModalInitialDate(start);
-    setEventToEdit(null);
-    setIsModalOpen(true);
+    openNewEventModal(start);
   };
+
+  useEffect(() => {
+    if (!prefillRequest?.openModal) return;
+    const key = `${prefillRequest.pacienteId ?? ''}-${prefillRequest.profesionalId ?? ''}`;
+    if (prefillRequestKey === key) return;
+    setPrefillRequestKey(key);
+    openNewEventModal(new Date(), {
+      pacienteId: prefillRequest.pacienteId ?? undefined,
+      profesionalId: prefillRequest.profesionalId ?? undefined,
+    });
+  }, [prefillRequest, prefillRequestKey, openNewEventModal]);
 
   const handleEventClick = (evento: AgendaEvent) => {
     setDrawerEvent(evento);
@@ -399,6 +479,13 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
       }
 
       const payload = serializeEventPayload(eventData as EventPayload);
+
+      const eventoFechaInicio =
+        eventData.fechaInicio instanceof Date ? eventData.fechaInicio : eventToEdit?.fechaInicio;
+      const eventoProfesionalId =
+        typeof eventData.profesionalId === 'string'
+          ? eventData.profesionalId
+          : eventToEdit?.profesionalId;
 
       if (eventToEdit) {
         await requestAgenda(`/api/agenda/eventos/${eventToEdit.id}`, {
@@ -427,6 +514,7 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
       }
 
       await invalidateAgenda();
+      focusAgendaOnEvent(eventoProfesionalId, eventoFechaInicio);
       setIsModalOpen(false);
       setEventToEdit(null);
       setModalInitialDate(undefined);
@@ -438,17 +526,40 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
   };
 
   const dateLabel = useMemo(() => {
-    if (vista === 'dia') {
-      return format(currentDate, "d 'de' MMMM, yyyy", { locale: es });
-    } else {
+    if (vista === 'semanal') {
       const weekEnd = addDays(weekStart, 6);
-      return `${format(weekStart, 'd MMM', { locale: es })} - ${format(
+      return `${format(weekStart, "d 'de' MMM", { locale: es })} - ${format(
         weekEnd,
-        'd MMM yyyy',
+        "d 'de' MMMM, yyyy",
         { locale: es }
       )}`;
     }
+
+    return format(currentDate, "EEEE d 'de' MMMM, yyyy", { locale: es });
   }, [vista, currentDate, weekStart]);
+
+  const weekDays = useMemo(() => {
+    const today = new Date();
+    return Array.from({ length: 7 }).map((_, index) => {
+      const date = addDays(weekStart, index);
+      return {
+        date,
+        label: format(date, 'EEE', { locale: es }),
+        dayNumber: format(date, 'd', { locale: es }),
+        isToday: isSameDay(date, today),
+        isSelected: isSameDay(date, currentDate),
+      };
+    });
+  }, [weekStart, currentDate]);
+
+  const hourHeight = viewDensity === 'compact' ? 60 : 90;
+
+  const renderPlaceholder = (title: string, description: string) => (
+    <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+      <p className="text-lg font-semibold text-text">{title}</p>
+      <p className="max-w-md text-sm text-text-muted">{description}</p>
+    </div>
+  );
 
   if (loading) {
     return <SkeletonLoader />;
@@ -456,130 +567,61 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
 
   return (
     <div className="space-y-4">
-      <ModuleHeader
-        title="Agenda"
-        description="Planifica y gestiona citas, recursos y disponibilidad del equipo"
-        actions={
-          <div className="flex items-center gap-3">
-            <div className="hidden w-64 md:block">
-              <AgendaSearch
-                events={eventos}
-                onEventSelect={handleEventClick}
-                onDateSelect={(date) => {
-                  setCurrentDate(date);
-                  setVista('dia');
-                }}
-              />
-            </div>
-            <button
-              onClick={() => {
-                setModalInitialDate(new Date());
-                setEventToEdit(null);
-                setIsModalOpen(true);
-              }}
-              className="inline-flex items-center gap-2 rounded-pill bg-brand px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-brand/90 focus-visible:focus-ring"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Nueva cita</span>
-            </button>
-          </div>
-        }
-      />
-
-      <AgendaMetrics events={eventos} weekStart={weekStart} profesionales={profesionales as Profesional[]} />
-
-      <div className="md:hidden">
-        <AgendaSearch
-          events={eventos}
-          onEventSelect={handleEventClick}
-          onDateSelect={(date) => {
-            setCurrentDate(date);
-            setVista('dia');
-          }}
-        />
-      </div>
-
-      <div className="panel-block p-4">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
-          <div className="flex items-center gap-2 md:col-span-2">
-            <button
-              onClick={handleToday}
-              className="rounded-pill border border-border bg-card px-3 py-2 text-sm font-medium text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
-            >
-              Hoy
-            </button>
-            <button
-              onClick={handlePrev}
-              className="rounded-full border border-border bg-card p-2 text-text hover:bg-cardHover focus-visible:focus-ring"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <div className="flex-1 text-center">
-              <span className="text-sm font-semibold capitalize text-text">{dateLabel}</span>
-            </div>
-            <button
-              onClick={handleNext}
-              className="rounded-full border border-border bg-card p-2 text-text hover:bg-cardHover focus-visible:focus-ring"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="relative z-40">
-            <details className="group">
-              <summary className="flex w-full list-none items-center justify-between panel-block px-3 py-2 text-sm font-medium text-text transition-colors hover:bg-cardHover">
-                <span className="text-text">
-                  {selectedProfesionales.length === 0
-                    ? 'Todos los profesionales'
-                    : `${selectedProfesionales.length} seleccionado${
-                        selectedProfesionales.length > 1 ? 's' : ''
-                      }`}
-                </span>
-                <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
-              </summary>
-              <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto panel-block shadow-lg">
-                <div className="space-y-1 p-2">
-                  <label className="flex items-center gap-2 rounded-2xl px-3 py-2 text-sm text-text transition-colors hover:bg-cardHover cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedProfesionales.length === 0}
-                      onChange={() => setSelectedProfesionales([])}
-                      className="h-4 w-4 rounded border-border text-brand focus-visible:ring-2 focus-visible:ring-brand/50"
-                    />
-                    <span>Todos</span>
-                  </label>
-                  {profesionales.map((prof) => (
-                    <label
-                      key={prof.id}
-                      className="flex items-center gap-2 rounded-2xl px-3 py-2 text-sm text-text transition-colors hover:bg-cardHover cursor-pointer"
-                    >
+      <section className="rounded-3xl border border-border bg-card p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            <div className="relative">
+              <details className="group" title="Profesionales visibles">
+                <summary className="flex cursor-pointer list-none items-center gap-2 rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-text shadow-sm transition-colors hover:bg-cardHover">
+                  <span>
+                    {selectedProfesionales.length === 0
+                      ? 'Todos los profesionales'
+                      : `${selectedProfesionales.length} seleccionado${
+                          selectedProfesionales.length > 1 ? 's' : ''
+                        }`}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-text-muted transition-transform group-open:rotate-90" />
+                </summary>
+                <div className="absolute left-0 z-50 mt-1 max-h-60 min-w-[240px] overflow-y-auto rounded-2xl border border-border bg-white shadow-2xl">
+                  <div className="space-y-1 p-2 text-sm">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 transition-colors hover:bg-cardHover">
                       <input
                         type="checkbox"
-                        checked={selectedProfesionales.includes(prof.id)}
-                        onChange={(e) => {
-                          setSelectedProfesionales((prev) =>
-                            e.target.checked
-                              ? [...prev, prof.id]
-                              : prev.filter((id) => id !== prof.id)
-                          );
-                        }}
+                        checked={selectedProfesionales.length === 0}
+                        onChange={() => setSelectedProfesionales([])}
                         className="h-4 w-4 rounded border-border text-brand focus-visible:ring-2 focus-visible:ring-brand/50"
                       />
-                      <span>
-                        {prof.nombre} {prof.apellidos}
-                      </span>
+                      <span>Todos</span>
                     </label>
-                  ))}
+                    {profesionales.map((prof) => (
+                      <label
+                        key={prof.id}
+                        className="flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 transition-colors hover:bg-cardHover"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedProfesionales.includes(prof.id)}
+                          onChange={(e) => {
+                            setSelectedProfesionales((prev) =>
+                              e.target.checked ? [...prev, prof.id] : prev.filter((id) => id !== prof.id)
+                            );
+                          }}
+                          className="h-4 w-4 rounded border-border text-brand focus-visible:ring-2 focus-visible:ring-brand/50"
+                        />
+                        <span>
+                          {prof.nombre} {prof.apellidos}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </details>
-          </div>
+              </details>
+            </div>
 
-          <div>
             <select
               value={selectedSala}
               onChange={(e) => setSelectedSala(e.target.value)}
-              className="w-full panel-block px-3 py-2 text-sm text-text focus-visible:focus-ring"
+              className="rounded-2xl border border-border bg-card px-3 py-2 text-xs font-semibold text-text focus-visible:focus-ring"
             >
               <option value="todas">Todas las salas</option>
               {salas.map((sala) => (
@@ -588,37 +630,11 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
                 </option>
               ))}
             </select>
-          </div>
 
-          <div className="md:col-span-2">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
-              Estado
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {ESTADO_FILTERS.map((filter) => (
-                <button
-                  key={filter.id}
-                  onClick={() => setEstadoFilter(filter.id)}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors focus-visible:focus-ring ${
-                    estadoFilter === filter.id
-                      ? filter.className
-                      : 'border border-border text-text-muted hover:bg-cardHover'
-                  }`}
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
-              Tipo de cita
-            </p>
             <select
               value={tipoFilter}
               onChange={(e) => setTipoFilter(e.target.value as AgendaEvent['tipo'] | 'todos')}
-              className="w-full rounded-2xl border border-border bg-card px-3 py-2 text-sm text-text focus-visible:focus-ring"
+              className="rounded-2xl border border-border bg-card px-3 py-2 text-xs font-semibold text-text focus-visible:focus-ring"
             >
               {TIPO_FILTERS.map((tipo) => (
                 <option key={tipo.id} value={tipo.id}>
@@ -626,83 +642,181 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
                 </option>
               ))}
             </select>
+
+            <select
+              value={resourcePreset}
+              disabled={vista !== 'multi'}
+              onChange={(e) =>
+                setResourcePreset(e.target.value as 'todos' | 'medicina' | 'fisioterapia' | 'enfermeria')
+              }
+              className={`rounded-2xl border border-border bg-card px-3 py-2 text-xs font-semibold text-text focus-visible:focus-ring ${
+                vista !== 'multi' ? 'cursor-not-allowed opacity-60' : ''
+              }`}
+            >
+              {RECURSO_PRESETS.map((preset) => (
+                <option key={preset.id} value={preset.id}>
+                  {preset.label}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {vista === 'recursos' && (
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
-                Preset de recursos
-              </p>
-              <select
-                value={resourcePreset}
-                onChange={(e) =>
-                  setResourcePreset(e.target.value as 'todos' | 'medicina' | 'fisioterapia' | 'enfermeria')
-                }
-                className="w-full rounded-2xl border border-border bg-card px-3 py-2 text-sm text-text focus-visible:focus-ring"
-              >
-                {RECURSO_PRESETS.map((preset) => (
-                  <option key={preset.id} value={preset.id}>
-                    {preset.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="flex items-center justify-center panel-blockHover px-3 py-2 text-sm font-medium text-text-muted">
-            {eventosFiltrados.length} eventos
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => openNewEventModal(new Date())}
+              className="inline-flex items-center gap-1 rounded-2xl bg-brand px-3 py-2 text-xs font-semibold text-text transition-colors hover:bg-brand/90 focus-visible:focus-ring"
+            >
+              <Plus className="h-4 w-4" /> Cita
+            </button>
+            <button
+              onClick={() => openNewEventModal(new Date())}
+              className="inline-flex items-center gap-1 rounded-2xl border border-border px-3 py-2 text-xs font-semibold text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
+            >
+              <AlertTriangle className="h-4 w-4 text-amber-500" /> Urgencia
+            </button>
+            <button
+              onClick={() => toast.info('La gestión de bloqueos estará disponible en la siguiente iteración.')}
+              className="inline-flex items-center gap-1 rounded-2xl border border-border px-3 py-2 text-xs font-semibold text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
+            >
+              <Lock className="h-4 w-4" /> Bloqueos
+            </button>
+            <button
+              onClick={() => toast.info('La apertura rápida del día llegará pronto.')}
+              className="inline-flex items-center gap-1 rounded-2xl border border-border px-3 py-2 text-xs font-semibold text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
+            >
+              <SunMedium className="h-4 w-4 text-brand" /> Abrir día
+            </button>
           </div>
         </div>
-      </div>
 
-      <ViewSelector
-        views={[
-          { id: 'dia', label: 'Día', icon: <Calendar className="w-4 h-4" /> },
-          { id: 'semana', label: 'Semana', icon: <List className="w-4 h-4" /> },
-          { id: 'recursos', label: 'Recursos', icon: <UsersIcon className="w-4 h-4" /> },
-        ]}
-        currentView={vista}
-        onViewChange={(v) => setVista(v as VistaAgenda)}
-      />
+        <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-border/60 pt-3">
+          <div className="flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2">
+            <button
+              onClick={handlePrev}
+              className="rounded-full p-1 text-text hover:bg-cardHover focus-visible:focus-ring"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={handleToday}
+              className="rounded-full border border-border px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-text hover:bg-cardHover focus-visible:focus-ring"
+            >
+              Hoy
+            </button>
+            <button
+              onClick={handleNext}
+              className="rounded-full p-1 text-text hover:bg-cardHover focus-visible:focus-ring"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+          <span className="text-sm font-semibold capitalize text-text">{dateLabel}</span>
+          <span className="rounded-full border border-dashed border-border bg-card px-3 py-1 text-xs font-semibold text-text-muted">
+            {eventosFiltrados.length} eventos visibles
+          </span>
+        </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <div className="lg:col-span-3">
-          <details className="group mb-4 lg:hidden" open>
-            <summary className="flex cursor-pointer items-center justify-between panel-block px-3 py-2 text-sm font-medium text-text shadow-sm">
-              <span>📅 Calendario</span>
-              <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
-            </summary>
-            <div className="mt-2">
-              <MiniCalendar
-                currentDate={currentDate}
-                onDateSelect={(date) => {
-                  setCurrentDate(date);
-                  setVista('dia');
-                }}
-                onMonthChange={setCurrentDate}
-                events={eventosFiltrados}
-              />
-            </div>
-          </details>
-          <div className="hidden lg:block">
+        <div className="mt-3 flex flex-wrap gap-2">
+          {ESTADO_FILTERS.map((filter) => (
+            <button
+              key={filter.id}
+              onClick={() => setEstadoFilter(filter.id)}
+              className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors focus-visible:focus-ring ${
+                estadoFilter === filter.id
+                  ? `${filter.className} border border-transparent`
+                  : 'border border-border text-text-muted hover:bg-cardHover'
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-3 flex items-center gap-2 text-[11px] font-semibold text-text-muted">
+          Densidad:
+          <div className="inline-flex rounded-full border border-border bg-card p-1">
+            {[
+              { id: 'comfort', label: 'Amplia' },
+              { id: 'compact', label: 'Compacta' },
+            ].map((option) => (
+              <button
+                key={option.id}
+                onClick={() => setViewDensity(option.id as 'comfort' | 'compact')}
+                className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                  viewDensity === option.id
+                    ? 'bg-brand text-text'
+                    : 'text-text-muted hover:bg-cardHover'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {highRiskPacientes.length > 0 && (
+        <CrossModuleAlert
+          title="Pacientes de riesgo alto"
+          description={`Hay ${highRiskPacientes.length} pacientes marcados con riesgo alto. Revisa su seguimiento antes de continuar con la agenda.`}
+          actionLabel="Ver pacientes"
+          href="/dashboard/pacientes"
+          tone="warn"
+          chips={highRiskNames}
+        />
+      )}
+
+      <section className="rounded-[32px] border border-border bg-card shadow-lg p-3">
+        <PrimaryTabs
+          tabs={VIEW_TABS}
+          current={vista}
+          onChange={(tab) => setVista(tab)}
+          size="sm"
+        />
+
+        <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+          <aside className="flex flex-col gap-4 rounded-[28px] border border-border bg-cardHover/30 p-3">
             <MiniCalendar
               currentDate={currentDate}
               onDateSelect={(date) => {
                 setCurrentDate(date);
-                setVista('dia');
+                setVista('diaria');
               }}
               onMonthChange={setCurrentDate}
               events={eventosFiltrados}
             />
-          </div>
-        </div>
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
+                Semana
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {weekDays.map((day) => {
+                  const isActive = day.isSelected;
+                  return (
+                    <button
+                      key={`${day.label}-${day.dayNumber}`}
+                      onClick={() => setCurrentDate(day.date)}
+                      className={`flex flex-col items-center rounded-2xl border px-3 py-2 text-[10px] font-semibold uppercase tracking-wide transition-colors focus-visible:focus-ring ${
+                        isActive
+                          ? 'border-brand bg-brand/20 text-text'
+                          : 'border-border bg-card text-text-muted hover:bg-cardHover'
+                      }`}
+                    >
+                      <span>{day.label}</span>
+                      <span className="text-lg leading-none text-text">{day.dayNumber}</span>
+                      {day.isToday && <span className="text-[9px] text-brand">hoy</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </aside>
 
-        <div className="lg:col-span-9">
           <div
-            className="panel-block shadow-sm"
-            style={{ height: 'calc(100vh - 350px)', minHeight: '400px' }}
+            className="rounded-[28px] border border-border bg-cardHover/30 p-2 sm:p-4"
+            style={{ minHeight: '65vh' }}
           >
-            {vista === 'dia' && (
+            {vista === 'diaria' && (
               <AgendaDayView
                 day={currentDate}
                 events={eventosFiltrados}
@@ -714,7 +828,7 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
               />
             )}
 
-            {vista === 'semana' && (
+            {vista === 'semanal' && (
               <AgendaWeekViewV2
                 weekStart={weekStart}
                 events={eventosFiltrados}
@@ -725,20 +839,33 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
               />
             )}
 
-            {vista === 'recursos' && (
-              <AgendaResourceView
-                day={currentDate}
-                events={eventosFiltrados}
-                resources={recursos}
-                onEventMove={handleEventMove}
-                onEventResize={handleEventResize}
-                onEventClick={handleEventClick}
-                onQuickAction={handleQuickAction}
-              />
-            )}
+          {vista === 'multi' && (
+            <AgendaResourceView
+              day={currentDate}
+              events={eventosFiltrados}
+              resources={recursos}
+              onEventMove={handleEventMove}
+              onEventResize={handleEventResize}
+              onEventClick={handleEventClick}
+              onQuickAction={handleQuickAction}
+              hourHeight={hourHeight}
+            />
+          )}
+
+            {vista === 'boxes' &&
+              renderPlaceholder(
+                'Vista de boxes en preparación',
+                'Aquí podrás organizar la ocupación de cada box y gestionar bloqueos. Lo dejaremos preparado para la siguiente fase.'
+              )}
+
+            {vista === 'paciente' &&
+              renderPlaceholder(
+                'Vista por paciente',
+                'Consulta la historia completa de citas, documentos y notas de un paciente en un único timeline.'
+              )}
           </div>
         </div>
-      </div>
+      </section>
 
       <EventModal
         isOpen={isModalOpen}
@@ -746,6 +873,7 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
           setIsModalOpen(false);
           setEventToEdit(null);
           setModalInitialDate(undefined);
+          setModalPrefill(null);
         }}
         onSave={handleSaveEvent}
         event={eventToEdit}
@@ -753,6 +881,8 @@ export default function AgendaClient({ initialWeekStart, initialEvents }: Agenda
         profesionales={profesionales}
         salas={salas}
         pacientes={pacienteOptions as Array<{ id: string; nombre: string; apellidos: string }>}
+        prefillPacienteId={modalPrefill?.pacienteId}
+        prefillProfesionalId={modalPrefill?.profesionalId}
       />
 
       <AgendaEventDrawer

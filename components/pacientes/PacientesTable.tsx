@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Paciente, Profesional } from '@/types';
 import { useMemo } from 'react';
+import { Calendar } from 'lucide-react';
 
 interface PacientesTableProps {
   pacientes: Paciente[];
@@ -94,6 +95,21 @@ export function PacientesTable({
     pacientesSeguimiento,
     profesionalFilter
   ]);
+
+  const buildAgendaLink = (paciente: Paciente) => {
+    const params = new URLSearchParams({
+      newEvent: '1',
+      pacienteId: paciente.id,
+    });
+    const fullName = `${paciente.nombre ?? ''} ${paciente.apellidos ?? ''}`.trim();
+    if (fullName) {
+      params.set('pacienteNombre', fullName);
+    }
+    if (paciente.profesionalReferenteId) {
+      params.set('profesionalId', paciente.profesionalReferenteId);
+    }
+    return `/dashboard/agenda?${params.toString()}`;
+  };
 
   return (
     <div className="space-y-4">
@@ -236,12 +252,21 @@ export function PacientesTable({
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right text-sm font-medium">
-                      <Link
-                        href={`/dashboard/pacientes/${paciente.id}`}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        Ver ficha
-                      </Link>
+                      <div className="flex flex-col items-end gap-2">
+                        <Link
+                          href={`/dashboard/pacientes/${paciente.id}`}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          Ver ficha
+                        </Link>
+                        <Link
+                          href={buildAgendaLink(paciente)}
+                          className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                        >
+                          <Calendar className="h-3.5 w-3.5" />
+                          Agendar
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 );

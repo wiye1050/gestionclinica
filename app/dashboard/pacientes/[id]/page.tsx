@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { collection, doc, getDoc, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
@@ -61,6 +61,7 @@ type ConsentimientoRaw = {
 
 export default function PacienteDetallePage() {
   const params = useParams();
+  const router = useRouter();
   const pacienteId = Array.isArray(params?.id) ? params?.id[0] : params?.id;
 
   const [paciente, setPaciente] = useState<Paciente | null>(null);
@@ -693,8 +694,24 @@ export default function PacienteDetallePage() {
     <PatientNotasTab notas={notas} />
   );
 
+  const handleNuevaCitaDesdePaciente = () => {
+    if (!paciente) return;
+    const params = new URLSearchParams({
+      newEvent: '1',
+      pacienteId: paciente.id,
+    });
+    const fullName = `${paciente.nombre ?? ''} ${paciente.apellidos ?? ''}`.trim();
+    if (fullName) {
+      params.set('pacienteNombre', fullName);
+    }
+    if (paciente.profesionalReferenteId) {
+      params.set('profesionalId', paciente.profesionalReferenteId);
+    }
+    router.push(`/dashboard/agenda?${params.toString()}`);
+  };
+
   const renderCitasTab = () => (
-    <PatientCitasTab citas={citas} />
+    <PatientCitasTab citas={citas} onNuevaCita={paciente ? handleNuevaCitaDesdePaciente : undefined} />
   );
 
   const renderTratamientosTab = () => (
@@ -741,7 +758,7 @@ export default function PacienteDetallePage() {
       activeTab={activeTab}
       onTabChange={setActiveTab}
       tabs={tabs}
-      onNewCita={() => toast.info('Funcionalidad pendiente')}
+      onNewCita={handleNuevaCitaDesdePaciente}
       onNewNota={() => setActiveTab('notas')}
       onUploadDoc={() => setActiveTab('documentos')}
     >

@@ -15,6 +15,8 @@ interface EventModalProps {
   profesionales: Array<{ id: string; nombre: string; apellidos: string }>;
   salas: Array<{ id: string; nombre: string }>;
   pacientes?: Array<{ id: string; nombre: string; apellidos: string }>;
+  prefillPacienteId?: string;
+  prefillProfesionalId?: string;
 }
 
 export default function EventModal({
@@ -26,6 +28,8 @@ export default function EventModal({
   profesionales,
   salas,
   pacientes = [],
+  prefillPacienteId,
+  prefillProfesionalId,
 }: EventModalProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -65,6 +69,15 @@ export default function EventModal({
       }));
     }
   }, [event, initialDate]);
+
+  useEffect(() => {
+    if (!isOpen || Boolean(event)) return;
+    setFormData((prev) => ({
+      ...prev,
+      pacienteId: prefillPacienteId ?? prev.pacienteId,
+      profesionalId: prefillProfesionalId ?? prev.profesionalId,
+    }));
+  }, [isOpen, event, prefillPacienteId, prefillProfesionalId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
