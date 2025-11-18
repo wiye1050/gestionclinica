@@ -89,12 +89,15 @@ export default function AgendaDayView({
   }, [pointerMoveHandler]);
 
   const computePointerDate = useCallback(() => {
-    if (!timelineRef.current) return null;
-    const rect = timelineRef.current.getBoundingClientRect();
+    const container = timelineRef.current;
+    if (!container) return null;
+    const rect = container.getBoundingClientRect();
     const relativeY = pointerPositionRef.current.y - rect.top;
     if (Number.isNaN(relativeY)) return null;
-    const clampedY = Math.min(Math.max(relativeY, 0), rect.height);
-    const minutesFromStart = (clampedY / hourHeight) * 60;
+    const scrollTop = container.scrollTop;
+    const totalHeight = hourHeight * (AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR);
+    const absoluteY = Math.min(Math.max(scrollTop + relativeY, 0), totalHeight);
+    const minutesFromStart = (absoluteY / hourHeight) * 60;
     const baseDate = new Date(day);
     baseDate.setHours(AGENDA_CONFIG.START_HOUR, 0, 0, 0);
     const newStart = new Date(baseDate.getTime() + minutesFromStart * 60000);
@@ -139,6 +142,13 @@ export default function AgendaDayView({
       newStart.setHours(hour, minute, 0, 0);
       onCreateEvent(newStart);
     }
+  };
+
+  const handleDragStart = () => {
+    hasPointerRef.current = false;
+    pointerPositionRef.current = { x: 0, y: 0 };
+    setIsDragging(true);
+    window.addEventListener('pointermove', pointerMoveHandler);
   };
 
   const dayLabel = format(day, "EEEE, d 'de' MMMM", { locale: es });
