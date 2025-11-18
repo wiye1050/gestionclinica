@@ -7,29 +7,31 @@ interface AgendaTimelineProps {
   showNowIndicator?: boolean;
   onSlotClick?: (hour: number, minute: number) => void;
   children?: React.ReactNode;
+  hourHeight?: number;
 }
 
 export default function AgendaTimeline({ 
   showNowIndicator = true, 
   onSlotClick,
-  children 
+  children,
+  hourHeight = AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR,
 }: AgendaTimelineProps) {
   const timeSlots = useMemo(() => generateTimeSlots(), []);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [nowPosition, setNowPosition] = useState(() => getCurrentTimePosition());
+  const [nowPosition, setNowPosition] = useState(() => getCurrentTimePosition(hourHeight));
 
   // Actualizar posición del indicador "ahora" cada minuto
   useEffect(() => {
     if (!showNowIndicator) return;
 
     const updateNowPosition = () => {
-      setNowPosition(getCurrentTimePosition());
+      setNowPosition(getCurrentTimePosition(hourHeight));
     };
 
     updateNowPosition();
     const interval = setInterval(updateNowPosition, 60000);
     return () => clearInterval(interval);
-  }, [showNowIndicator]);
+  }, [showNowIndicator, hourHeight]);
 
   // Scroll automático a la hora actual al montar
   useEffect(() => {
@@ -46,7 +48,7 @@ export default function AgendaTimeline({
     const offsetY = event.clientY - rect.top;
     const minutesFromStart = Math.max(
       0,
-      (offsetY / AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR) * 60
+      (offsetY / hourHeight) * 60
     );
     const hour = Math.min(
       AGENDA_CONFIG.END_HOUR - 1,
@@ -66,14 +68,14 @@ export default function AgendaTimeline({
         <div className="h-12 border-b border-border flex items-center justify-center">
           <span className="text-xs font-semibold text-text-muted uppercase">Hora</span>
         </div>
-        <div className="relative" style={{ height: `${AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR * (AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR)}px` }}>
+        <div className="relative" style={{ height: `${hourHeight * (AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR)}px` }}>
           {timeSlots.filter((_, index) => index % 4 === 0).map((slot) => (
             <div
               key={slot.time}
               className="absolute w-full text-right pr-2"
               style={{
-                top: `${((slot.hour - AGENDA_CONFIG.START_HOUR) * 60 + slot.minute) / 60 * AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR}px`,
-                height: `${AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR}px`,
+                top: `${((slot.hour - AGENDA_CONFIG.START_HOUR) * 60 + slot.minute) / 60 * hourHeight}px`,
+                height: `${hourHeight}px`,
               }}
             >
               <span className="text-xs font-medium text-text-muted">{slot.time}</span>
@@ -93,7 +95,7 @@ export default function AgendaTimeline({
         <div 
           className="relative"
           style={{ 
-            height: `${AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR * (AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR)}px`,
+            height: `${hourHeight * (AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR)}px`,
           }}
           onClick={handleTimelineClick}
         >
@@ -103,8 +105,8 @@ export default function AgendaTimeline({
               key={index}
               className="absolute w-full border-t border-border"
               style={{
-                top: `${index * AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR}px`,
-                height: `${AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR}px`,
+                top: `${index * hourHeight}px`,
+                height: `${hourHeight}px`,
               }}
             >
               {/* Líneas cada 15 minutos */}
@@ -113,7 +115,7 @@ export default function AgendaTimeline({
                   key={quarter}
                   className="absolute w-full border-t border-border/40"
                   style={{
-                    top: `${quarter * (AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR / 4)}px`,
+                    top: `${quarter * (hourHeight / 4)}px`,
                   }}
                 />
               ))}

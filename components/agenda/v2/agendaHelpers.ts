@@ -159,12 +159,14 @@ export function getEventsForDay(events: AgendaEvent[], day: Date): AgendaEvent[]
 }
 
 // Calcular posición de hora actual
-export function getCurrentTimePosition(): number {
+export function getCurrentTimePosition(
+  hourHeight: number = AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR
+): number {
   const now = new Date();
-  const { START_HOUR, TIMELINE_HEIGHT_PER_HOUR } = AGENDA_CONFIG;
+  const { START_HOUR } = AGENDA_CONFIG;
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const startOffset = currentMinutes - START_HOUR * 60;
-  return (startOffset / 60) * TIMELINE_HEIGHT_PER_HOUR;
+  return (startOffset / 60) * hourHeight;
 }
 
 // Verificar si una hora está dentro del horario laboral

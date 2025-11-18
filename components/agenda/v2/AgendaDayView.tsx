@@ -28,6 +28,7 @@ interface AgendaDayViewProps {
   onCreateEvent?: (start: Date) => void;
   onEdit?: (event: AgendaEvent) => void;
   onDelete?: (event: AgendaEvent) => void;
+  hourHeight?: number;
 }
 
 export default function AgendaDayView({
@@ -40,6 +41,7 @@ export default function AgendaDayView({
   onCreateEvent,
   onEdit,
   onDelete,
+  hourHeight = AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR,
 }: AgendaDayViewProps) {
   // Eventos del día
   const dayEvents = useMemo(() => getEventsForDay(events, day), [events, day]);
@@ -81,7 +83,7 @@ export default function AgendaDayView({
 
     // Calcular nueva hora basada en la posición
     const dropPosition = result.destination.index;
-    const minutesFromStart = (dropPosition / AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR) * 60;
+    const minutesFromStart = (dropPosition / hourHeight) * 60;
     const newStart = new Date(day);
     newStart.setHours(AGENDA_CONFIG.START_HOUR + Math.floor(minutesFromStart / 60));
     newStart.setMinutes(minutesFromStart % 60);
@@ -153,7 +155,11 @@ export default function AgendaDayView({
       {/* Timeline con eventos */}
       <div className="relative flex-1">
         <DragDropContext onDragEnd={handleDragEnd}>
-          <AgendaTimeline showNowIndicator={true} onSlotClick={handleSlotClick}>
+          <AgendaTimeline
+            showNowIndicator={true}
+            onSlotClick={handleSlotClick}
+            hourHeight={hourHeight}
+          >
             <Droppable droppableId="day-timeline" type="EVENT">
               {(provided, snapshot) => (
                 <div
@@ -163,7 +169,7 @@ export default function AgendaDayView({
                 >
                   {/* Eventos */}
                   {dayEvents.map((event, index) => {
-                    const position = calculateEventPosition(event);
+                    const position = calculateEventPosition(event, hourHeight);
                     const hasConflict = conflictEventIds.has(event.id);
 
                     return (

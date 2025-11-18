@@ -42,6 +42,7 @@ type VistaAgenda = 'diaria' | 'semanal' | 'multi' | 'boxes' | 'paciente';
 type AgendaResource = { id: string; nombre: string; tipo: 'profesional' | 'sala' };
 
 const AGENDA_STORAGE_KEY = 'agenda.filters.v1';
+const VIEW_STORAGE_KEY = 'agenda.view.v1';
 
 const ESTADO_FILTERS: Array<{
   id: AgendaEvent['estado'] | 'todos';
@@ -128,6 +129,25 @@ export default function AgendaClient({
     useState<{ pacienteId?: string; profesionalId?: string } | null>(null);
   const [viewDensity, setViewDensity] = useState<'comfort' | 'compact'>('comfort');
   const [prefillRequestKey, setPrefillRequestKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const storedView = window.localStorage.getItem(VIEW_STORAGE_KEY);
+    if (
+      storedView === 'diaria' ||
+      storedView === 'semanal' ||
+      storedView === 'multi' ||
+      storedView === 'boxes' ||
+      storedView === 'paciente'
+    ) {
+      setVista(storedView);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(VIEW_STORAGE_KEY, vista);
+  }, [vista]);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -320,6 +340,27 @@ export default function AgendaClient({
     return payload;
   };
 
+  const showUndoToast = useCallback(
+    (message: string, undoAction: () => Promise<void>) => {
+      toast.success(message, {
+        action: {
+          label: 'Deshacer',
+          onClick: () => {
+            undoAction()
+              .then(() => {
+                toast.success('Cambio revertido');
+              })
+              .catch((error) => {
+                console.error('Error al deshacer cambio de agenda', error);
+                toast.error('No se pudo deshacer el cambio');
+              });
+          },
+        },
+      });
+    },
+    []
+  );
+
   const handlePrev = () => {
     if (vista === 'semanal') {
       setCurrentDate((prev) => addWeeks(prev, -1));
@@ -362,7 +403,20 @@ export default function AgendaClient({
         body: JSON.stringify(payload),
       });
       await invalidateAgenda();
-      toast.success('Evento actualizado');
+      const revertPayload: Record<string, unknown> = {
+        fechaInicio: evento.fechaInicio.toISOString(),
+        fechaFin: evento.fechaFin.toISOString(),
+      };
+      if (evento.profesionalId !== undefined) {
+        revertPayload.profesionalId = evento.profesionalId || null;
+      }
+      showUndoToast('Evento actualizado', async () => {
+        await requestAgenda(`/api/agenda/eventos/${eventId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(revertPayload),
+        });
+        await invalidateAgenda();
+      });
     } catch (error) {
       console.error('Error al mover evento:', error);
       toast.error(error instanceof Error ? error.message : 'Error al actualizar el evento');
@@ -380,7 +434,13 @@ export default function AgendaClient({
         body: JSON.stringify({ fechaFin: newEnd.toISOString() }),
       });
       await invalidateAgenda();
-      toast.success('Duración actualizada');
+      showUndoToast('Duración actualizada', async () => {
+        await requestAgenda(`/api/agenda/eventos/${eventId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ fechaFin: evento.fechaFin.toISOString() }),
+        });
+        await invalidateAgenda();
+      });
     } catch (error) {
       console.error('Error al redimensionar:', error);
       toast.error(error instanceof Error ? error.message : 'Error al actualizar duración');
@@ -408,6 +468,7 @@ export default function AgendaClient({
     try {
       const nuevoEstado =
         action === 'confirm' ? 'confirmada' : action === 'complete' ? 'realizada' : 'cancelada';
+      const estadoAnterior = evento.estado;
 
       await requestAgenda(`/api/agenda/eventos/${evento.id}`, {
         method: 'PATCH',
@@ -427,7 +488,13 @@ export default function AgendaClient({
         cancel: 'Cita cancelada',
       } as const;
 
-      toast.success(mensajes[action]);
+      showUndoToast(mensajes[action], async () => {
+        await requestAgenda(`/api/agenda/eventos/${evento.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ estado: estadoAnterior }),
+        });
+        await invalidateAgenda();
+      });
     } catch (error) {
       console.error('Error en acción rápida:', error);
       toast.error(error instanceof Error ? error.message : 'Error al actualizar estado');
@@ -816,28 +883,30 @@ export default function AgendaClient({
             className="rounded-[28px] border border-border bg-cardHover/30 p-2 sm:p-4"
             style={{ minHeight: '65vh' }}
           >
-            {vista === 'diaria' && (
-              <AgendaDayView
-                day={currentDate}
-                events={eventosFiltrados}
-                onEventMove={handleEventMove}
-                onEventResize={handleEventResize}
-                onEventClick={handleEventClick}
-                onQuickAction={handleQuickAction}
-                onCreateEvent={handleCreateEvent}
-              />
-            )}
+          {vista === 'diaria' && (
+            <AgendaDayView
+              day={currentDate}
+              events={eventosFiltrados}
+              onEventMove={handleEventMove}
+              onEventResize={handleEventResize}
+              onEventClick={handleEventClick}
+              onQuickAction={handleQuickAction}
+              onCreateEvent={handleCreateEvent}
+              hourHeight={hourHeight}
+            />
+          )}
 
-            {vista === 'semanal' && (
-              <AgendaWeekViewV2
-                weekStart={weekStart}
-                events={eventosFiltrados}
-                onEventMove={handleEventMove}
-                onEventResize={handleEventResize}
-                onEventClick={handleEventClick}
-                onQuickAction={handleQuickAction}
-              />
-            )}
+          {vista === 'semanal' && (
+            <AgendaWeekViewV2
+              weekStart={weekStart}
+              events={eventosFiltrados}
+              onEventMove={handleEventMove}
+              onEventResize={handleEventResize}
+              onEventClick={handleEventClick}
+              onQuickAction={handleQuickAction}
+              hourHeight={hourHeight}
+            />
+          )}
 
           {vista === 'multi' && (
             <AgendaResourceView
