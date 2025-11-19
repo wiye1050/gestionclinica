@@ -100,6 +100,8 @@ interface AgendaClientProps {
     pacienteId?: string;
     pacienteNombre?: string;
     profesionalId?: string;
+    forcedView?: VistaAgenda;
+    presetProfesionales?: string[];
   };
 }
 
@@ -148,6 +150,16 @@ export default function AgendaClient({
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(VIEW_STORAGE_KEY, vista);
   }, [vista]);
+
+  useEffect(() => {
+    if (!prefillRequest) return;
+    if (prefillRequest.forcedView) {
+      setVista(prefillRequest.forcedView);
+    }
+    if (prefillRequest.presetProfesionales && prefillRequest.presetProfesionales.length > 0) {
+      setSelectedProfesionales(prefillRequest.presetProfesionales);
+    }
+  }, [prefillRequest]);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -459,6 +471,20 @@ export default function AgendaClient({
       });
     }
     setVista('multi');
+  };
+
+  const handleReassignProfessional = async (evento: AgendaEvent, profesionalId: string) => {
+    try {
+      await requestAgenda(`/api/agenda/eventos/${evento.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ profesionalId: profesionalId || null }),
+      });
+      await invalidateAgenda();
+      toast.success('Profesional actualizado');
+    } catch (error) {
+      console.error('Error al reasignar profesional', error);
+      toast.error('No se pudo reasignar la cita');
+    }
   };
 
   const handleQuickAction = async (
@@ -964,6 +990,11 @@ export default function AgendaClient({
         }}
         onEdit={handleEditFromDrawer}
         onAction={handleQuickAction}
+        profesionales={profesionales.map((prof) => ({
+          id: prof.id,
+          nombre: `${prof.nombre} ${prof.apellidos}`,
+        }))}
+        onReassign={handleReassignProfessional}
       />
     </div>
   );

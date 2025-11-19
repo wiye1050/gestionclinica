@@ -41,6 +41,7 @@ interface PatientCitasTabProps {
   onNuevaCita?: () => void;
   paciente?: Paciente | null;
   onRequestRefresh?: () => Promise<void> | void;
+  profesionales?: Array<{ id: string; nombre: string }>;
 }
 
 export default function PatientCitasTab({
@@ -49,6 +50,7 @@ export default function PatientCitasTab({
   onNuevaCita,
   paciente,
   onRequestRefresh,
+  profesionales,
 }: PatientCitasTabProps) {
   const [filtroTipo, setFiltroTipo] = useState<Cita['tipo'] | 'todos'>('todos');
   const [filtroEstado, setFiltroEstado] = useState<Cita['estado'] | 'todos'>('todos');
@@ -391,6 +393,11 @@ export default function PatientCitasTab({
           await handleEdit(event);
           await onRequestRefresh?.();
         }}
+        profesionales={profesionales}
+        onReassign={async (event, profesionalId) => {
+          await handleReassign(event.id, profesionalId);
+          await onRequestRefresh?.();
+        }}
       />
     </div>
   );
@@ -443,6 +450,21 @@ function actionToEstado(action: 'confirm' | 'complete' | 'cancel'): AgendaEvent[
   if (action === 'confirm') return 'confirmada';
   if (action === 'complete') return 'realizada';
   return 'cancelada';
+}
+
+async function handleReassign(eventId: string, profesionalId: string) {
+  const { toast } = await import('sonner');
+  const response = await fetch(`/api/agenda/eventos/${eventId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ profesionalId: profesionalId || null }),
+  });
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    toast.error(data.error ?? 'No se pudo reasignar la cita');
+    throw new Error(data.error ?? 'Error reassign');
+  }
+  toast.success('Cita reasignada');
 }
 
 function citaToAgendaEvent(cita: Cita, paciente: Paciente): AgendaEvent {

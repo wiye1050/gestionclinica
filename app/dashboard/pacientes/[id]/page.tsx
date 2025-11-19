@@ -294,13 +294,30 @@ export default function PacienteDetallePage() {
     return historial.map((registro) => mapRegistroToCita(registro));
   }, [historial]);
 
-  const proximasCitas = useMemo(() => {
-    const now = new Date();
-    return citas
-      .filter((cita) => cita.fecha >= now)
-      .sort((a, b) => a.fecha.getTime() - b.fecha.getTime())
-      .slice(0, 8);
-  }, [citas]);
+const proximasCitas = useMemo(() => {
+  const now = new Date();
+  return citas
+    .filter((cita) => cita.fecha >= now)
+    .sort((a, b) => a.fecha.getTime() - b.fecha.getTime())
+    .slice(0, 8);
+}, [citas]);
+
+const agendaLink = useMemo(() => {
+  if (!paciente) return undefined;
+  const params = new URLSearchParams();
+  params.set('view', 'multi');
+  if (paciente.profesionalReferenteId) {
+    params.set('profesionales', paciente.profesionalReferenteId);
+  }
+  params.set('pacienteId', paciente.id);
+  params.set('pacienteNombre', `${paciente.nombre ?? ''} ${paciente.apellidos ?? ''}`.trim());
+  return `/dashboard/agenda?${params.toString()}`;
+}, [paciente]);
+
+const profesionalesOptions = useMemo(
+  () => profesionales.map((prof) => ({ id: prof.id, nombre: `${prof.nombre} ${prof.apellidos}` })),
+  [profesionales]
+);
 
   const documentos = useMemo<DocumentoPaciente[]>(() => {
     if (!paciente) return [];
@@ -553,6 +570,7 @@ export default function PacienteDetallePage() {
           tratamientosCompletados: historial.filter((registro) => registro.tipo === 'tratamiento').length,
           facturasPendientes: 0
         }}
+        agendaLink={agendaLink}
       />
       {seguimientoPendiente && (
         <form action={resolverSeguimientoAction} className="flex justify-end">
@@ -722,6 +740,7 @@ export default function PacienteDetallePage() {
     <PatientCitasTab
       citas={citas}
       paciente={paciente ?? undefined}
+      profesionales={profesionalesOptions}
       onNuevaCita={paciente ? handleNuevaCitaDesdePaciente : undefined}
       onRequestRefresh={async () => {
         if (!pacienteId) return;

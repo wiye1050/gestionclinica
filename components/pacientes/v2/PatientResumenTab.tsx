@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import type { PacienteV2 as Paciente } from '@/types/paciente-v2';
 import type { Profesional } from '@/types';
 import {
@@ -38,6 +39,7 @@ interface PatientResumenTabProps {
     tratamientosCompletados: number;
     facturasPendientes: number;
   };
+  agendaLink?: string;
 }
 
 export default function PatientResumenTab({
@@ -50,6 +52,7 @@ export default function PatientResumenTab({
     tratamientosCompletados: 0,
     facturasPendientes: 0,
   },
+  agendaLink,
 }: PatientResumenTabProps) {
   const edad = Math.floor(
     (new Date().getTime() - paciente.fechaNacimiento.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
@@ -212,7 +215,7 @@ export default function PatientResumenTab({
           </div>
         </div>
 
-        <UpcomingCitasTimeline proximasCitas={proximasCitas} />
+        <UpcomingCitasTimeline proximasCitas={proximasCitas} agendaLink={agendaLink} />
 
         <CardList
           title="Tratamientos activos"
@@ -352,14 +355,24 @@ function CardList({
 
 function UpcomingCitasTimeline({
   proximasCitas,
+  agendaLink,
 }: {
   proximasCitas: PatientResumenTabProps['proximasCitas'];
+  agendaLink?: string;
 }) {
   return (
     <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center justify-between gap-2 mb-4">
         <Calendar className="h-5 w-5 text-brand" />
-        <h2 className="text-lg font-semibold text-text">Próximas citas</h2>
+        <h2 className="text-lg font-semibold text-text flex-1 ml-2">Próximas citas</h2>
+        {agendaLink && (
+          <Link
+            href={agendaLink}
+            className="rounded-full border border-brand px-3 py-1 text-xs font-semibold text-brand hover:bg-brand-subtle"
+          >
+            Ver en Agenda
+          </Link>
+        )}
       </div>
       {proximasCitas.length === 0 ? (
         <p className="text-sm text-text-muted">Este paciente no tiene citas próximas.</p>

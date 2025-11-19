@@ -3,6 +3,7 @@
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { ReactNode } from 'react';
+import { useState, useEffect } from 'react';
 import DetailPanel from '@/components/shared/DetailPanel';
 import type { AgendaEvent } from './agendaHelpers';
 import type { Paciente } from '@/types';
@@ -22,6 +23,8 @@ interface AgendaEventDrawerProps {
   onClose: () => void;
   onAction?: (event: AgendaEvent, action: 'confirm' | 'complete' | 'cancel') => void;
   onEdit?: (event: AgendaEvent) => void;
+  profesionales?: Array<{ id: string; nombre: string }>;
+  onReassign?: (event: AgendaEvent, profesionalId: string) => Promise<void>;
 }
 
 const QUICK_ACTIONS: Array<{
@@ -63,7 +66,14 @@ export default function AgendaEventDrawer({
   onClose,
   onAction,
   onEdit,
+  profesionales,
+  onReassign,
 }: AgendaEventDrawerProps) {
+  const [selectedProf, setSelectedProf] = useState(event?.profesionalId ?? '');
+  useEffect(() => {
+    setSelectedProf(event?.profesionalId ?? '');
+  }, [event?.profesionalId]);
+
   if (!event) return null;
 
   const fechaLabel = `${format(event.fechaInicio, "EEEE, d 'de' MMMM", { locale: es })}`;
@@ -122,6 +132,30 @@ export default function AgendaEventDrawer({
                 </button>
               )}
             </div>
+            {profesionales && profesionales.length > 0 && onReassign && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-text">
+                <label className="font-semibold">Reasignar a:</label>
+                <select
+                  value={selectedProf}
+                  onChange={(e) => setSelectedProf(e.target.value)}
+                  className="rounded-full border border-border bg-white px-3 py-1 text-xs"
+                >
+                  <option value="">Sin asignar</option>
+                  {profesionales.map((prof) => (
+                    <option key={prof.id} value={prof.id}>
+                      {prof.nombre}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => onReassign(event, selectedProf)}
+                  className="rounded-full border border-brand px-3 py-1 text-xs font-semibold text-brand hover:bg-brand-subtle"
+                  disabled={selectedProf === (event.profesionalId ?? '')}
+                >
+                  Guardar
+                </button>
+              </div>
+            )}
           </div>
         )}
 
