@@ -80,7 +80,9 @@ export default function AgendaEventDrawer({
       onClose={onClose}
       title={event.titulo || 'Cita sin título'}
       subtitle={fechaLabel}
-      headerColor="from-brand to-brand/90"
+      headerColor="from-white to-white"
+      headerTextClassName="text-text"
+      headerSubtitleClassName="text-text-muted"
       variant="drawer"
       actions={
         onEdit && (
@@ -111,6 +113,14 @@ export default function AgendaEventDrawer({
                   {action.label}
                 </button>
               ))}
+              {onEdit && (
+                <button
+                  onClick={() => onEdit(event)}
+                  className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-text transition-colors hover:bg-card"
+                >
+                  Editar cita
+                </button>
+              )}
             </div>
           </div>
         )}

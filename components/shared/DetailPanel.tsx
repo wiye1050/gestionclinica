@@ -19,6 +19,8 @@ interface DetailPanelProps {
   actions?: ReactNode;
   headerColor?: string;
   variant?: 'modal' | 'drawer';
+  headerTextClassName?: string;
+  headerSubtitleClassName?: string;
 }
 
 export default function DetailPanel({
@@ -32,7 +34,9 @@ export default function DetailPanel({
   children,
   actions,
   headerColor = 'from-blue-600 to-blue-700',
-  variant = 'modal'
+  variant = 'modal',
+  headerTextClassName = 'text-white',
+  headerSubtitleClassName = 'text-blue-100',
 }: DetailPanelProps) {
   if (!isOpen) return null;
 
@@ -52,11 +56,11 @@ export default function DetailPanel({
         }`}
       >
         {/* Header */}
-        <div className={`bg-gradient-to-r ${headerColor} text-white p-6 flex items-start justify-between`}>
+        <div className={`bg-gradient-to-r ${headerColor} ${headerTextClassName} p-6 flex items-start justify-between`}>
           <div className="flex-1">
             <h2 className="text-2xl font-bold">{title}</h2>
             {subtitle && (
-              <p className="text-blue-100 mt-1">{subtitle}</p>
+              <p className={`${headerSubtitleClassName} mt-1`}>{subtitle}</p>
             )}
           </div>
 
