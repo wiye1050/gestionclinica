@@ -44,7 +44,7 @@ export default function KanbanView({ proyectos, onProyectoClick, onNuevoProyecto
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = (e: React.DragEvent, nuevoEstado: EstadoProyecto) => {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     if (draggedId) {
       // TODO: Implementar actualización de estado vía hook
@@ -62,7 +62,7 @@ export default function KanbanView({ proyectos, onProyectoClick, onNuevoProyecto
             key={columna.estado}
             className="flex-shrink-0 w-80 flex flex-col"
             onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, columna.estado)}
+            onDrop={handleDrop}
           >
             {/* Header de columna */}
             <div className={`p-3 rounded-t-lg border-2 ${columna.color}`}>
