@@ -23,8 +23,6 @@ export async function createProtocolAction(prevState: ActionState, formData: For
     visiblePara: formData.getAll('visiblePara')
   };
 
-  console.log('Valores del formulario:', values);
-
   const parsed = createProtocolSchema.safeParse(values);
   if (!parsed.success) {
     console.error('Error de validación:', parsed.error);

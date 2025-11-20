@@ -47,8 +47,7 @@ export default function KanbanView({ proyectos, onProyectoClick, onNuevoProyecto
   const handleDrop = (e: React.DragEvent, nuevoEstado: EstadoProyecto) => {
     e.preventDefault();
     if (draggedId) {
-      // Aquí irías al hook para actualizar el estado
-      console.log(`Mover proyecto ${draggedId} a ${nuevoEstado}`);
+      // TODO: Implementar actualización de estado vía hook
       setDraggedId(null);
     }
   };
