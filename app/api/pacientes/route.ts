@@ -1,12 +1,35 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth/server';
 import { createPaciente } from '@/lib/server/pacientesAdmin';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { validateRequest } from '@/lib/utils/apiValidation';
 import type { Query } from 'firebase-admin/firestore';
 
 const CREATE_UPDATE_ROLES = new Set(['admin', 'coordinacion']);
 const ADMIN_ROLES = new Set(['admin', 'coordinacion']);
 const CLINICAL_ROLES = new Set(['doctor', 'terapeuta']);
+
+// Schema de validación para crear paciente
+const createPacienteSchema = z.object({
+  nombre: z.string().min(1, 'El nombre es requerido').max(100),
+  apellidos: z.string().min(1, 'Los apellidos son requeridos').max(100),
+  documentoId: z.string().optional(),
+  email: z.string().email('Email inválido').optional().or(z.literal('')),
+  telefono: z.string().optional(),
+  fechaNacimiento: z.string().optional(),
+  direccion: z.string().optional(),
+  codigoPostal: z.string().optional(),
+  ciudad: z.string().optional(),
+  estado: z.enum(['activo', 'inactivo', 'alta']).default('activo'),
+  riesgo: z.enum(['alto', 'medio', 'bajo']).optional(),
+  profesionalReferenteId: z.string().optional(),
+  grupoPacienteId: z.string().optional(),
+  notas: z.string().max(2000).optional(),
+  alergias: z.array(z.string()).optional(),
+  alertasClinicas: z.array(z.string()).optional(),
+  diagnosticosPrincipales: z.array(z.string()).optional(),
+});
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -129,9 +152,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
   }
 
+  // Validar request con Zod
+  const validation = await validateRequest(request, createPacienteSchema);
+  if (!validation.success) {
+    return validation.error;
+  }
+
   try {
-    const body = await request.json();
-    const result = await createPaciente(body, { email: user.email, uid: user.uid });
+    const result = await createPaciente(validation.data, { email: user.email, uid: user.uid });
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error inesperado';

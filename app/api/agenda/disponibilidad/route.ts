@@ -1,24 +1,34 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { addDays, startOfDay, setHours, setMinutes, isSameDay, max as dateMax } from 'date-fns';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { AGENDA_CONFIG } from '@/components/agenda/v2/agendaHelpers';
+import { validateSearchParams } from '@/lib/utils/apiValidation';
+
+// Schema de validación para query params
+const disponibilidadSchema = z.object({
+  profesionalId: z.string().min(1, 'profesionalId es requerido'),
+  days: z.coerce.number().min(1).max(7).default(3),
+});
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const profesionalId = searchParams.get('profesionalId');
-    const days = Number(searchParams.get('days') ?? '3');
 
-    if (!profesionalId) {
-      return NextResponse.json({ error: 'Falta profesionalId' }, { status: 400 });
+    // Validar parámetros con Zod
+    const validation = validateSearchParams(searchParams, disponibilidadSchema);
+    if (!validation.success) {
+      return validation.error;
     }
+
+    const { profesionalId, days } = validation.data;
 
     if (!adminDb) {
       return NextResponse.json({ slots: [] });
     }
 
     const now = new Date();
-    const endDate = addDays(now, Math.min(Math.max(days, 1), 7));
+    const endDate = addDays(now, days);
 
     const snapshot = await adminDb
       .collection('agenda-eventos')
@@ -43,7 +53,7 @@ export async function GET(request: Request) {
       .sort((a, b) => a.start.getTime() - b.start.getTime());
 
     const slots: Array<{ start: string; end: string; durationMinutes: number }> = [];
-    const daysToProcess = Math.min(Math.max(days, 1), 7);
+    const daysToProcess = days;
 
     for (let dayOffset = 0; dayOffset < daysToProcess && slots.length < 6; dayOffset++) {
       const currentDay = addDays(now, dayOffset);
