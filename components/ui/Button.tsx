@@ -12,15 +12,15 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   ref
 ) {
   const base =
-    'inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60';
+    'inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
 
-const variants: Record<NonNullable<ButtonProps['variant']>, string> = {
+  const variants: Record<NonNullable<ButtonProps['variant']>, string> = {
     primary:
-      'bg-blue-600 text-white hover:bg-blue-700 focus-visible:outline-blue-600 disabled:bg-blue-300',
+      'bg-brand-500 text-white hover:bg-brand-600 focus-visible:outline-brand-500 shadow-sm hover:shadow-md',
     secondary:
-      'bg-gray-900 text-white hover:bg-gray-800 focus-visible:outline-gray-900 disabled:bg-gray-400',
+      'bg-gray-800 text-white hover:bg-gray-700 focus-visible:outline-gray-800 shadow-sm',
     outline:
-      'border border-gray-300 text-gray-700 hover:bg-gray-100 focus-visible:outline-gray-400'
+      'border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-400 focus-visible:outline-gray-400'
   };
 
   return (
