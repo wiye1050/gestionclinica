@@ -1,49 +1,67 @@
 import { startOfWeek } from 'date-fns';
-import { AgendaClientWrapper } from './AgendaClient';
+import { AgendaClientWrapper, type VistaAgenda } from './AgendaClient';
 import { getSerializedAgendaEvents } from '@/lib/server/agenda';
 
+type AgendaSearchParams = {
+  newEvent?: string;
+  pacienteId?: string;
+  pacienteNombre?: string;
+  profesionalId?: string;
+  view?: string;
+  profesionales?: string;
+  date?: string;
+};
+
 interface AgendaPageProps {
-  searchParams?: {
-    newEvent?: string;
-    pacienteId?: string;
-    pacienteNombre?: string;
-    profesionalId?: string;
-    view?: string;
-    profesionales?: string;
-  };
+  searchParams?: Promise<AgendaSearchParams>;
 }
 
-export default async function AgendaPage({ searchParams = {} }: AgendaPageProps) {
+const isVistaAgenda = (value?: string): value is VistaAgenda =>
+  value === 'diaria' ||
+  value === 'semanal' ||
+  value === 'multi' ||
+  value === 'boxes' ||
+  value === 'paciente';
+
+export default async function AgendaPage({ searchParams }: AgendaPageProps) {
+  const resolvedSearchParams = (await searchParams) ?? {};
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const initialEvents = await getSerializedAgendaEvents(weekStart);
 
-  const viewParam = searchParams.view;
-  const forcedView =
-    viewParam === 'diaria' ||
-    viewParam === 'semanal' ||
-    viewParam === 'multi' ||
-    viewParam === 'boxes' ||
-    viewParam === 'paciente'
-      ? viewParam
-      : undefined;
+  const viewParam = resolvedSearchParams.view;
+  const forcedView = isVistaAgenda(viewParam) ? viewParam : undefined;
 
   const presetProfesionales =
-    typeof searchParams.profesionales === 'string'
-      ? searchParams.profesionales
+    typeof resolvedSearchParams.profesionales === 'string'
+      ? resolvedSearchParams.profesionales
           .split(',')
           .map((id) => id.trim())
           .filter(Boolean)
       : undefined;
 
+  const targetDateIso =
+    typeof resolvedSearchParams.date === 'string'
+      ? new Date(resolvedSearchParams.date)
+      : undefined;
+
   const prefillRequest = {
-    openModal: searchParams.newEvent === '1',
-    pacienteId: typeof searchParams.pacienteId === 'string' ? searchParams.pacienteId : undefined,
+    openModal: resolvedSearchParams.newEvent === '1',
+    pacienteId:
+      typeof resolvedSearchParams.pacienteId === 'string'
+        ? resolvedSearchParams.pacienteId
+        : undefined,
     pacienteNombre:
-      typeof searchParams.pacienteNombre === 'string' ? searchParams.pacienteNombre : undefined,
+      typeof resolvedSearchParams.pacienteNombre === 'string'
+        ? resolvedSearchParams.pacienteNombre
+        : undefined,
     profesionalId:
-      typeof searchParams.profesionalId === 'string' ? searchParams.profesionalId : undefined,
+      typeof resolvedSearchParams.profesionalId === 'string'
+        ? resolvedSearchParams.profesionalId
+        : undefined,
     forcedView,
     presetProfesionales,
+    targetDate:
+      targetDateIso && !Number.isNaN(targetDateIso.getTime()) ? targetDateIso.toISOString() : undefined,
   };
 
   return (

@@ -3,16 +3,17 @@
 import { useState } from 'react';
 import type { PacienteV2 as Paciente } from '@/types/paciente-v2';
 import { Badge } from '@/components/ui/Badge';
-import { 
-  User, 
-  Calendar, 
-  Phone, 
-  Mail, 
+import {
+  User,
+  Calendar,
+  Phone,
+  Mail,
   AlertTriangle,
   Edit,
   FileText,
   DollarSign,
-  MoreVertical
+  MoreVertical,
+  Bell,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -21,9 +22,16 @@ interface PatientHeaderProps {
   onNewCita?: () => void;
   onNewNota?: () => void;
   onUploadDoc?: () => void;
+  agendaLink?: string;
 }
 
-export default function PatientHeader({ paciente, onNewCita, onNewNota, onUploadDoc }: PatientHeaderProps) {
+export default function PatientHeader({
+  paciente,
+  onNewCita,
+  onNewNota,
+  onUploadDoc,
+  agendaLink,
+}: PatientHeaderProps) {
   const [showActions, setShowActions] = useState(false);
 
   const edad = Math.floor(
@@ -86,7 +94,7 @@ export default function PatientHeader({ paciente, onNewCita, onNewNota, onUpload
           </div>
         </div>
 
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[220px]">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[240px]">
           <button
             onClick={onNewCita}
             className="inline-flex items-center justify-center gap-2 rounded-pill bg-brand px-4 py-2 text-sm font-semibold text-white transition-all hover:opacity-90"
@@ -94,6 +102,15 @@ export default function PatientHeader({ paciente, onNewCita, onNewNota, onUpload
             <Calendar className="h-4 w-4" />
             Nueva cita
           </button>
+          {agendaLink && (
+            <Link
+              href={agendaLink}
+              className="inline-flex items-center justify-center gap-2 rounded-pill border border-border px-4 py-2 text-sm font-semibold text-brand transition-colors hover:bg-brand-subtle"
+            >
+              <Calendar className="h-4 w-4" />
+              Ver agenda
+            </Link>
+          )}
           <Link
             href={`/dashboard/pacientes/${paciente.id}/editar`}
             className="inline-flex items-center justify-center gap-2 rounded-pill border border-border px-4 py-2 text-sm font-semibold text-text transition-colors hover:bg-cardHover"
@@ -138,6 +155,24 @@ export default function PatientHeader({ paciente, onNewCita, onNewNota, onUpload
                   <DollarSign className="h-4 w-4" />
                   Ver facturación
                 </Link>
+                <button
+                  onClick={() => {
+                    const reminderUrl = paciente.email
+                      ? `mailto:${paciente.email}?subject=Recordatorio%20de%20cita`
+                      : paciente.telefono
+                      ? `sms:${paciente.telefono}`
+                      : null;
+                    if (reminderUrl) {
+                      window.location.href = reminderUrl;
+                    }
+                    setShowActions(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-text hover:bg-cardHover disabled:opacity-50"
+                  disabled={!paciente.email && !paciente.telefono}
+                >
+                  <Bell className="h-4 w-4" />
+                  Enviar recordatorio
+                </button>
                 <button
                   onClick={() => {
                     if (paciente.email) window.location.href = `mailto:${paciente.email}`;

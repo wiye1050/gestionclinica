@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import {
   Calendar,
   Clock,
@@ -17,6 +18,7 @@ import { es } from 'date-fns/locale';
 import AgendaEventDrawer from '@/components/agenda/v2/AgendaEventDrawer';
 import type { AgendaEvent } from '@/components/agenda/v2/agendaHelpers';
 import type { Paciente } from '@/types';
+import type { AgendaLinkBuilder } from './types';
 
 export interface Cita {
   id: string;
@@ -42,6 +44,7 @@ interface PatientCitasTabProps {
   paciente?: Paciente | null;
   onRequestRefresh?: () => Promise<void> | void;
   profesionales?: Array<{ id: string; nombre: string }>;
+  buildAgendaLink?: AgendaLinkBuilder;
 }
 
 export default function PatientCitasTab({
@@ -51,6 +54,7 @@ export default function PatientCitasTab({
   paciente,
   onRequestRefresh,
   profesionales,
+  buildAgendaLink,
 }: PatientCitasTabProps) {
   const [filtroTipo, setFiltroTipo] = useState<Cita['tipo'] | 'todos'>('todos');
   const [filtroEstado, setFiltroEstado] = useState<Cita['estado'] | 'todos'>('todos');
@@ -70,7 +74,7 @@ export default function PatientCitasTab({
   }, [citas, filtroTipo, filtroEstado, filtroProfesional]);
 
   // Profesionales únicos para filtro
-  const profesionales = useMemo(() => {
+  const profesionalesFiltro = useMemo(() => {
     const unique = new Map<string, string>();
     citas.forEach((cita) => {
       if (!unique.has(cita.profesionalId)) {
@@ -220,7 +224,7 @@ export default function PatientCitasTab({
             className="rounded-xl border border-border bg-card px-3 py-2 text-sm focus-visible:focus-ring"
           >
             <option value="todos">Todos los profesionales</option>
-            {profesionales.map((prof) => (
+            {profesionalesFiltro.map((prof) => (
               <option key={prof.id} value={prof.id}>
                 {prof.nombre}
               </option>
@@ -257,6 +261,10 @@ export default function PatientCitasTab({
                       ? (['complete', 'cancel'] as Array<'complete' | 'cancel'>)
                       : [];
 
+                  const agendaHref = buildAgendaLink?.({
+                    date: cita.fecha,
+                    profesionalId: cita.profesionalId,
+                  });
                   return (
                     <div
                       key={cita.id}
@@ -357,15 +365,26 @@ export default function PatientCitasTab({
                               })}
                             </div>
                           )}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenDrawer(cita);
-                            }}
-                            className="flex-shrink-0 p-2 text-brand hover:bg-brand-subtle rounded-2xl transition-colors"
-                          >
-                            <ChevronRight className="w-5 h-5" />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            {agendaHref && (
+                              <Link
+                                href={agendaHref}
+                                className="rounded-full border border-brand px-3 py-1 text-xs font-semibold text-brand hover:bg-brand-subtle"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                Ver en agenda
+                              </Link>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenDrawer(cita);
+                              }}
+                              className="flex-shrink-0 p-2 text-brand hover:bg-brand-subtle rounded-2xl transition-colors"
+                            >
+                              <ChevronRight className="w-5 h-5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -396,6 +415,10 @@ export default function PatientCitasTab({
         profesionales={profesionales}
         onReassign={async (event, profesionalId) => {
           await handleReassign(event.id, profesionalId);
+          await onRequestRefresh?.();
+        }}
+        onUpdateEvent={async (id, updates) => {
+          await handleInlineUpdateRequest(id, updates);
           await onRequestRefresh?.();
         }}
       />
@@ -467,6 +490,45 @@ async function handleReassign(eventId: string, profesionalId: string) {
   toast.success('Cita reasignada');
 }
 
+async function handleInlineUpdateRequest(eventId: string, updates: Partial<AgendaEvent>) {
+  const { toast } = await import('sonner');
+  const payload: Record<string, unknown> = {};
+  if (updates.fechaInicio instanceof Date) {
+    payload.fechaInicio = updates.fechaInicio.toISOString();
+  }
+  if (updates.fechaFin instanceof Date) {
+    payload.fechaFin = updates.fechaFin.toISOString();
+  }
+  if (updates.profesionalId !== undefined) {
+    payload.profesionalId = updates.profesionalId;
+  }
+  if (updates.estado !== undefined) {
+    payload.estado = updates.estado;
+  }
+  if (updates.notas !== undefined) {
+    payload.notas = updates.notas;
+  }
+
+  if (Object.keys(payload).length === 0) {
+    toast.error('No hay cambios para aplicar');
+    return;
+  }
+
+  const response = await fetch(`/api/agenda/eventos/${eventId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    toast.error(data.error ?? 'No se pudo actualizar la cita');
+    throw new Error(data.error ?? 'Error inline update');
+  }
+
+  toast.success('Horario actualizado');
+}
+
 function citaToAgendaEvent(cita: Cita, paciente: Paciente): AgendaEvent {
   const duracionMinutos = 60;
   const fechaFin = new Date(cita.fecha.getTime() + duracionMinutos * 60000);
@@ -483,8 +545,8 @@ function citaToAgendaEvent(cita: Cita, paciente: Paciente): AgendaEvent {
     pacienteNombre: fullName || paciente.nombre || 'Paciente',
     profesionalId: cita.profesionalId,
     profesionalNombre: cita.profesional,
-    salaId: cita.sala ?? null,
-    salaNombre: cita.sala ?? null,
+    salaId: cita.sala || undefined,
+    salaNombre: cita.sala || undefined,
     prioridad: 'media',
     notas: cita.notas ?? '',
   };

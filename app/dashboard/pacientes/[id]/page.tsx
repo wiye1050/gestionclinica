@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { collection, doc, getDoc, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -19,6 +20,8 @@ import PatientDocumentosTab from '@/components/pacientes/v2/PatientDocumentosTab
 import PatientFacturacionTab from '@/components/pacientes/v2/PatientFacturacionTab';
 import PatientNotasTab from '@/components/pacientes/v2/PatientNotasTab';
 import type { Activity as TimelineActivity } from '@/components/pacientes/v2/PatientTimeline';
+import PatientAvailabilityCard from '@/components/pacientes/v2/PatientAvailabilityCard';
+import type { AgendaLinkBuilder } from '@/components/pacientes/v2/types';
 import { resolverSeguimientoAction } from '../actions';
 import { hasActiveFollowUpInHistory } from '@/lib/utils/followUps';
 import { toast } from 'sonner';
@@ -285,39 +288,130 @@ export default function PacienteDetallePage() {
         descripcion: registro.descripcion,
         fecha: registro.fecha,
         usuario: registro.profesionalNombre ?? registro.creadoPor,
-        estado
+        estado,
+        agendaContext:
+          tipo === 'cita'
+            ? {
+                profesionalId: registro.profesionalId ?? undefined,
+                date: registro.fecha,
+              }
+            : undefined,
       } satisfies TimelineActivity;
     });
   }, [historial]);
 
   const citas = useMemo<Cita[]>(() => {
-    return historial.map((registro) => mapRegistroToCita(registro));
-  }, [historial]);
+  return historial.map((registro) => mapRegistroToCita(registro));
+}, [historial]);
 
 const proximasCitas = useMemo(() => {
   const now = new Date();
   return citas
     .filter((cita) => cita.fecha >= now)
     .sort((a, b) => a.fecha.getTime() - b.fecha.getTime())
-    .slice(0, 8);
+    .slice(0, 8)
+    .map((cita) => ({
+      id: cita.id,
+      fecha: cita.fecha,
+      profesional: cita.profesional,
+      profesionalId: cita.profesionalId,
+      tipo: cita.tipo,
+      estado: cita.estado,
+    }));
 }, [citas]);
-
-const agendaLink = useMemo(() => {
-  if (!paciente) return undefined;
-  const params = new URLSearchParams();
-  params.set('view', 'multi');
-  if (paciente.profesionalReferenteId) {
-    params.set('profesionales', paciente.profesionalReferenteId);
-  }
-  params.set('pacienteId', paciente.id);
-  params.set('pacienteNombre', `${paciente.nombre ?? ''} ${paciente.apellidos ?? ''}`.trim());
-  return `/dashboard/agenda?${params.toString()}`;
-}, [paciente]);
-
 const profesionalesOptions = useMemo(
   () => profesionales.map((prof) => ({ id: prof.id, nombre: `${prof.nombre} ${prof.apellidos}` })),
   [profesionales]
 );
+
+  const refreshHistorial = useCallback(async () => {
+    if (!pacienteId) return;
+    const historialSnap = await getDocs(
+      query(
+        collection(db, 'pacientes-historial'),
+        where('pacienteId', '==', pacienteId),
+        orderBy('fecha', 'desc'),
+        limit(100)
+      )
+    );
+    setHistorial(
+      historialSnap.docs.map((docSnap) => {
+        const histData = docSnap.data() ?? {};
+        return {
+          id: docSnap.id,
+          pacienteId: histData.pacienteId ?? pacienteId,
+          eventoAgendaId: histData.eventoAgendaId,
+          servicioId: histData.servicioId,
+          servicioNombre: histData.servicioNombre,
+          profesionalId: histData.profesionalId,
+          profesionalNombre: histData.profesionalNombre,
+          fecha: histData.fecha?.toDate?.() ?? new Date(),
+          tipo: histData.tipo ?? 'consulta',
+          descripcion: histData.descripcion ?? '',
+          resultado: histData.resultado,
+          planesSeguimiento: histData.planesSeguimiento,
+          adjuntos: Array.isArray(histData.adjuntos) ? histData.adjuntos : [],
+          createdAt: histData.createdAt?.toDate?.() ?? new Date(),
+          creadoPor: histData.creadoPor ?? 'sistema',
+        } satisfies RegistroHistorialPaciente;
+      })
+    );
+  }, [pacienteId]);
+
+  const handleResumenQuickAction = useCallback(
+    async (eventId: string, action: 'confirm' | 'complete' | 'cancel') => {
+      const estadoMap = {
+        confirm: 'confirmada',
+        complete: 'realizada',
+        cancel: 'cancelada',
+      } as const;
+      const response = await fetch(`/api/agenda/eventos/${eventId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: estadoMap[action] }),
+      });
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
+        toast.error(data.error ?? 'No se pudo actualizar la cita');
+        throw new Error(data.error ?? 'Error quick action');
+      }
+      toast.success(
+        action === 'confirm'
+          ? 'Cita confirmada'
+          : action === 'complete'
+          ? 'Cita completada'
+          : 'Cita cancelada'
+      );
+      await refreshHistorial();
+    },
+    [refreshHistorial]
+  );
+
+const agendaLinkBuilder = useMemo(() => {
+  if (!paciente) return undefined;
+  const pacienteNombre = `${paciente.nombre ?? ''} ${paciente.apellidos ?? ''}`.trim();
+  return ((options = {}) => {
+    const params = new URLSearchParams();
+    params.set('view', 'multi');
+    const profesional = options.profesionalId ?? paciente.profesionalReferenteId;
+    if (profesional) {
+      params.set('profesionales', profesional);
+    }
+    if (options.date instanceof Date && !Number.isNaN(options.date.getTime())) {
+      params.set('date', options.date.toISOString());
+    }
+    if (options.newEvent) {
+      params.set('newEvent', '1');
+    }
+    params.set('pacienteId', paciente.id);
+    if (pacienteNombre) {
+      params.set('pacienteNombre', pacienteNombre);
+    }
+    return `/dashboard/agenda?${params.toString()}`;
+  }) as AgendaLinkBuilder;
+}, [paciente]);
+
+const agendaLink = agendaLinkBuilder?.({});
 
   const documentos = useMemo<DocumentoPaciente[]>(() => {
     if (!paciente) return [];
@@ -571,15 +665,98 @@ const profesionalesOptions = useMemo(
           facturasPendientes: 0
         }}
         agendaLink={agendaLink}
+        buildAgendaLink={agendaLinkBuilder}
+        onQuickAction={handleResumenQuickAction}
       />
-      {seguimientoPendiente && (
-        <form action={resolverSeguimientoAction} className="flex justify-end">
-          <input type="hidden" name="pacienteId" value={pacienteId} />
-          <button className="rounded-pill border border-success bg-success-bg px-4 py-2 text-sm font-medium text-success hover:bg-success-bg/80 focus-visible:focus-ring">
-            Marcar seguimiento resuelto
-          </button>
-        </form>
+      {paciente.profesionalReferenteId && (
+        <PatientAvailabilityCard
+          profesionalId={paciente.profesionalReferenteId}
+          agendaLinkBuilder={agendaLinkBuilder}
+        />
       )}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase text-text-muted">Tratamientos y servicios</p>
+              <p className="text-lg font-semibold text-text">Seguimiento en curso</p>
+            </div>
+            <Link
+              href="/dashboard/servicios"
+              className="text-xs font-semibold text-brand hover:underline"
+            >
+              Ver servicios
+            </Link>
+          </div>
+          {serviciosRelacionados.length === 0 ? (
+            <p className="text-sm text-text-muted">No hay servicios activos para este paciente.</p>
+          ) : (
+            <div className="space-y-3">
+              {serviciosRelacionados.slice(0, 3).map((servicio) => (
+                <div key={servicio.id} className="rounded-2xl border border-border px-4 py-3">
+                  <p className="text-sm font-semibold text-text">{servicio.catalogoServicioNombre ?? 'Servicio'}</p>
+                  <p className="text-xs text-text-muted">
+                    {servicio.profesionalPrincipalNombre ?? 'Sin profesional'} ·{' '}
+                    {servicio.esActual ? 'En progreso' : 'Planificado'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase text-text-muted">Pendientes y documentos</p>
+              <p className="text-lg font-semibold text-text">Integración con otros módulos</p>
+            </div>
+            <Link href={`/dashboard/pacientes/${paciente.id}`} className="text-xs font-semibold text-brand hover:underline">
+              Ver ficha completa
+            </Link>
+          </div>
+          {seguimientoPendiente ? (
+            <div className="rounded-2xl border border-warn bg-warn-bg/30 px-4 py-3 text-sm">
+              <p className="font-semibold text-warn">Seguimiento pendiente</p>
+              <p className="text-text">
+                Hay tareas de seguimiento registradas en el historial reciente. Revisa la pestaña de notas o marca el seguimiento como resuelto.
+              </p>
+              <form action={resolverSeguimientoAction} className="mt-2">
+                <input type="hidden" name="pacienteId" value={pacienteId} />
+                <button className="rounded-pill border border-success bg-success-bg px-3 py-1 text-xs font-semibold text-success hover:bg-success-bg/80 focus-visible:focus-ring">
+                  Marcar seguimiento resuelto
+                </button>
+              </form>
+            </div>
+          ) : (
+            <p className="text-sm text-text-muted">No hay seguimientos pendientes registrados.</p>
+          )}
+
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase text-text-muted">Documentos recientes</p>
+            {documentos.length === 0 ? (
+              <p className="text-sm text-text-muted">Sin documentos adjuntos.</p>
+            ) : (
+              <div className="space-y-2">
+                {documentos.slice(0, 3).map((doc) => (
+                  <div key={doc.id} className="flex items-center justify-between rounded-2xl border border-border px-3 py-2 text-sm">
+                    <div>
+                      <p className="font-medium text-text">{doc.nombre}</p>
+                      <p className="text-xs text-text-muted">
+                        {doc.fechaSubida.toLocaleDateString('es-ES')} · {doc.subidoPor}
+                      </p>
+                    </div>
+                    <a href={doc.url} target="_blank" rel="noreferrer" className="text-xs font-semibold text-brand hover:underline">
+                      Abrir
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {relacionesError && (
         <div className="rounded-lg border border-warn bg-warn-bg/40 px-4 py-3 text-sm text-warn">
           {relacionesError}
@@ -741,40 +918,9 @@ const profesionalesOptions = useMemo(
       citas={citas}
       paciente={paciente ?? undefined}
       profesionales={profesionalesOptions}
+      buildAgendaLink={agendaLinkBuilder}
       onNuevaCita={paciente ? handleNuevaCitaDesdePaciente : undefined}
-      onRequestRefresh={async () => {
-        if (!pacienteId) return;
-        const historialSnap = await getDocs(
-          query(
-            collection(db, 'pacientes-historial'),
-            where('pacienteId', '==', pacienteId),
-            orderBy('fecha', 'desc'),
-            limit(100)
-          )
-        );
-        setHistorial(
-          historialSnap.docs.map((docSnap) => {
-            const histData = docSnap.data() ?? {};
-            return {
-              id: docSnap.id,
-              pacienteId: histData.pacienteId ?? pacienteId,
-              eventoAgendaId: histData.eventoAgendaId,
-              servicioId: histData.servicioId,
-              servicioNombre: histData.servicioNombre,
-              profesionalId: histData.profesionalId,
-              profesionalNombre: histData.profesionalNombre,
-              fecha: histData.fecha?.toDate?.() ?? new Date(),
-              tipo: histData.tipo ?? 'consulta',
-              descripcion: histData.descripcion ?? '',
-              resultado: histData.resultado,
-              planesSeguimiento: histData.planesSeguimiento,
-              adjuntos: Array.isArray(histData.adjuntos) ? histData.adjuntos : [],
-              createdAt: histData.createdAt?.toDate?.() ?? new Date(),
-              creadoPor: histData.creadoPor ?? 'sistema',
-            } satisfies RegistroHistorialPaciente;
-          })
-        );
-      }}
+      onRequestRefresh={refreshHistorial}
     />
   );
 
@@ -825,6 +971,8 @@ const profesionalesOptions = useMemo(
       onNewCita={handleNuevaCitaDesdePaciente}
       onNewNota={() => setActiveTab('notas')}
       onUploadDoc={() => setActiveTab('documentos')}
+      agendaLinkBuilder={agendaLinkBuilder}
+      agendaLink={agendaLink}
     >
       {renderTabContent()}
     </PatientProfileLayout>

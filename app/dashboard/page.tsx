@@ -2,20 +2,13 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useKPIs } from '@/lib/hooks/useQueries';
 import {
-  Mail,
-  BarChart3,
-  Wrench,
   AlertTriangle,
   Package,
-  ExternalLink,
   ArrowRight,
-  BookOpen,
   Sun,
   Moon,
   Activity,
@@ -43,8 +36,6 @@ function DashboardSkeleton() {
 }
 
 function DashboardContent() {
-  const router = useRouter();
-  
   // React Query hook - caché de 2 min
   const { data: kpisData, isLoading: loadingKPIs } = useKPIs();
   
@@ -138,15 +129,20 @@ function DashboardContent() {
               <h1 className="text-3xl font-semibold text-slate-900">Panel Operativo</h1>
               <p className="text-sm text-slate-500">{formattedDate}</p>
             </div>
-            <div className="flex flex-wrap gap-6 text-sm text-slate-500">
-              <div className="space-y-1">
-                <p>Servicios activos</p>
-                <p className="text-2xl font-semibold text-slate-900">{stats.serviciosActivos}</p>
-              </div>
-              <div className="space-y-1">
-                <p>Eventos esta semana</p>
-                <p className="text-2xl font-semibold text-slate-900">{stats.seguimientosPendientes}</p>
-              </div>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: 'Servicios activos', value: stats.serviciosActivos },
+                { label: 'Eventos esta semana', value: stats.seguimientosPendientes },
+                { label: 'Reportes pendientes', value: stats.incidenciasPendientes },
+                { label: 'Stock bajo', value: stats.productosStockBajo },
+              ].map((metric) => (
+                <div key={metric.label} className="rounded-2xl border border-slate-100 bg-slate-50/60 px-4 py-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{metric.label}</p>
+                  <p className="mt-1 text-2xl font-semibold text-slate-900">
+                    {loading ? '—' : metric.value}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
           <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-slate-50/70 px-4 py-3">
@@ -161,105 +157,6 @@ function DashboardContent() {
             </button>
           </div>
         </div>
-      </section>
-
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <a
-          href="https://email.ionos.es/appsuite/#!!&app=io.ox/mail&folder=default0/INBOX"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="surface-card card-hover group p-5 focus-visible:focus-ring"
-        >
-          <div className="mb-4 flex items-center justify-between">
-            <div className="rounded-full bg-brand-subtle p-2 text-brand">
-              <Mail className="h-4 w-4" />
-            </div>
-            <ExternalLink className="h-4 w-4 text-text-muted transition-transform group-hover:translate-x-0.5" />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-900">Correo corporativo</h3>
-          <p className="mt-1 text-sm text-slate-500">Abrir bandeja de entrada</p>
-        </a>
-
-        <a
-          href="https://app.clinic-cloud.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="surface-card card-hover group p-5 focus-visible:focus-ring"
-        >
-          <div className="mb-4 flex items-center justify-between">
-            <div className="rounded-full bg-brand-subtle p-2 text-brand">
-              <Activity className="h-4 w-4" />
-            </div>
-            <ExternalLink className="h-4 w-4 text-text-muted transition-transform group-hover:translate-x-0.5" />
-          </div>
-          <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-            <Image src="/cliniccloud-logo.svg" alt="ClinicCloud" width={96} height={28} priority={false} />
-          </div>
-        </a>
-
-        <Link
-          href="/dashboard/kpis"
-          className="surface-card card-hover group p-5 focus-visible:focus-ring"
-        >
-          <div className="mb-4 flex items-center justify-between">
-            <div className="rounded-full bg-brand-subtle p-2 text-brand">
-              <BarChart3 className="h-4 w-4" />
-            </div>
-            <ArrowRight className="h-4 w-4 text-text-muted transition-transform group-hover:translate-x-0.5" />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-900">KPIs y métricas</h3>
-          <p className="mt-1 text-sm text-slate-500">Ver estadísticas en tiempo real</p>
-        </Link>
-      </section>
-
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <button
-          type="button"
-          onClick={() => router.push('/dashboard/servicios?estado=activo')}
-          className="surface-card card-hover p-5 text-left focus-visible:focus-ring"
-        >
-          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-brand-subtle text-brand">
-            <Wrench className="h-4 w-4" />
-          </div>
-          <p className="text-sm text-slate-500">Servicios activos</p>
-          <p className="mt-2 text-3xl font-semibold text-slate-900">{loadingKPIs ? '—' : stats.serviciosActivos}</p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => router.push('/dashboard/reporte-diario?tipo=incidencia&prioridad=alta&estado=abierta')}
-          className="surface-card card-hover p-5 text-left focus-visible:focus-ring"
-        >
-          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-danger-bg text-danger">
-            <AlertTriangle className="h-4 w-4" />
-          </div>
-          <p className="text-sm text-slate-500">Reportes pendientes</p>
-          <p className="mt-2 text-3xl font-semibold text-slate-900">{loadingKPIs ? '—' : stats.incidenciasPendientes}</p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => router.push('/dashboard/inventario?critico=true')}
-          className="surface-card card-hover p-5 text-left focus-visible:focus-ring"
-        >
-          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-warn-bg text-warn">
-            <Package className="h-4 w-4" />
-          </div>
-          <p className="text-sm text-slate-500">Stock bajo</p>
-          <p className="mt-2 text-3xl font-semibold text-slate-900">{loading ? '—' : stats.productosStockBajo}</p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => router.push('/dashboard/profesionales')}
-          className="surface-card card-hover p-5 text-left focus-visible:focus-ring"
-        >
-          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-brand-subtle text-brand">
-            <BookOpen className="h-4 w-4" />
-          </div>
-          <p className="text-sm text-slate-500">Profesionales activos</p>
-          <p className="mt-2 text-3xl font-semibold text-slate-900">{loadingKPIs ? '—' : kpisData?.profesionalesActivos ?? 0}</p>
-        </button>
       </section>
 
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">

@@ -1,9 +1,10 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import type { PacienteV2 as Paciente } from '@/types/paciente-v2';
 import type { Profesional } from '@/types';
+import type { AgendaLinkBuilder } from './types';
 import {
   Activity,
   AlertCircle,
@@ -25,7 +26,9 @@ interface PatientResumenTabProps {
     id: string;
     fecha: Date;
     profesional: string;
+    profesionalId?: string;
     tipo: string;
+    estado?: 'programada' | 'confirmada' | 'realizada' | 'cancelada';
   }>;
   tratamientosActivos?: Array<{
     id: string;
@@ -40,6 +43,8 @@ interface PatientResumenTabProps {
     facturasPendientes: number;
   };
   agendaLink?: string;
+  buildAgendaLink?: AgendaLinkBuilder;
+  onQuickAction?: (id: string, action: 'confirm' | 'complete' | 'cancel') => Promise<void>;
 }
 
 export default function PatientResumenTab({
@@ -53,6 +58,8 @@ export default function PatientResumenTab({
     facturasPendientes: 0,
   },
   agendaLink,
+  buildAgendaLink,
+  onQuickAction,
 }: PatientResumenTabProps) {
   const edad = Math.floor(
     (new Date().getTime() - paciente.fechaNacimiento.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
@@ -215,7 +222,12 @@ export default function PatientResumenTab({
           </div>
         </div>
 
-        <UpcomingCitasTimeline proximasCitas={proximasCitas} agendaLink={agendaLink} />
+        <UpcomingCitasTimeline
+          proximasCitas={proximasCitas}
+          agendaLink={agendaLink}
+          buildAgendaLink={buildAgendaLink}
+          onQuickAction={onQuickAction}
+        />
 
         <CardList
           title="Tratamientos activos"
@@ -354,12 +366,38 @@ function CardList({
 }
 
 function UpcomingCitasTimeline({
-  proximasCitas,
+  proximasCitas = [],
   agendaLink,
+  buildAgendaLink,
+  onQuickAction,
 }: {
-  proximasCitas: PatientResumenTabProps['proximasCitas'];
+  proximasCitas?: PatientResumenTabProps['proximasCitas'];
   agendaLink?: string;
+  buildAgendaLink?: AgendaLinkBuilder;
+  onQuickAction?: (id: string, action: 'confirm' | 'complete' | 'cancel') => Promise<void>;
 }) {
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const getAvailableActions = (estado?: string) => {
+    if (estado === 'programada') return ['confirm', 'cancel'] as const;
+    if (estado === 'confirmada') return ['complete', 'cancel'] as const;
+    return [] as const;
+  };
+
+  const handleActionClick = async (
+    citaId: string,
+    action: 'confirm' | 'complete' | 'cancel'
+  ) => {
+    if (!onQuickAction) return;
+    const key = `${citaId}-${action}`;
+    try {
+      setActionLoading(key);
+      await onQuickAction(citaId, action);
+    } finally {
+      setActionLoading((prev) => (prev === key ? null : prev));
+    }
+  };
+
   return (
     <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
       <div className="flex items-center justify-between gap-2 mb-4">
@@ -382,6 +420,12 @@ function UpcomingCitasTimeline({
           <div className="space-y-4">
             {proximasCitas.map((cita) => {
               const tipoStyle = getTipoBadgeStyles(cita.tipo);
+              const href =
+                buildAgendaLink?.({
+                  date: cita.fecha,
+                  profesionalId: cita.profesionalId,
+                }) ?? null;
+              const quickActions = onQuickAction ? getAvailableActions(cita.estado) : [];
               return (
                 <div key={cita.id} className="relative pl-4">
                   <div className="absolute left-[-0.65rem] top-2 h-3 w-3 rounded-full" style={tipoStyle.dot} />
@@ -399,6 +443,43 @@ function UpcomingCitasTimeline({
                       {cita.fecha.toLocaleDateString('es-ES')} ·{' '}
                       {cita.fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                     </p>
+                    {quickActions.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {quickActions.map((action) => {
+                          const key = `${cita.id}-${action}`;
+                          return (
+                            <button
+                              key={action}
+                              onClick={() => handleActionClick(cita.id, action)}
+                              disabled={actionLoading === key}
+                              className={`rounded-full px-3 py-1 text-xs font-semibold text-white transition-colors ${
+                                action === 'confirm'
+                                  ? 'bg-brand hover:bg-brand/90'
+                                  : action === 'complete'
+                                  ? 'bg-success hover:bg-success/90'
+                                  : 'bg-danger hover:bg-danger/90'
+                              } ${actionLoading === key ? 'opacity-60 cursor-not-allowed' : ''}`}
+                            >
+                              {action === 'confirm'
+                                ? 'Confirmar'
+                                : action === 'complete'
+                                ? 'Completar'
+                                : 'Cancelar'}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {href && (
+                      <div className="mt-2 text-right">
+                        <Link
+                          href={href}
+                          className="text-xs font-semibold text-brand hover:underline"
+                        >
+                          Ver en Agenda
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
               );

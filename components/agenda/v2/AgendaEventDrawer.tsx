@@ -11,20 +11,23 @@ import {
   AlertTriangle,
   Calendar,
   Edit,
+  Loader2,
   Mail,
   MapPin,
   Phone,
   User,
 } from 'lucide-react';
+import { toast } from 'sonner';
 interface AgendaEventDrawerProps {
   event: AgendaEvent | null;
   paciente: Paciente | null;
   isOpen: boolean;
   onClose: () => void;
-  onAction?: (event: AgendaEvent, action: 'confirm' | 'complete' | 'cancel') => void;
+  onAction?: (event: AgendaEvent, action: 'confirm' | 'complete' | 'cancel') => Promise<void> | void;
   onEdit?: (event: AgendaEvent) => void;
   profesionales?: Array<{ id: string; nombre: string }>;
-  onReassign?: (event: AgendaEvent, profesionalId: string) => Promise<void>;
+  onReassign?: (event: AgendaEvent, profesionalId: string) => Promise<void> | void;
+  onUpdateEvent?: (id: string, updates: Partial<AgendaEvent>) => Promise<void>;
 }
 
 const QUICK_ACTIONS: Array<{
@@ -68,11 +71,31 @@ export default function AgendaEventDrawer({
   onEdit,
   profesionales,
   onReassign,
+  onUpdateEvent,
 }: AgendaEventDrawerProps) {
   const [selectedProf, setSelectedProf] = useState(event?.profesionalId ?? '');
+  const [inlineDate, setInlineDate] = useState(format(event?.fechaInicio ?? new Date(), 'yyyy-MM-dd'));
+  const [inlineTime, setInlineTime] = useState(format(event?.fechaInicio ?? new Date(), 'HH:mm'));
+  const [inlineDuration, setInlineDuration] = useState(
+    Math.max(15, Math.round(((event?.fechaFin ?? new Date()).getTime() - (event?.fechaInicio ?? new Date()).getTime()) / 60000))
+  );
+  const [updating, setUpdating] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'confirm' | 'complete' | 'cancel' | null>(null);
+  const [reassigning, setReassigning] = useState(false);
+  const [inlineError, setInlineError] = useState<string | null>(null);
   useEffect(() => {
     setSelectedProf(event?.profesionalId ?? '');
-  }, [event?.profesionalId]);
+    if (event) {
+      setInlineDate(format(event.fechaInicio, 'yyyy-MM-dd'));
+      setInlineTime(format(event.fechaInicio, 'HH:mm'));
+      setInlineDuration(
+        Math.max(15, Math.round((event.fechaFin.getTime() - event.fechaInicio.getTime()) / 60000))
+      );
+    }
+    setPendingAction(null);
+    setReassigning(false);
+    setInlineError(null);
+  }, [event]);
 
   if (!event) return null;
 
@@ -117,10 +140,25 @@ export default function AgendaEventDrawer({
               {availableActions.map((action) => (
                 <button
                   key={action.key}
-                  onClick={() => onAction?.(event, action.key)}
-                  className={`${action.tone} text-white rounded-full px-3 py-1 text-xs font-semibold transition-colors hover:opacity-90`}
+                  onClick={async () => {
+                    if (!onAction) return;
+                    try {
+                      setPendingAction(action.key);
+                      await onAction(event, action.key);
+                    } finally {
+                      setPendingAction((prev) => (prev === action.key ? null : prev));
+                    }
+                  }}
+                  disabled={pendingAction !== null}
+                  className={`${action.tone} text-white rounded-full px-3 py-1 text-xs font-semibold transition-colors hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1`}
                 >
-                  {action.label}
+                  {pendingAction === action.key ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Procesando
+                    </>
+                  ) : (
+                    action.label
+                  )}
                 </button>
               ))}
               {onEdit && (
@@ -132,6 +170,85 @@ export default function AgendaEventDrawer({
                 </button>
               )}
             </div>
+            {onUpdateEvent && (
+              <div className="mt-4 grid gap-3 text-xs text-text">
+                <p className="font-semibold uppercase text-text-muted">Cambiar horario</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[10px] text-text-muted">Fecha</span>
+                    <input
+                      type="date"
+                      value={inlineDate}
+                      onChange={(e) => setInlineDate(e.target.value)}
+                      className="rounded-lg border border-border px-2 py-1"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[10px] text-text-muted">Hora</span>
+                    <input
+                      type="time"
+                      value={inlineTime}
+                      onChange={(e) => setInlineTime(e.target.value)}
+                      className="rounded-lg border border-border px-2 py-1"
+                    />
+                  </label>
+                </div>
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] text-text-muted">Duración (min)</span>
+                  <input
+                    type="number"
+                    min={15}
+                    step={15}
+                    value={inlineDuration}
+                    onChange={(e) => setInlineDuration(Number(e.target.value) || 15)}
+                    className="rounded-lg border border-border px-2 py-1"
+                  />
+                </label>
+                <div className="space-y-1">
+                  <button
+                    onClick={async () => {
+                      if (!event || !onUpdateEvent) return;
+                      if (!inlineDate || !inlineTime) {
+                        setInlineError('Selecciona una fecha y hora válidas.');
+                        return;
+                      }
+                      const newStart = new Date(`${inlineDate}T${inlineTime}`);
+                      if (Number.isNaN(newStart.getTime())) {
+                        setInlineError('La combinación de fecha y hora no es válida.');
+                        return;
+                      }
+                      const normalizedDuration = Math.min(12 * 60, Math.max(15, inlineDuration || 15));
+                      const newEnd = new Date(newStart.getTime() + normalizedDuration * 60000);
+                      setInlineError(null);
+                      setUpdating(true);
+                      try {
+                        await onUpdateEvent(event.id, {
+                          fechaInicio: newStart,
+                          fechaFin: newEnd,
+                        });
+                      } catch (error) {
+                        console.error('Inline update error', error);
+                        setInlineError('No se pudo actualizar el horario. Intenta de nuevo.');
+                        throw error;
+                      } finally {
+                        setUpdating(false);
+                      }
+                    }}
+                    disabled={updating}
+                    className="rounded-full bg-brand px-3 py-1 text-xs font-semibold text-text hover:bg-brand/90 disabled:opacity-50"
+                  >
+                    {updating ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Guardando
+                      </span>
+                    ) : (
+                      'Aplicar cambios'
+                    )}
+                  </button>
+                  {inlineError && <p className="text-[11px] text-danger">{inlineError}</p>}
+                </div>
+              </div>
+            )}
             {profesionales && profesionales.length > 0 && onReassign && (
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-text">
                 <label className="font-semibold">Reasignar a:</label>
@@ -148,11 +265,29 @@ export default function AgendaEventDrawer({
                   ))}
                 </select>
                 <button
-                  onClick={() => onReassign(event, selectedProf)}
-                  className="rounded-full border border-brand px-3 py-1 text-xs font-semibold text-brand hover:bg-brand-subtle"
-                  disabled={selectedProf === (event.profesionalId ?? '')}
+                  onClick={async () => {
+                    if (!onReassign) return;
+                    try {
+                      setReassigning(true);
+                      await onReassign(event, selectedProf);
+                    } catch (error) {
+                      console.error('Reassign error', error);
+                      toast.error('No se pudo reasignar la cita');
+                      throw error;
+                    } finally {
+                      setReassigning(false);
+                    }
+                  }}
+                  className="rounded-full border border-brand px-3 py-1 text-xs font-semibold text-brand hover:bg-brand-subtle disabled:opacity-50"
+                  disabled={selectedProf === (event.profesionalId ?? '') || reassigning}
                 >
-                  Guardar
+                  {reassigning ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Guardando
+                    </span>
+                  ) : (
+                    'Guardar'
+                  )}
                 </button>
               </div>
             )}

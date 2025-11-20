@@ -16,6 +16,13 @@ import {
 } from './agendaHelpers';
 import { Users, TrendingUp } from 'lucide-react';
 
+const RESOURCE_HEADER_ACCENTS = [
+  { container: 'border-brand/40 bg-brand-subtle', dot: 'bg-brand' },
+  { container: 'border-success/40 bg-success-bg', dot: 'bg-success' },
+  { container: 'border-warn/40 bg-warn-bg', dot: 'bg-warn' },
+  { container: 'border-accent/40 bg-accent-bg', dot: 'bg-accent' },
+];
+
 interface Resource {
   id: string;
   nombre: string;
@@ -49,6 +56,10 @@ export default function AgendaResourceView({
   hourHeight = AGENDA_CONFIG.TIMELINE_HEIGHT_PER_HOUR,
 }: AgendaResourceViewProps) {
   const dayEvents = useMemo(() => getEventsForDay(events, day), [events, day]);
+  const timelineHeight = useMemo(
+    () => hourHeight * (AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR),
+    [hourHeight]
+  );
 
   // Agrupar eventos por recurso
   const eventsByResource = useMemo(() => {
@@ -129,169 +140,171 @@ export default function AgendaResourceView({
   };
 
   const dayLabel = format(day, "EEEE, d 'de' MMMM", { locale: es });
+  const overallOccupancy = useMemo(() => calculateOccupancyRate(dayEvents, day), [dayEvents, day]);
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="bg-card border-b border-border p-4 rounded-t-lg">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-brand" />
-            <h2 className="text-lg font-bold text-text capitalize">{dayLabel}</h2>
+    <div className="flex h-full flex-col rounded-[28px] bg-card">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/80 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-subtle text-brand">
+            <Users className="h-5 w-5" />
           </div>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="px-2 py-1 bg-brand-subtle text-brand rounded font-medium">
-              {resources.length} recursos
-            </span>
-            <span className="px-2 py-1 bg-success-bg text-success rounded font-medium">
-              {dayEvents.length} eventos
-            </span>
-            {conflicts.length > 0 && (
-              <span className="px-2 py-1 bg-danger-bg text-danger rounded font-medium">
-                {conflicts.length} conflictos
-              </span>
-            )}
+          <div>
+            <p className="text-sm font-semibold capitalize text-text">{dayLabel}</p>
+            <p className="text-xs text-text-muted">
+              {resources.length} recursos · {dayEvents.length} eventos programados
+            </p>
           </div>
+        </div>
+        <div className="flex items-center gap-2 text-xs font-semibold">
+          <span className="rounded-full bg-brand-subtle px-3 py-1 text-brand">
+            {dayEvents.length} eventos
+          </span>
+          <span className="rounded-full bg-success-bg px-3 py-1 text-success">
+            {overallOccupancy}% ocupación
+          </span>
+          {conflicts.length > 0 && (
+            <span className="rounded-full bg-danger-bg px-3 py-1 text-danger">
+              {conflicts.length} conflictos
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Vista de recursos */}
-      <div className="flex-1 relative">
+      <div className="relative flex-1 overflow-hidden rounded-b-[28px]">
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex h-full">
-            {/* Columna de horas (compartida) */}
-            <div className="w-20 flex-shrink-0 bg-cardHover border-r border-border sticky left-0 z-20 shadow">
-              <div className="h-14 border-b border-border flex items-center justify-center sticky top-0 z-10 bg-cardHover">
-                <span className="text-xs font-semibold text-text-muted uppercase">Hora</span>
-              </div>
-              <div 
-                className="relative"
-                style={{ 
-                  height: `${hourHeight * (AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR)}px` 
-                }}
-              >
-                {Array.from({ 
-                  length: AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR 
-                }).map((_, index) => {
-                  const hour = AGENDA_CONFIG.START_HOUR + index;
-                  return (
-                    <div
-                      key={hour}
-                      className="absolute w-full text-right pr-2"
-                      style={{
-                        top: `${index * hourHeight}px`,
-                        height: `${hourHeight}px`,
-                      }}
-                    >
-                      <span className="text-xs font-medium text-text-muted">
-                        {String(hour).padStart(2, '0')}:00
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+          <div className="flex h-full overflow-hidden">
+            <div className="flex h-full w-full overflow-y-auto">
+              <div className="flex min-h-full min-w-full">
+                <div className="sticky left-0 z-30 flex w-20 flex-shrink-0 flex-col border-r border-border bg-card">
+                  <div className="flex h-16 items-center justify-center border-b border-border bg-card">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-text-muted">
+                      Hora
+                    </span>
+                  </div>
+                  <div className="relative" style={{ height: `${timelineHeight}px` }}>
+                    {Array.from({ length: AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR }).map(
+                      (_, index) => {
+                        const hour = AGENDA_CONFIG.START_HOUR + index;
+                        return (
+                          <div
+                            key={hour}
+                            className="absolute inset-x-0 border-t border-border/60 px-1"
+                            style={{
+                              top: `${index * hourHeight}px`,
+                              height: `${hourHeight}px`,
+                            }}
+                          >
+                            <span className="text-xs font-semibold text-text-muted">
+                              {String(hour).padStart(2, '0')}:00
+                            </span>
+                          </div>
+                        );
+                      }
+                    )}
+                  </div>
+                </div>
 
-            {/* Columnas de recursos */}
-            <div className="flex-1 flex overflow-x-auto">
-              {resources.map((resource) => {
-                const resourceEvents = eventsByResource.get(resource.id) || [];
-                const stats = resourceStats.get(resource.id);
+                <div className="flex-1 overflow-x-auto">
+                  <div className="flex min-h-full min-w-full">
+                    {resources.map((resource, index) => {
+                      const resourceEvents = eventsByResource.get(resource.id) || [];
+                      const stats = resourceStats.get(resource.id);
+                      const accent = RESOURCE_HEADER_ACCENTS[index % RESOURCE_HEADER_ACCENTS.length];
+                      const occupancyLabel = Math.round(stats?.occupancy ?? 0);
 
-                return (
-                  <div
-                    key={resource.id}
-                    className="flex-1 min-w-[250px] border-r border-border last:border-r-0"
-                  >
-                    {/* Header del recurso */}
-                    <div className="sticky top-0 z-10 bg-card border-b border-border p-3 h-14">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-sm text-text truncate">
-                            {resource.nombre}
-                          </h3>
-                          <div className="flex items-center gap-2 text-xs text-text-muted mt-0.5">
-                            <span>{stats?.totalEvents || 0} eventos</span>
-                            <span>•</span>
-                            <div className="flex items-center gap-1">
-                              <TrendingUp className="w-3 h-3" />
-                              <span>{stats?.occupancy || 0}%</span>
+                      return (
+                        <div
+                          key={resource.id}
+                          className="flex min-w-[260px] flex-1 flex-col border-r border-border/60 bg-cardHover/20 p-1 last:border-r-0"
+                        >
+                          <div
+                            className={`sticky top-0 z-20 flex h-16 flex-col justify-center gap-1 rounded-2xl border px-3 text-sm backdrop-blur ${accent.container}`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className={`h-2.5 w-2.5 rounded-full ${accent.dot}`} />
+                              <h3 className="truncate font-semibold text-text">{resource.nombre}</h3>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 text-[11px] text-text-muted">
+                              <span>{stats?.totalEvents ?? resourceEvents.length} citas</span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <TrendingUp className="h-3 w-3" />
+                                {occupancyLabel}% ocupación
+                              </span>
+                              <span>•</span>
+                              <span>{stats?.confirmed ?? 0} confirmadas</span>
                             </div>
                           </div>
+
+                          <Droppable droppableId={`resource-${resource.id}`} type="EVENT">
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.droppableProps}
+                                className={`relative rounded-2xl border border-transparent bg-card transition-colors ${
+                                  snapshot.isDraggingOver ? 'border-brand/40 bg-brand-subtle/40' : ''
+                                }`}
+                                style={{ height: `${timelineHeight}px` }}
+                              >
+                                {Array.from({
+                                  length: AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR,
+                                }).map((_, indexHour) => (
+                                  <div
+                                    key={indexHour}
+                                    className="absolute inset-x-0 border-t border-border/40"
+                                    style={{
+                                      top: `${indexHour * hourHeight}px`,
+                                      height: `${hourHeight}px`,
+                                    }}
+                                  >
+                                    {[1, 2, 3].map((quarter) => (
+                                      <div
+                                        key={quarter}
+                                        className="absolute inset-x-2 border-t border-border/30"
+                                        style={{
+                                          top: `${quarter * (hourHeight / 4)}px`,
+                                        }}
+                                      />
+                                    ))}
+                                  </div>
+                                ))}
+
+                                {resourceEvents.map((event, eventIndex) => {
+                                  const position = calculateEventPosition(event, hourHeight);
+                                  const hasConflict = conflictEventIds.has(event.id);
+
+                                  return (
+                                    <AgendaEventCard
+                                      key={event.id}
+                                      event={event}
+                                      index={eventIndex}
+                                      style={{
+                                        top: `${position.top}px`,
+                                        height: `${position.height}px`,
+                                        left: '6px',
+                                        right: '6px',
+                                      }}
+                                      isResizable={true}
+                                      onResize={handleResize}
+                                      onClick={onEventClick}
+                                      onQuickAction={onQuickAction}
+                                      onEdit={onEdit}
+                                      onDelete={onDelete}
+                                      hasConflict={hasConflict}
+                                    />
+                                  );
+                                })}
+                                {provided.placeholder}
+                              </div>
+                            )}
+                          </Droppable>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Timeline del recurso */}
-                    <Droppable droppableId={`resource-${resource.id}`} type="EVENT">
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.droppableProps}
-                          className={`relative ${
-                            snapshot.isDraggingOver ? 'bg-brand-subtle/40' : ''
-                          }`}
-                          style={{
-                            height: `${hourHeight * (AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR)}px`,
-                          }}
-                        >
-                          {/* Grid de fondo */}
-                          {Array.from({ 
-                            length: AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR 
-                          }).map((_, index) => (
-                            <div
-                              key={index}
-                              className="absolute w-full border-t border-border"
-                              style={{
-                                top: `${index * hourHeight}px`,
-                                height: `${hourHeight}px`,
-                              }}
-                            >
-                              {[1, 2, 3].map((quarter) => (
-                                <div
-                                  key={quarter}
-                                  className="absolute w-full border-t border-border/40"
-                                  style={{
-                                    top: `${quarter * (hourHeight / 4)}px`,
-                                  }}
-                                />
-                              ))}
-                            </div>
-                          ))}
-
-                          {/* Eventos */}
-                          {resourceEvents.map((event, index) => {
-                            const position = calculateEventPosition(event, hourHeight);
-                            const hasConflict = conflictEventIds.has(event.id);
-
-                            return (
-                              <AgendaEventCard
-                                key={event.id}
-                                event={event}
-                                index={index}
-                                style={{
-                                  top: `${position.top}px`,
-                                  height: `${position.height}px`,
-                                  left: '4px',
-                                  right: '4px',
-                                }}
-                                isResizable={true}
-                                onResize={handleResize}
-                                onClick={onEventClick}
-                                onQuickAction={onQuickAction}
-                                onEdit={onEdit}
-                                onDelete={onDelete}
-                                hasConflict={hasConflict}
-                              />
-                            );
-                          })}
-                          {provided.placeholder}
-                        </div>
-                      )}
-                    </Droppable>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              </div>
             </div>
           </div>
         </DragDropContext>

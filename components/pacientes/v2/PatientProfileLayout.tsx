@@ -4,6 +4,7 @@ import { ReactNode } from 'react';
 import type { PacienteV2 as Paciente } from '@/types/paciente-v2';
 import PatientHeader from './PatientHeader';
 import PatientTimeline, { Activity } from './PatientTimeline';
+import type { AgendaLinkBuilder } from './types';
 import {
   LayoutDashboard,
   Heart,
@@ -40,6 +41,8 @@ interface PatientProfileLayoutProps {
   onNewCita?: () => void;
   onNewNota?: () => void;
   onUploadDoc?: () => void;
+  agendaLinkBuilder?: AgendaLinkBuilder;
+  agendaLink?: string;
 }
 
 export default function PatientProfileLayout({
@@ -51,7 +54,9 @@ export default function PatientProfileLayout({
   tabs,
   onNewCita,
   onNewNota,
-  onUploadDoc
+  onUploadDoc,
+  agendaLinkBuilder,
+  agendaLink,
 }: PatientProfileLayoutProps) {
   const defaultTabs: Tab[] = [
     { key: 'resumen', label: 'Resumen', icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -74,6 +79,7 @@ export default function PatientProfileLayout({
           onNewCita={onNewCita}
           onNewNota={onNewNota}
           onUploadDoc={onUploadDoc}
+          agendaLink={agendaLink}
         />
 
         {/* Tabs de navegación */}
@@ -118,7 +124,7 @@ export default function PatientProfileLayout({
           {/* Timeline lateral (4 columnas en desktop) */}
           <div className="lg:col-span-4">
             <div className="sticky top-6">
-              <PatientTimeline actividades={actividades} />
+              <PatientTimeline actividades={actividades} agendaLinkBuilder={agendaLinkBuilder} />
             </div>
           </div>
         </div>

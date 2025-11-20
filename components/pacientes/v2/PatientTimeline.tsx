@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import Link from 'next/link';
 import { 
   Calendar, 
   FileText, 
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import type { AgendaLinkBuilder } from './types';
 
 export type ActivityType = 
   | 'cita'
@@ -30,14 +32,23 @@ export interface Activity {
   fecha: Date;
   usuario?: string;
   estado?: 'success' | 'warning' | 'error' | 'info';
+  agendaContext?: {
+    profesionalId?: string;
+    date?: Date;
+  };
 }
 
 interface PatientTimelineProps {
   actividades: Activity[];
   maxItems?: number;
+  agendaLinkBuilder?: AgendaLinkBuilder;
 }
 
-export default function PatientTimeline({ actividades, maxItems = 10 }: PatientTimelineProps) {
+export default function PatientTimeline({
+  actividades,
+  maxItems = 10,
+  agendaLinkBuilder,
+}: PatientTimelineProps) {
   const actividadesRecientes = useMemo(() => {
     return actividades
       .sort((a, b) => b.fecha.getTime() - a.fecha.getTime())
@@ -124,39 +135,56 @@ export default function PatientTimeline({ actividades, maxItems = 10 }: PatientT
 
         {/* Actividades */}
         <div className="space-y-4">
-          {actividadesRecientes.map((actividad) => (
-            <div key={actividad.id} className="relative flex gap-3 pl-10">
-              {/* Icono */}
-              <div className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-full border ${getColor(actividad.tipo, actividad.estado)}`}>
-                {getIcon(actividad.tipo)}
-              </div>
-
-              {/* Contenido */}
-              <div className="flex-1 pb-4">
-                <div className="mb-1 flex items-start justify-between gap-2">
-                  <p className="text-sm font-medium text-text">
-                    {actividad.titulo}
-                  </p>
-                  <span className="text-xs text-text-muted whitespace-nowrap">
-                    {getRelativeTime(actividad.fecha)}
-                  </span>
+          {actividadesRecientes.map((actividad) => {
+            const agendaHref =
+              actividad.tipo === 'cita'
+                ? agendaLinkBuilder?.({
+                    date: actividad.agendaContext?.date ?? actividad.fecha,
+                    profesionalId: actividad.agendaContext?.profesionalId,
+                  })
+                : undefined;
+            return (
+              <div key={actividad.id} className="relative flex gap-3 pl-10">
+                {/* Icono */}
+                <div
+                  className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-full border ${getColor(
+                    actividad.tipo,
+                    actividad.estado
+                  )}`}
+                >
+                  {getIcon(actividad.tipo)}
                 </div>
 
-                {actividad.descripcion && (
-                  <p className="mb-1 text-sm text-text-muted">
-                    {actividad.descripcion}
-                  </p>
-                )}
-
-                {actividad.usuario && (
-                  <div className="flex items-center gap-1 text-xs text-text-muted">
-                    <User className="w-3 h-3" />
-                    <span>{actividad.usuario}</span>
+                {/* Contenido */}
+                <div className="flex-1 pb-4">
+                  <div className="mb-1 flex items-start justify-between gap-2">
+                    <p className="text-sm font-medium text-text">{actividad.titulo}</p>
+                    <span className="text-xs text-text-muted whitespace-nowrap">
+                      {getRelativeTime(actividad.fecha)}
+                    </span>
                   </div>
-                )}
+
+                  {actividad.descripcion && (
+                    <p className="mb-1 text-sm text-text-muted">{actividad.descripcion}</p>
+                  )}
+
+                  {actividad.usuario && (
+                    <div className="flex items-center gap-1 text-xs text-text-muted">
+                      <User className="w-3 h-3" />
+                      <span>{actividad.usuario}</span>
+                    </div>
+                  )}
+                  {agendaHref && (
+                    <div className="mt-2">
+                      <Link href={agendaHref} className="text-xs font-semibold text-brand hover:underline">
+                        Ver en Agenda
+                      </Link>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

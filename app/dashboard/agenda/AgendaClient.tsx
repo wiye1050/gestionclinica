@@ -38,11 +38,12 @@ import {
 import type { SerializedAgendaEvent } from '@/lib/server/agenda';
 import type { Paciente } from '@/types';
 
-type VistaAgenda = 'diaria' | 'semanal' | 'multi' | 'boxes' | 'paciente';
+export type VistaAgenda = 'diaria' | 'semanal' | 'multi' | 'boxes' | 'paciente';
 type AgendaResource = { id: string; nombre: string; tipo: 'profesional' | 'sala' };
 
 const AGENDA_STORAGE_KEY = 'agenda.filters.v1';
 const VIEW_STORAGE_KEY = 'agenda.view.v1';
+const DAY_MODE_STORAGE_KEY = 'agenda.dayMode.v1';
 
 const ESTADO_FILTERS: Array<{
   id: AgendaEvent['estado'] | 'todos';
@@ -102,6 +103,7 @@ interface AgendaClientProps {
     profesionalId?: string;
     forcedView?: VistaAgenda;
     presetProfesionales?: string[];
+    targetDate?: string;
   };
 }
 
@@ -131,6 +133,8 @@ export default function AgendaClient({
     useState<{ pacienteId?: string; profesionalId?: string } | null>(null);
   const [viewDensity, setViewDensity] = useState<'comfort' | 'compact'>('comfort');
   const [prefillRequestKey, setPrefillRequestKey] = useState<string | null>(null);
+  const [dayViewMode, setDayViewMode] = useState<'single' | 'multi'>('single');
+  const hourHeight = viewDensity === 'compact' ? 60 : 90;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -150,6 +154,17 @@ export default function AgendaClient({
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(VIEW_STORAGE_KEY, vista);
   }, [vista]);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const storedDayMode = window.localStorage.getItem(DAY_MODE_STORAGE_KEY);
+    if (storedDayMode === 'single' || storedDayMode === 'multi') {
+      setDayViewMode(storedDayMode);
+    }
+  }, []);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(DAY_MODE_STORAGE_KEY, dayViewMode);
+  }, [dayViewMode]);
 
   useEffect(() => {
     if (!prefillRequest) return;
@@ -160,6 +175,13 @@ export default function AgendaClient({
       setSelectedProfesionales(prefillRequest.presetProfesionales);
     }
   }, [prefillRequest]);
+  useEffect(() => {
+    if (!prefillRequest?.targetDate) return;
+    const parsed = new Date(prefillRequest.targetDate);
+    if (!Number.isNaN(parsed.getTime())) {
+      setCurrentDate(parsed);
+    }
+  }, [prefillRequest?.targetDate]);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -285,6 +307,9 @@ export default function AgendaClient({
     });
   }, [eventos, selectedProfesionales, selectedSala, estadoFilter, tipoFilter]);
 
+  const isResourceGridMode = vista === 'multi' || (vista === 'diaria' && dayViewMode === 'multi');
+  const resourceColumnLimit = Math.max(isResourceGridMode ? 6 : 4, 1);
+
   const recursos = useMemo<AgendaResource[]>(() => {
     const cumplePreset = (prof?: (typeof profesionales)[number]) => {
       if (!prof) return false;
@@ -292,26 +317,43 @@ export default function AgendaClient({
       return prof.especialidad === resourcePreset;
     };
 
-    const seleccionados =
-      selectedProfesionales.length > 0
-        ? selectedProfesionales
-            .map((id) => profesionales.find((p) => p.id === id))
-            .filter((prof): prof is (typeof profesionales)[number] => Boolean(prof))
-        : [];
+    const selectedOrdered = selectedProfesionales
+      .map((id) => profesionales.find((p) => p.id === id))
+      .filter((prof): prof is (typeof profesionales)[number] => Boolean(prof));
 
     const fallbackProfesionales = profesionales.filter(cumplePreset);
 
-    const baseProfesionales =
-      seleccionados.length > 0
-        ? seleccionados
-        : (fallbackProfesionales.length > 0 ? fallbackProfesionales : profesionales).slice(0, 5);
+    const orderedPool: (typeof profesionales)[number][] = [];
+    const pushUnique = (prof?: (typeof profesionales)[number]) => {
+      if (!prof) return;
+      if (orderedPool.some((item) => item.id === prof.id)) return;
+      orderedPool.push(prof);
+    };
 
-    return baseProfesionales.map((prof) => ({
+    selectedOrdered.forEach(pushUnique);
+
+    if (orderedPool.length < resourceColumnLimit) {
+      fallbackProfesionales.forEach((prof) => {
+        if (orderedPool.length >= resourceColumnLimit) return;
+        pushUnique(prof);
+      });
+    }
+
+    if (orderedPool.length < resourceColumnLimit) {
+      profesionales.forEach((prof) => {
+        if (orderedPool.length >= resourceColumnLimit) return;
+        pushUnique(prof);
+      });
+    }
+
+    const finalProfesionales = orderedPool.slice(0, resourceColumnLimit);
+
+    return finalProfesionales.map((prof) => ({
       id: prof.id,
       nombre: `${prof.nombre} ${prof.apellidos}`,
       tipo: 'profesional',
     }));
-  }, [profesionales, selectedProfesionales, resourcePreset]);
+  }, [profesionales, selectedProfesionales, resourcePreset, resourceColumnLimit]);
 
   const requestAgenda = async (url: string, options: RequestInit) => {
     const response = await fetch(url, {
@@ -487,6 +529,21 @@ export default function AgendaClient({
     }
   };
 
+  const handleInlineUpdate = async (eventId: string, updates: Partial<AgendaEvent>) => {
+    try {
+      const payload = serializeEventPayload(updates as EventPayload);
+      await requestAgenda(`/api/agenda/eventos/${eventId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      });
+      await invalidateAgenda();
+      toast.success('Cita actualizada');
+    } catch (error) {
+      console.error('Error al actualizar cita', error);
+      toast.error('No se pudo actualizar la cita');
+    }
+  };
+
   const handleQuickAction = async (
     evento: AgendaEvent,
     action: 'confirm' | 'complete' | 'cancel'
@@ -645,8 +702,6 @@ export default function AgendaClient({
     });
   }, [weekStart, currentDate]);
 
-  const hourHeight = viewDensity === 'compact' ? 60 : 90;
-
   const renderPlaceholder = (title: string, description: string) => (
     <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
       <p className="text-lg font-semibold text-text">{title}</p>
@@ -660,191 +715,209 @@ export default function AgendaClient({
 
   return (
     <div className="space-y-4">
-      <section className="rounded-3xl border border-border bg-card p-4 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-2">
-            <div className="relative">
-              <details className="group" title="Profesionales visibles">
-                <summary className="flex cursor-pointer list-none items-center gap-2 rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-text shadow-sm transition-colors hover:bg-cardHover">
-                  <span>
-                    {selectedProfesionales.length === 0
-                      ? 'Todos los profesionales'
-                      : `${selectedProfesionales.length} seleccionado${
-                          selectedProfesionales.length > 1 ? 's' : ''
-                        }`}
-                  </span>
-                  <ChevronRight className="h-4 w-4 text-text-muted transition-transform group-open:rotate-90" />
-                </summary>
-                <div className="absolute left-0 z-50 mt-1 max-h-60 min-w-[240px] overflow-y-auto rounded-2xl border border-border bg-white shadow-2xl">
-                  <div className="space-y-1 p-2 text-sm">
-                    <label className="flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 transition-colors hover:bg-cardHover">
-                      <input
-                        type="checkbox"
-                        checked={selectedProfesionales.length === 0}
-                        onChange={() => setSelectedProfesionales([])}
-                        className="h-4 w-4 rounded border-border text-brand focus-visible:ring-2 focus-visible:ring-brand/50"
-                      />
-                      <span>Todos</span>
-                    </label>
-                    {profesionales.map((prof) => (
-                      <label
-                        key={prof.id}
-                        className="flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 transition-colors hover:bg-cardHover"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedProfesionales.includes(prof.id)}
-                          onChange={(e) => {
-                            setSelectedProfesionales((prev) =>
-                              e.target.checked ? [...prev, prof.id] : prev.filter((id) => id !== prof.id)
-                            );
-                          }}
-                          className="h-4 w-4 rounded border-border text-brand focus-visible:ring-2 focus-visible:ring-brand/50"
-                        />
-                        <span>
-                          {prof.nombre} {prof.apellidos}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
+      <section className="rounded-[36px] border border-border bg-card/90 p-5 shadow-lg">
+        <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 rounded-3xl border border-border bg-white px-3 py-2 shadow-sm">
+                  <button
+                    onClick={handlePrev}
+                    className="rounded-full p-1 text-text hover:bg-cardHover focus-visible:focus-ring"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={handleToday}
+                    className="rounded-full border border-border px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-text hover:bg-cardHover focus-visible:focus-ring"
+                  >
+                    Hoy
+                  </button>
+                  <button
+                    onClick={handleNext}
+                    className="rounded-full p-1 text-text hover:bg-cardHover focus-visible:focus-ring"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
                 </div>
-              </details>
+                <div className="rounded-3xl bg-card px-3 py-1 text-sm font-semibold capitalize text-text shadow-inner">
+                  {dateLabel}
+                </div>
+                <span className="rounded-full border border-dashed border-border bg-card px-3 py-1 text-xs font-semibold text-text-muted">
+                  {eventosFiltrados.length} eventos
+                </span>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <div className="relative">
+                  <details className="group" title="Profesionales visibles">
+                    <summary className="flex cursor-pointer list-none items-center gap-2 rounded-2xl border border-border bg-white px-3 py-2 text-xs font-semibold text-text shadow-sm transition-colors hover:bg-cardHover">
+                      <span>
+                        {selectedProfesionales.length === 0
+                          ? 'Todos los profesionales'
+                          : `${selectedProfesionales.length} seleccionado${
+                              selectedProfesionales.length > 1 ? 's' : ''
+                            }`}
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-text-muted transition-transform group-open:rotate-90" />
+                    </summary>
+                    <div className="absolute left-0 z-50 mt-1 max-h-60 min-w-[240px] overflow-y-auto rounded-2xl border border-border bg-white shadow-2xl">
+                      <div className="space-y-1 p-2 text-sm">
+                        <label className="flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 transition-colors hover:bg-cardHover">
+                          <input
+                            type="checkbox"
+                            checked={selectedProfesionales.length === 0}
+                            onChange={() => setSelectedProfesionales([])}
+                            className="h-4 w-4 rounded border-border text-brand focus-visible:ring-2 focus-visible:ring-brand/50"
+                          />
+                          <span>Todos</span>
+                        </label>
+                        {profesionales.map((prof) => (
+                          <label
+                            key={prof.id}
+                            className="flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 transition-colors hover:bg-cardHover"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedProfesionales.includes(prof.id)}
+                              onChange={(e) => {
+                                setSelectedProfesionales((prev) =>
+                                  e.target.checked ? [...prev, prof.id] : prev.filter((id) => id !== prof.id)
+                                );
+                              }}
+                              className="h-4 w-4 rounded border-border text-brand focus-visible:ring-2 focus-visible:ring-brand/50"
+                            />
+                            <span>
+                              {prof.nombre} {prof.apellidos}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </details>
+                </div>
+
+                <select
+                  value={selectedSala}
+                  onChange={(e) => setSelectedSala(e.target.value)}
+                  className="rounded-2xl border border-border bg-card px-3 py-2 text-xs font-semibold text-text focus-visible:focus-ring"
+                >
+                  <option value="todas">Todas las salas</option>
+                  {salas.map((sala) => (
+                    <option key={sala.id} value={sala.id}>
+                      {sala.nombre}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={tipoFilter}
+                  onChange={(e) => setTipoFilter(e.target.value as AgendaEvent['tipo'] | 'todos')}
+                  className="rounded-2xl border border-border bg-card px-3 py-2 text-xs font-semibold text-text focus-visible:focus-ring"
+                >
+                  {TIPO_FILTERS.map((tipo) => (
+                    <option key={tipo.id} value={tipo.id}>
+                      {tipo.label}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={resourcePreset}
+                  disabled={vista !== 'multi'}
+                  onChange={(e) =>
+                    setResourcePreset(e.target.value as 'todos' | 'medicina' | 'fisioterapia' | 'enfermeria')
+                  }
+                  className={`rounded-2xl border border-border bg-card px-3 py-2 text-xs font-semibold text-text focus-visible:focus-ring ${
+                    vista !== 'multi' ? 'cursor-not-allowed opacity-60' : ''
+                  }`}
+                >
+                  {RECURSO_PRESETS.map((preset) => (
+                    <option key={preset.id} value={preset.id}>
+                      {preset.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {ESTADO_FILTERS.map((filter) => (
+                  <button
+                    key={filter.id}
+                    onClick={() => setEstadoFilter(filter.id)}
+                    className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors focus-visible:focus-ring ${
+                      estadoFilter === filter.id
+                        ? `${filter.className} border border-transparent`
+                        : 'border border-border text-text-muted hover:bg-cardHover'
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+                <div className="inline-flex rounded-full border border-border bg-card p-1 text-[11px] font-semibold text-text-muted">
+                  {[
+                    { id: 'comfort', label: 'Amplia' },
+                    { id: 'compact', label: 'Compacta' },
+                  ].map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => setViewDensity(option.id as 'comfort' | 'compact')}
+                      className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                        viewDensity === option.id
+                          ? 'bg-brand text-text'
+                          : 'text-text-muted hover:bg-cardHover'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="inline-flex rounded-full border border-border bg-card p-1 text-[11px] font-semibold text-text-muted">
+                  {[
+                    { id: 'single', label: 'Una columna' },
+                    { id: 'multi', label: 'Multi-columna' },
+                  ].map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => setDayViewMode(option.id as 'single' | 'multi')}
+                      className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                        dayViewMode === option.id
+                          ? 'bg-brand text-text'
+                          : 'text-text-muted hover:bg-cardHover'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => openNewEventModal(new Date())}
+                  className="inline-flex items-center gap-1 rounded-2xl bg-brand px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-brand/90 focus-visible:focus-ring"
+                >
+                  <Plus className="h-4 w-4" /> Nueva cita
+                </button>
+                <button
+                  onClick={() => openNewEventModal(new Date())}
+                  className="inline-flex items-center gap-1 rounded-2xl border border-border px-3 py-2 text-xs font-semibold text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
+                >
+                  <AlertTriangle className="h-4 w-4 text-amber-500" /> Urgencia
+                </button>
+                <button
+                  onClick={() => toast.info('La gestión de bloqueos estará disponible en la siguiente iteración.')}
+                  className="inline-flex items-center gap-1 rounded-2xl border border-border px-3 py-2 text-xs font-semibold text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
+                >
+                  <Lock className="h-4 w-4" /> Bloqueos
+                </button>
+                <button
+                  onClick={() => toast.info('La apertura rápida del día llegará pronto.')}
+                  className="inline-flex items-center gap-1 rounded-2xl border border-border px-3 py-2 text-xs font-semibold text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
+                >
+                  <SunMedium className="h-4 w-4 text-brand" /> Abrir día
+                </button>
+              </div>
             </div>
-
-            <select
-              value={selectedSala}
-              onChange={(e) => setSelectedSala(e.target.value)}
-              className="rounded-2xl border border-border bg-card px-3 py-2 text-xs font-semibold text-text focus-visible:focus-ring"
-            >
-              <option value="todas">Todas las salas</option>
-              {salas.map((sala) => (
-                <option key={sala.id} value={sala.id}>
-                  {sala.nombre}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={tipoFilter}
-              onChange={(e) => setTipoFilter(e.target.value as AgendaEvent['tipo'] | 'todos')}
-              className="rounded-2xl border border-border bg-card px-3 py-2 text-xs font-semibold text-text focus-visible:focus-ring"
-            >
-              {TIPO_FILTERS.map((tipo) => (
-                <option key={tipo.id} value={tipo.id}>
-                  {tipo.label}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={resourcePreset}
-              disabled={vista !== 'multi'}
-              onChange={(e) =>
-                setResourcePreset(e.target.value as 'todos' | 'medicina' | 'fisioterapia' | 'enfermeria')
-              }
-              className={`rounded-2xl border border-border bg-card px-3 py-2 text-xs font-semibold text-text focus-visible:focus-ring ${
-                vista !== 'multi' ? 'cursor-not-allowed opacity-60' : ''
-              }`}
-            >
-              {RECURSO_PRESETS.map((preset) => (
-                <option key={preset.id} value={preset.id}>
-                  {preset.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => openNewEventModal(new Date())}
-              className="inline-flex items-center gap-1 rounded-2xl bg-brand px-3 py-2 text-xs font-semibold text-text transition-colors hover:bg-brand/90 focus-visible:focus-ring"
-            >
-              <Plus className="h-4 w-4" /> Cita
-            </button>
-            <button
-              onClick={() => openNewEventModal(new Date())}
-              className="inline-flex items-center gap-1 rounded-2xl border border-border px-3 py-2 text-xs font-semibold text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
-            >
-              <AlertTriangle className="h-4 w-4 text-amber-500" /> Urgencia
-            </button>
-            <button
-              onClick={() => toast.info('La gestión de bloqueos estará disponible en la siguiente iteración.')}
-              className="inline-flex items-center gap-1 rounded-2xl border border-border px-3 py-2 text-xs font-semibold text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
-            >
-              <Lock className="h-4 w-4" /> Bloqueos
-            </button>
-            <button
-              onClick={() => toast.info('La apertura rápida del día llegará pronto.')}
-              className="inline-flex items-center gap-1 rounded-2xl border border-border px-3 py-2 text-xs font-semibold text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
-            >
-              <SunMedium className="h-4 w-4 text-brand" /> Abrir día
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-border/60 pt-3">
-          <div className="flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2">
-            <button
-              onClick={handlePrev}
-              className="rounded-full p-1 text-text hover:bg-cardHover focus-visible:focus-ring"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              onClick={handleToday}
-              className="rounded-full border border-border px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-text hover:bg-cardHover focus-visible:focus-ring"
-            >
-              Hoy
-            </button>
-            <button
-              onClick={handleNext}
-              className="rounded-full p-1 text-text hover:bg-cardHover focus-visible:focus-ring"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-          <span className="text-sm font-semibold capitalize text-text">{dateLabel}</span>
-          <span className="rounded-full border border-dashed border-border bg-card px-3 py-1 text-xs font-semibold text-text-muted">
-            {eventosFiltrados.length} eventos visibles
-          </span>
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          {ESTADO_FILTERS.map((filter) => (
-            <button
-              key={filter.id}
-              onClick={() => setEstadoFilter(filter.id)}
-              className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors focus-visible:focus-ring ${
-                estadoFilter === filter.id
-                  ? `${filter.className} border border-transparent`
-                  : 'border border-border text-text-muted hover:bg-cardHover'
-              }`}
-            >
-              {filter.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-3 flex items-center gap-2 text-[11px] font-semibold text-text-muted">
-          Densidad:
-          <div className="inline-flex rounded-full border border-border bg-card p-1">
-            {[
-              { id: 'comfort', label: 'Amplia' },
-              { id: 'compact', label: 'Compacta' },
-            ].map((option) => (
-              <button
-                key={option.id}
-                onClick={() => setViewDensity(option.id as 'comfort' | 'compact')}
-                className={`rounded-full px-3 py-1 text-xs transition-colors ${
-                  viewDensity === option.id
-                    ? 'bg-brand text-text'
-                    : 'text-text-muted hover:bg-cardHover'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -867,60 +940,35 @@ export default function AgendaClient({
           size="sm"
         />
 
-        <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
-          <aside className="flex flex-col gap-4 rounded-[28px] border border-border bg-cardHover/30 p-3">
-            <MiniCalendar
-              currentDate={currentDate}
-              onDateSelect={(date) => {
-                setCurrentDate(date);
-                setVista('diaria');
-              }}
-              onMonthChange={setCurrentDate}
-              events={eventosFiltrados}
-            />
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
-                Semana
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {weekDays.map((day) => {
-                  const isActive = day.isSelected;
-                  return (
-                    <button
-                      key={`${day.label}-${day.dayNumber}`}
-                      onClick={() => setCurrentDate(day.date)}
-                      className={`flex flex-col items-center rounded-2xl border px-3 py-2 text-[10px] font-semibold uppercase tracking-wide transition-colors focus-visible:focus-ring ${
-                        isActive
-                          ? 'border-brand bg-brand/20 text-text'
-                          : 'border-border bg-card text-text-muted hover:bg-cardHover'
-                      }`}
-                    >
-                      <span>{day.label}</span>
-                      <span className="text-lg leading-none text-text">{day.dayNumber}</span>
-                      {day.isToday && <span className="text-[9px] text-brand">hoy</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </aside>
-
+        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
           <div
             className="rounded-[28px] border border-border bg-cardHover/30 p-2 sm:p-4"
             style={{ minHeight: '65vh' }}
           >
-          {vista === 'diaria' && (
-            <AgendaDayView
-              day={currentDate}
-              events={eventosFiltrados}
-              onEventMove={handleEventMove}
-              onEventResize={handleEventResize}
-              onEventClick={handleEventClick}
-              onQuickAction={handleQuickAction}
-              onCreateEvent={handleCreateEvent}
-              hourHeight={hourHeight}
-            />
-          )}
+          {vista === 'diaria' &&
+            (dayViewMode === 'single' ? (
+              <AgendaDayView
+                day={currentDate}
+                events={eventosFiltrados}
+                onEventMove={handleEventMove}
+                onEventResize={handleEventResize}
+                onEventClick={handleEventClick}
+                onQuickAction={handleQuickAction}
+                onCreateEvent={handleCreateEvent}
+                hourHeight={hourHeight}
+              />
+            ) : (
+              <AgendaResourceView
+                day={currentDate}
+                events={eventosFiltrados}
+                resources={recursos}
+                onEventMove={handleEventMove}
+                onEventResize={handleEventResize}
+                onEventClick={handleEventClick}
+                onQuickAction={handleQuickAction}
+                hourHeight={hourHeight}
+              />
+            ))}
 
           {vista === 'semanal' && (
             <AgendaWeekViewV2
@@ -959,6 +1007,43 @@ export default function AgendaClient({
                 'Consulta la historia completa de citas, documentos y notas de un paciente en un único timeline.'
               )}
           </div>
+
+          <aside className="flex flex-col gap-4 rounded-[28px] border border-border bg-cardHover/30 p-3">
+            <MiniCalendar
+              currentDate={currentDate}
+              onDateSelect={(date) => {
+                setCurrentDate(date);
+                setVista('diaria');
+              }}
+              onMonthChange={setCurrentDate}
+              events={eventosFiltrados}
+            />
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
+                Semana
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {weekDays.map((day) => {
+                  const isActive = day.isSelected;
+                  return (
+                    <button
+                      key={`${day.label}-${day.dayNumber}`}
+                      onClick={() => setCurrentDate(day.date)}
+                      className={`flex flex-col items-center rounded-2xl border px-3 py-2 text-[10px] font-semibold uppercase tracking-wide transition-colors focus-visible:focus-ring ${
+                        isActive
+                          ? 'border-brand bg-brand/20 text-text'
+                          : 'border-border bg-card text-text-muted hover:bg-cardHover'
+                      }`}
+                    >
+                      <span>{day.label}</span>
+                      <span className="text-lg leading-none text-text">{day.dayNumber}</span>
+                      {day.isToday && <span className="text-[9px] text-brand">hoy</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </aside>
         </div>
       </section>
 
@@ -995,6 +1080,7 @@ export default function AgendaClient({
           nombre: `${prof.nombre} ${prof.apellidos}`,
         }))}
         onReassign={handleReassignProfessional}
+        onUpdateEvent={handleInlineUpdate}
       />
     </div>
   );
