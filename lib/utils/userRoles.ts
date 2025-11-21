@@ -1,8 +1,13 @@
 // lib/utils/userRoles.ts
+import { useState, useEffect } from 'react';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { AppRole, ROLE_LABELS, ROLE_DESCRIPTIONS } from '@/lib/auth/roles';
 
-export type UserRole = 'admin' | 'doctor' | 'coordinador' | 'staff';
+// Re-exportar tipos para compatibilidad
+export type UserRole = AppRole;
+export { ROLE_LABELS, ROLE_DESCRIPTIONS };
 
 export interface UserProfile {
   email: string;
@@ -21,7 +26,7 @@ export interface UserProfile {
 export async function createUserProfile(
   uid: string,
   email: string,
-  role: UserRole = 'staff',
+  role: UserRole = 'invitado',
   displayName?: string
 ): Promise<void> {
   try {
@@ -46,11 +51,11 @@ export async function createUserProfile(
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   try {
     const userDoc = await getDoc(doc(db, 'users', uid));
-    
+
     if (!userDoc.exists()) {
       return null;
     }
-    
+
     const data = userDoc.data();
     return {
       email: data.email,
@@ -85,25 +90,26 @@ export async function updateLastLogin(uid: string): Promise<void> {
 /**
  * Verifica si el usuario tiene un rol específico
  */
-export async function hasRole(uid: string, role: UserRole): Promise<boolean> {
+export async function hasRoleAsync(uid: string, role: UserRole): Promise<boolean> {
   const profile = await getUserProfile(uid);
-  return profile?.role === role;
+  if (!profile) return false;
+  if (profile.role === 'admin') return true;
+  return profile.role === role;
 }
 
 /**
  * Verifica si el usuario tiene al menos uno de los roles especificados
  */
-export async function hasAnyRole(uid: string, roles: UserRole[]): Promise<boolean> {
+export async function hasAnyRoleAsync(uid: string, roles: UserRole[]): Promise<boolean> {
   const profile = await getUserProfile(uid);
-  return profile ? roles.includes(profile.role) : false;
+  if (!profile) return false;
+  if (profile.role === 'admin') return true;
+  return roles.includes(profile.role);
 }
 
 /**
  * Hook para usar roles en componentes
  */
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/hooks/useAuth';
-
 export function useUserRole() {
   const { user } = useAuth();
   const [role, setRole] = useState<UserRole | null>(null);
@@ -125,11 +131,24 @@ export function useUserRole() {
   return {
     role,
     loading,
+    // Helpers para verificar roles
     isAdmin: role === 'admin',
-    isDoctor: role === 'doctor',
     isCoordinador: role === 'coordinador',
-    isStaff: role === 'staff',
-    hasRole: (r: UserRole) => role === r,
-    hasAnyRole: (roles: UserRole[]) => role ? roles.includes(role) : false
+    isProfesional: role === 'profesional',
+    isRecepcion: role === 'recepcion',
+    isInvitado: role === 'invitado',
+    // Funciones de verificación
+    hasRole: (r: UserRole) => {
+      if (role === 'admin') return true;
+      return role === r;
+    },
+    hasAnyRole: (roles: UserRole[]) => {
+      if (!role) return false;
+      if (role === 'admin') return true;
+      return roles.includes(role);
+    },
+    // Label para mostrar en UI
+    roleLabel: role ? ROLE_LABELS[role] : '',
+    roleDescription: role ? ROLE_DESCRIPTIONS[role] : ''
   };
 }

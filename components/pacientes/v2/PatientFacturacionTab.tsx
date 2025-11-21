@@ -1,35 +1,13 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { FileText, Euro, Clock, CheckCircle2, AlertCircle, Calendar, Send, Download, Eye, Plus, Search, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-
-interface Factura {
-  id: string;
-  numero: string;
-  fecha: Date;
-  vencimiento: Date;
-  concepto: string;
-  estado: 'pagada' | 'pendiente' | 'vencida';
-  total: number;
-  pagado: number;
-  metodoPago?: string;
-  fechaPago?: Date;
-}
-
-interface Presupuesto {
-  id: string;
-  numero: string;
-  fecha: Date;
-  validoHasta: Date;
-  concepto: string;
-  estado: 'pendiente' | 'aceptado' | 'rechazado' | 'caducado';
-  total: number;
-}
+import type { PacienteFactura, PacientePresupuesto } from '@/types';
 
 interface Props {
-  facturas: Factura[];
-  presupuestos: Presupuesto[];
+  facturas: PacienteFactura[];
+  presupuestos: PacientePresupuesto[];
   onNuevaFactura?: () => void;
   onNuevoPresupuesto?: () => void;
   onVerFactura?: (id: string) => void;
@@ -51,6 +29,15 @@ export default function PatientFacturacionTab({
   const [vistaActiva, setVistaActiva] = useState<'facturas' | 'presupuestos'>('facturas');
   const [filtroEstado, setFiltroEstado] = useState<string>('todos');
   const [busqueda, setBusqueda] = useState('');
+  const currencyFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat('es-ES', {
+        style: 'currency',
+        currency: 'EUR',
+      }),
+    []
+  );
+  const formatCurrency = useCallback((amount: number) => currencyFormatter.format(amount), [currencyFormatter]);
 
   const resumenFinanciero = useMemo(() => {
     const totalFacturado = facturas.reduce((sum, f) => sum + f.total, 0);
@@ -113,12 +100,8 @@ export default function PatientFacturacionTab({
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(amount);
-  };
+  const safeFormatDate = (date?: Date | null) =>
+    date ? format(date, 'dd MMM yyyy', { locale: es }) : 'Sin fecha';
 
   return (
     <div className="space-y-6">
@@ -356,16 +339,16 @@ export default function PatientFacturacionTab({
                     <div className="flex flex-wrap gap-4 text-sm text-text-muted">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
-                        Emitida: {format(factura.fecha, 'dd MMM yyyy', { locale: es })}
+                        Emitida: {safeFormatDate(factura.fecha)}
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock className="w-4 h-4" />
-                        Vence: {format(factura.vencimiento, 'dd MMM yyyy', { locale: es })}
+                        Vence: {safeFormatDate(factura.vencimiento)}
                       </div>
                       {factura.fechaPago && (
                         <div className="flex items-center gap-1 text-success">
                           <CheckCircle2 className="w-4 h-4" />
-                          Pagada: {format(factura.fechaPago, 'dd MMM yyyy', { locale: es })}
+                          Pagada: {safeFormatDate(factura.fechaPago)}
                         </div>
                       )}
                     </div>
@@ -445,11 +428,11 @@ export default function PatientFacturacionTab({
                     <div className="flex flex-wrap gap-4 text-sm text-text-muted">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
-                        Emitido: {format(presupuesto.fecha, 'dd MMM yyyy', { locale: es })}
+                        Emitido: {safeFormatDate(presupuesto.fecha)}
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock className="w-4 h-4" />
-                        Válido hasta: {format(presupuesto.validoHasta, 'dd MMM yyyy', { locale: es })}
+                        Válido hasta: {safeFormatDate(presupuesto.validoHasta)}
                       </div>
                     </div>
                   </div>

@@ -6,7 +6,7 @@ export const createProtocolSchema = z.object({
   descripcion: z.string().optional(),
   requiereQuiz: z.boolean().default(false),
   visiblePara: z
-    .array(z.enum(['admin', 'coordinacion', 'terapeuta', 'admin_ops', 'marketing', 'invitado']))
+    .array(z.enum(['admin', 'coordinador', 'profesional', 'recepcion', 'invitado']))
     .nonempty('Debe seleccionar al menos un grupo de usuarios')
 });
 

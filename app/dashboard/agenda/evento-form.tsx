@@ -84,6 +84,7 @@ export function AgendaEventForm({ onSuccess }: AgendaEventFormProps) {
             const data = docSnap.data() ?? {};
             return {
               id: docSnap.id,
+              numeroHistoria: data.numeroHistoria ?? '',
               nombre: data.nombre ?? 'Sin nombre',
               apellidos: data.apellidos ?? '',
               fechaNacimiento: data.fechaNacimiento?.toDate?.() ?? new Date('1970-01-01'),

@@ -1,12 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, orderBy, query, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { Profesional } from '@/types';
+import { useProfesionales } from '@/lib/hooks/useQueries';
 import { PacienteForm, PacienteFormValues } from '@/components/pacientes/PacienteForm';
 import { toast } from 'sonner';
 
@@ -14,50 +12,9 @@ export default function NuevoPacientePage() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const [profesionales, setProfesionales] = useState<Profesional[]>([]);
-  const [loadingProfesionales, setLoadingProfesionales] = useState(true);
+  const { data: profesionales = [], isLoading: loadingProfesionales } = useProfesionales();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const cargarProfesionales = async () => {
-      setLoadingProfesionales(true);
-      try {
-        const profesionalesSnap = await getDocs(
-          query(collection(db, 'profesionales'), orderBy('apellidos'), limit(200))
-        );
-
-        const profesionalesData: Profesional[] = profesionalesSnap.docs.map((docSnap) => {
-          const data = docSnap.data() ?? {};
-          return {
-            id: docSnap.id,
-            nombre: data.nombre ?? 'Sin nombre',
-            apellidos: data.apellidos ?? '',
-            especialidad: data.especialidad ?? 'medicina',
-            email: data.email ?? '',
-            telefono: data.telefono,
-            activo: data.activo ?? true,
-            horasSemanales: data.horasSemanales ?? 0,
-            diasTrabajo: Array.isArray(data.diasTrabajo) ? data.diasTrabajo : [],
-            horaInicio: data.horaInicio ?? '09:00',
-            horaFin: data.horaFin ?? '17:00',
-            serviciosAsignados: data.serviciosAsignados ?? 0,
-            cargaTrabajo: data.cargaTrabajo ?? 0,
-            createdAt: data.createdAt?.toDate?.() ?? new Date(),
-            updatedAt: data.updatedAt?.toDate?.() ?? new Date()
-          };
-        });
-
-        setProfesionales(profesionalesData);
-      } catch (err) {
-        console.error('Error al cargar profesionales:', err);
-      } finally {
-        setLoadingProfesionales(false);
-      }
-    };
-
-    cargarProfesionales();
-  }, []);
 
   const manejarSubmit = async (values: PacienteFormValues) => {
     if (!user) {

@@ -37,12 +37,12 @@ export default function PrimaryTabs<T extends string>({
             onClick={() => onChange(tab.id)}
             className={`rounded-2xl border px-3 py-2 font-semibold transition-colors focus-visible:focus-ring ${
               isActive
-                ? 'border-brand bg-brand text-text shadow-sm'
+                ? 'border-brand bg-brand text-white shadow-sm'
                 : 'border-border bg-cardHover/50 text-text-muted hover:bg-cardHover'
             }`}
           >
             <span className="flex items-center gap-2">
-              {tab.icon ? <span className="rounded-full bg-white/10 p-1">{tab.icon}</span> : null}
+              {tab.icon ? <span className={`rounded-full p-1 ${isActive ? 'bg-white/20' : 'bg-gray-200/60'}`}>{tab.icon}</span> : null}
               {tab.label}
             </span>
             {tab.helper && (

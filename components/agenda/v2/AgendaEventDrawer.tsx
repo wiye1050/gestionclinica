@@ -113,15 +113,15 @@ export default function AgendaEventDrawer({
       onClose={onClose}
       title={event.titulo || 'Cita sin título'}
       subtitle={fechaLabel}
-      headerColor="from-white to-white"
-      headerTextClassName="text-text"
-      headerSubtitleClassName="text-text-muted"
+      headerColor="from-brand-subtle to-brand-subtle/50"
+      headerTextClassName="text-gray-900"
+      headerSubtitleClassName="text-gray-600"
       variant="drawer"
       actions={
         onEdit && (
           <button
             onClick={() => onEdit(event)}
-            className="rounded-lg p-2 hover:bg-white/10 transition-colors"
+            className="rounded-lg p-2 hover:bg-gray-200/60 transition-colors text-gray-700"
             title="Editar cita"
           >
             <Edit className="w-5 h-5" />

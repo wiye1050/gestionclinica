@@ -644,6 +644,7 @@ export interface ConsentimientoPaciente {
 
 export interface Paciente {
   id: string;
+  numeroHistoria: string; // NHC - Número de Historia Clínica (auto-generado, único)
   nombre: string;
   apellidos: string;
   fechaNacimiento: Date;
@@ -695,6 +696,85 @@ export interface RegistroHistorialPaciente {
   adjuntos?: string[];
   createdAt: Date;
   creadoPor: string;
+}
+
+// ============================================
+// TIPOS PARA FACTURACIÓN DE PACIENTES
+// ============================================
+
+export interface FacturaItem {
+  concepto: string;
+  cantidad: number;
+  precioUnitario: number;
+  total: number;
+}
+
+export type EstadoFactura = 'pagada' | 'pendiente' | 'vencida';
+
+export interface PacienteFactura {
+  id: string;
+  pacienteId: string;
+  numero: string;
+  fecha: Date;
+  vencimiento?: Date;
+  concepto: string;
+  estado: EstadoFactura;
+  total: number;
+  pagado: number;
+  metodoPago?: string;
+  fechaPago?: Date;
+  items: FacturaItem[];
+  notas?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PresupuestoItem {
+  concepto: string;
+  cantidad: number;
+  precioUnitario: number;
+  total: number;
+}
+
+export type EstadoPresupuesto = 'pendiente' | 'aceptado' | 'rechazado' | 'caducado';
+
+export interface PacientePresupuesto {
+  id: string;
+  pacienteId: string;
+  numero: string;
+  fecha: Date;
+  validoHasta?: Date;
+  concepto: string;
+  estado: EstadoPresupuesto;
+  total: number;
+  items: PresupuestoItem[];
+  notas?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type TipoDocumentoPaciente =
+  | 'informe'
+  | 'consentimiento'
+  | 'receta'
+  | 'imagen'
+  | 'analitica'
+  | 'factura'
+  | 'otro';
+
+export interface PacienteDocumento {
+  id: string;
+  pacienteId: string;
+  nombre: string;
+  tipo: TipoDocumentoPaciente;
+  tamaño: number;
+  url: string;
+  storagePath?: string;
+  fechaSubida: Date;
+  subidoPor: string;
+  etiquetas: string[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // ============================================

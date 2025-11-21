@@ -894,7 +894,7 @@ export default function AgendaClient({
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => openNewEventModal(new Date())}
-                  className="inline-flex items-center gap-1 rounded-2xl bg-brand px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-brand/90 focus-visible:focus-ring"
+                  className="inline-flex items-center gap-1 rounded-2xl bg-brand-600 px-3 py-2 text-xs font-semibold text-white shadow-md transition-all hover:bg-brand-700 hover:shadow-lg focus-visible:focus-ring"
                 >
                   <Plus className="h-4 w-4" /> Nueva cita
                 </button>

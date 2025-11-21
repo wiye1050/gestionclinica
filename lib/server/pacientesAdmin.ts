@@ -1,5 +1,56 @@
 import { adminDb } from '@/lib/firebaseAdmin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { sanitizeRichText, sanitizeStringArray, sanitizeText } from '@/lib/utils/sanitize';
+
+/**
+ * Genera el siguiente Número de Historia Clínica (NHC) usando un contador atómico
+ * Retorna un número único incremental como string
+ */
+export async function generateNextNHC(): Promise<string> {
+  if (!adminDb) {
+    throw new Error('Firebase Admin no está configurado.');
+  }
+
+  const counterRef = adminDb.collection('counters').doc('pacientes');
+
+  // Usar transacción para garantizar atomicidad
+  const newNHC = await adminDb.runTransaction(async (transaction) => {
+    const counterDoc = await transaction.get(counterRef);
+
+    let currentValue = 0;
+    if (counterDoc.exists) {
+      currentValue = counterDoc.data()?.lastNHC ?? 0;
+    }
+
+    const nextValue = currentValue + 1;
+
+    transaction.set(counterRef, {
+      lastNHC: nextValue,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    return nextValue;
+  });
+
+  return String(newNHC);
+}
+
+/**
+ * Inicializa el contador de NHC con un valor específico
+ * Útil para migración de datos existentes
+ */
+export async function initializeNHCCounter(startValue: number): Promise<void> {
+  if (!adminDb) {
+    throw new Error('Firebase Admin no está configurado.');
+  }
+
+  const counterRef = adminDb.collection('counters').doc('pacientes');
+  await counterRef.set({
+    lastNHC: startValue,
+    updatedAt: FieldValue.serverTimestamp(),
+    initializedAt: FieldValue.serverTimestamp(),
+  });
+}
 
 export function normalizeCommaList(value?: string | string[] | null) {
   if (!value) return [] as string[];
@@ -74,6 +125,14 @@ export async function createPaciente(values: Record<string, unknown>, user: { em
   }
 
   const payload = buildPacientePayload(values, user);
+
+  // Generar NHC automáticamente si no viene en los valores (migración puede traer NHC)
+  if (!values.numeroHistoria) {
+    payload.numeroHistoria = await generateNextNHC();
+  } else {
+    payload.numeroHistoria = String(values.numeroHistoria);
+  }
+
   const docRef = await adminDb.collection('pacientes').add(payload);
 
   await adminDb.collection('pacientes-historial').add({
@@ -126,6 +185,8 @@ export async function updatePaciente(
   payload.updatedAt = new Date();
   payload.creadoPor = snapshot.data()?.creadoPor ?? user.email ?? user.uid;
   payload.creadoPorId = snapshot.data()?.creadoPorId ?? user.uid;
+  // Preservar el NHC existente - nunca debe cambiar
+  payload.numeroHistoria = snapshot.data()?.numeroHistoria ?? '';
 
   await docRef.set(payload);
 

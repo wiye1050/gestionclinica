@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { createDailyReport } from '@/lib/server/reports';
 
-const ALLOWED_ROLES = new Set(['admin', 'coordinacion', 'operador']);
+const ALLOWED_ROLES = new Set(['admin', 'coordinador', 'operador']);
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       tipo: body.tipo ?? 'incidencia',
       categoria: body.categoria ?? 'personal',
       prioridad: body.prioridad ?? 'media',
-      responsable: body.responsable ?? 'coordinacion',
+      responsable: body.responsable ?? 'coordinador',
       descripcion: body.descripcion,
       accionInmediata: body.accionInmediata ?? '',
       requiereSeguimiento: Boolean(body.requiereSeguimiento),

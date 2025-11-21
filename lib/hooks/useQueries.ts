@@ -13,6 +13,14 @@ import type {
   Sala
 } from '@/types';
 import type { AgendaEvent } from '@/components/agenda/v2/agendaHelpers';
+import {
+  transformProfesional,
+  transformPaciente,
+  transformServicioAsignado,
+  transformGrupoPaciente,
+  transformCatalogoServicio,
+  transformSala,
+} from '@/lib/utils/firestoreTransformers';
 
 // Hook para KPIs con caché agresivo (datos que no cambian tanto)
 export function useKPIs() {
@@ -192,13 +200,7 @@ export function useServicios(options?: { initialData?: ServicioAsignado[] }) {
         query(collection(db, 'servicios-asignados'), orderBy('createdAt', 'desc'), limit(300))
       );
 
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.() ?? new Date(),
-        updatedAt: doc.data().updatedAt?.toDate?.() ?? new Date(),
-        fechaProgramada: doc.data().fechaProgramada?.toDate?.(),
-      })) as ServicioAsignado[];
+      return snapshot.docs.map(transformServicioAsignado);
     },
     staleTime: 3 * 60 * 1000, // 3 minutos
     initialData: options?.initialData,
@@ -207,22 +209,22 @@ export function useServicios(options?: { initialData?: ServicioAsignado[] }) {
 }
 
 // Hook para profesionales
-export function useProfesionales(options?: { initialData?: Profesional[] }) {
+export function useProfesionales(options?: {
+  initialData?: Profesional[];
+  includeInactive?: boolean;
+}) {
   return useQuery<Profesional[]>({
-    queryKey: ['profesionales'],
+    queryKey: ['profesionales', { includeInactive: options?.includeInactive }],
     queryFn: async () => {
       const snapshot = await getDocs(
-        query(collection(db, 'profesionales'), orderBy('apellidos'), limit(100))
+        query(collection(db, 'profesionales'), orderBy('apellidos'), limit(200))
       );
 
-      const profesionales = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.() ?? new Date(),
-        updatedAt: doc.data().updatedAt?.toDate?.() ?? new Date(),
-      })) as Profesional[];
+      const profesionales = snapshot.docs.map(transformProfesional);
 
-      return profesionales.filter(p => p.activo);
+      return options?.includeInactive
+        ? profesionales
+        : profesionales.filter(p => p.activo);
     },
     staleTime: 5 * 60 * 1000, // 5 minutos - profesionales no cambian frecuentemente
     initialData: options?.initialData,
@@ -239,13 +241,7 @@ export function useGruposPacientes(options?: { initialData?: GrupoPaciente[] }) 
         query(collection(db, 'grupos-pacientes'), orderBy('nombre'), limit(100))
       );
 
-      const grupos = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.() ?? new Date(),
-        updatedAt: doc.data().updatedAt?.toDate?.() ?? new Date(),
-      })) as GrupoPaciente[];
-
+      const grupos = snapshot.docs.map(transformGrupoPaciente);
       return grupos.filter(g => g.activo);
     },
     staleTime: 5 * 60 * 1000,
@@ -263,13 +259,7 @@ export function useCatalogoServicios(options?: { initialData?: CatalogoServicio[
         query(collection(db, 'catalogo-servicios'), orderBy('nombre'), limit(200))
       );
 
-      const servicios = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.() ?? new Date(),
-        updatedAt: doc.data().updatedAt?.toDate?.() ?? new Date(),
-      })) as CatalogoServicio[];
-
+      const servicios = snapshot.docs.map(transformCatalogoServicio);
       return servicios.filter(s => s.activo);
     },
     staleTime: 10 * 60 * 1000, // 10 minutos - catálogo es bastante estático
@@ -378,20 +368,7 @@ export function useSalas() {
         query(collection(db, 'salas'), orderBy('nombre'), limit(50))
       );
 
-      return snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() ?? {};
-        return {
-          id: docSnap.id,
-          nombre: data.nombre ?? 'Sin nombre',
-          tipo: data.tipo ?? 'general',
-          capacidad: data.capacidad ?? 0,
-          equipamiento: Array.isArray(data.equipamiento) ? data.equipamiento : [],
-          activa: data.activa ?? true,
-          ocupacionActual: data.ocupacionActual ?? 0,
-          createdAt: data.createdAt?.toDate?.() ?? new Date(),
-          updatedAt: data.updatedAt?.toDate?.() ?? new Date()
-        } as Sala;
-      });
+      return snapshot.docs.map(transformSala);
     },
     staleTime: 10 * 60 * 1000, // 10 minutos - salas muy estáticas
   });
@@ -406,61 +383,7 @@ export function usePacientes() {
         query(collection(db, 'pacientes'), orderBy('apellidos'), limit(500))
       );
 
-      type ConsentimientoSnapshot = {
-        tipo?: string;
-        fecha?: { toDate?: () => Date };
-        documentoId?: string;
-        firmadoPor?: string;
-      };
-
-      return snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() ?? {};
-        return {
-          id: docSnap.id,
-          nombre: data.nombre ?? 'Sin nombre',
-          apellidos: data.apellidos ?? '',
-          fechaNacimiento: data.fechaNacimiento?.toDate?.() ?? new Date('1970-01-01'),
-          genero: data.genero ?? 'no-especificado',
-          documentoId: data.documentoId,
-          tipoDocumento: data.tipoDocumento,
-          telefono: data.telefono,
-          email: data.email,
-          direccion: data.direccion,
-          ciudad: data.ciudad,
-          codigoPostal: data.codigoPostal,
-          aseguradora: data.aseguradora,
-          numeroPoliza: data.numeroPoliza,
-          alergias: Array.isArray(data.alergias) ? data.alergias : [],
-          alertasClinicas: Array.isArray(data.alertasClinicas) ? data.alertasClinicas : [],
-          diagnosticosPrincipales: Array.isArray(data.diagnosticosPrincipales)
-            ? data.diagnosticosPrincipales
-            : [],
-          riesgo: data.riesgo ?? 'medio',
-          contactoEmergencia: data.contactoEmergencia
-            ? {
-                nombre: data.contactoEmergencia.nombre ?? '',
-                parentesco: data.contactoEmergencia.parentesco ?? '',
-                telefono: data.contactoEmergencia.telefono ?? ''
-              }
-            : undefined,
-          consentimientos: Array.isArray(data.consentimientos)
-            ? (data.consentimientos as ConsentimientoSnapshot[]).map((item) => ({
-                tipo: item?.tipo ?? 'general',
-                fecha: item?.fecha?.toDate?.() ?? new Date(),
-                documentoId: item?.documentoId,
-                firmadoPor: item?.firmadoPor
-              }))
-            : [],
-          estado: data.estado ?? 'activo',
-          profesionalReferenteId: data.profesionalReferenteId,
-          grupoPacienteId: data.grupoPacienteId,
-          notasInternas: data.notasInternas,
-          creadoPor: data.creadoPor ?? 'desconocido',
-          createdAt: data.createdAt?.toDate?.() ?? new Date(),
-          updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
-          modificadoPor: data.modificadoPor
-        } as Paciente;
-      });
+      return snapshot.docs.map(transformPaciente);
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
   });

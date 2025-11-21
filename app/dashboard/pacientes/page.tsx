@@ -22,6 +22,7 @@ import {
   LayoutGrid,
   List,
   Download,
+  Upload,
   Plus
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -234,6 +235,13 @@ function PacientesContent() {
         description="Gestiona las fichas, alertas y seguimientos de los pacientes"
         actions={
           <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard/pacientes/importar"
+              className="inline-flex items-center gap-2 rounded-pill border border-border bg-card px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
+            >
+              <Upload className="h-4 w-4" />
+              Importar
+            </Link>
             <button
               onClick={handleExportar}
               className="inline-flex items-center gap-2 rounded-pill border border-border bg-card px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-cardHover focus-visible:focus-ring"
@@ -243,10 +251,10 @@ function PacientesContent() {
             </button>
             <Link
               href="/dashboard/pacientes/nuevo"
-              className="inline-flex items-center gap-2 rounded-pill bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand/90 focus-visible:focus-ring"
+              className="inline-flex items-center gap-2 rounded-pill bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:bg-brand-700 hover:shadow-lg focus-visible:focus-ring"
             >
               <Plus className="h-4 w-4" />
-              Nuevo
+              Nuevo paciente
             </Link>
           </div>
         }

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { createServicioAsignado, type CreateServicioInput } from '@/lib/server/servicios';
 
-const ALLOWED_ROLES = new Set(['admin', 'coordinacion']);
+const ALLOWED_ROLES = new Set(['admin', 'coordinador']);
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();

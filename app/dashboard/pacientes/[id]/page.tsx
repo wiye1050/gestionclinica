@@ -1,30 +1,41 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { collection, doc, getDoc, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import {
-  Paciente,
-  Profesional,
-  RegistroHistorialPaciente,
-  ServicioAsignado
-} from '@/types';
-import { db, storage } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { collection, addDoc, doc, deleteDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { storage, db } from '@/lib/firebase';
+import { usePatientDetailData } from '@/lib/hooks/usePatientDetailData';
+import { useAuth } from '@/lib/hooks/useAuth';
 import PatientProfileLayout, { PatientTab } from '@/components/pacientes/v2/PatientProfileLayout';
 import PatientResumenTab from '@/components/pacientes/v2/PatientResumenTab';
 import PatientHistorialClinicoTab from '@/components/pacientes/v2/PatientHistorialClinicoTab';
-import PatientCitasTab, { Cita } from '@/components/pacientes/v2/PatientCitasTab';
+import PatientCitasTab from '@/components/pacientes/v2/PatientCitasTab';
 import PatientDocumentosTab from '@/components/pacientes/v2/PatientDocumentosTab';
 import PatientFacturacionTab from '@/components/pacientes/v2/PatientFacturacionTab';
 import PatientNotasTab from '@/components/pacientes/v2/PatientNotasTab';
-import type { Activity as TimelineActivity } from '@/components/pacientes/v2/PatientTimeline';
 import PatientAvailabilityCard from '@/components/pacientes/v2/PatientAvailabilityCard';
-import type { AgendaLinkBuilder } from '@/components/pacientes/v2/types';
+import DetailPanel from '@/components/shared/DetailPanel';
 import { resolverSeguimientoAction } from '../actions';
 import { hasActiveFollowUpInHistory } from '@/lib/utils/followUps';
 import { toast } from 'sonner';
+import {
+  HISTORIAL_FILTROS,
+  HISTORIAL_BADGE_COLORS,
+  filtrarHistorial,
+  type HistorialFiltro,
+} from '@/components/pacientes/v2/pacientesConstants';
+import {
+  historialToActividades,
+  historialToCitas,
+  getProximasCitas,
+  extractDocumentos,
+  historialToNotas,
+  extractAlergias,
+  extractAntecedentes,
+  createAgendaLinkBuilder,
+} from '@/components/pacientes/v2/pacientesHelpers';
 import {
   LayoutDashboard,
   Heart,
@@ -32,332 +43,92 @@ import {
   Activity as ActivityIcon,
   Folder,
   DollarSign,
-  StickyNote
+  StickyNote,
 } from 'lucide-react';
-
-const HISTORIAL_FILTROS = [
-  { value: 'todos', label: 'Todos' },
-  { value: 'clinico', label: 'Clínicos' },
-  { value: 'administrativo', label: 'Administrativos' }
-] as const;
-
-type HistorialFiltro = (typeof HISTORIAL_FILTROS)[number]['value'];
-
-type DocumentoPaciente = {
-  id: string;
-  nombre: string;
-  tipo: 'informe' | 'consentimiento' | 'receta' | 'imagen' | 'analitica' | 'factura' | 'otro';
-  tamaño: number;
-  url: string;
-  fechaSubida: Date;
-  subidoPor: string;
-  etiquetas: string[];
-};
-
-type NotaPaciente = Parameters<typeof PatientNotasTab>[0]['notas'][number];
-type ConsentimientoRaw = {
-  tipo?: string;
-  fecha?: { toDate?: () => Date };
-  documentoId?: string;
-  firmadoPor?: string;
-};
+import type { PacienteFactura, PacientePresupuesto } from '@/types';
 
 export default function PacienteDetallePage() {
   const params = useParams();
   const router = useRouter();
   const pacienteId = Array.isArray(params?.id) ? params?.id[0] : params?.id;
+  const { user } = useAuth();
 
-  const [paciente, setPaciente] = useState<Paciente | null>(null);
-  const [profesionales, setProfesionales] = useState<Profesional[]>([]);
-  const [historial, setHistorial] = useState<RegistroHistorialPaciente[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Hook centralizado para cargar todos los datos
+  const {
+    paciente,
+    historial,
+    serviciosRelacionados,
+    loading,
+    error,
+    relacionesError,
+    refreshHistorial,
+    profesionalReferente,
+    profesionalesOptions,
+    facturas,
+    presupuestos,
+    documentos: documentosFirestore,
+    refreshFacturacion,
+    refreshDocumentos,
+  } = usePatientDetailData({ pacienteId });
+
+  // Estados locales de UI
   const [activeTab, setActiveTab] = useState<PatientTab>('resumen');
   const [historialFiltro, setHistorialFiltro] = useState<HistorialFiltro>('todos');
   const [compartiendo, setCompartiendo] = useState(false);
+  const [facturaSeleccionada, setFacturaSeleccionada] = useState<PacienteFactura | null>(null);
+  const [presupuestoSeleccionado, setPresupuestoSeleccionado] = useState<PacientePresupuesto | null>(null);
+  const [detalleTab, setDetalleTab] = useState<'resumen' | 'conceptos'>('resumen');
 
-  const [serviciosRelacionados, setServiciosRelacionados] = useState<ServicioAsignado[]>([]);
-  const [relacionesError, setRelacionesError] = useState<string | null>(null);
-
-  const fetchRelacionesGrupo = useCallback(
-    async (grupoId: string) => {
-      setRelacionesError(null);
-
-      try {
-        const serviciosSnap = await getDocs(
-          query(collection(db, 'servicios-asignados'), where('grupoId', '==', grupoId), limit(25))
-        );
-
-        const serviciosData: ServicioAsignado[] = serviciosSnap.docs.map((docSnap) => {
-          const data = docSnap.data() ?? {};
-          return {
-            id: docSnap.id,
-            catalogoServicioId: data.catalogoServicioId,
-            catalogoServicioNombre: data.catalogoServicioNombre,
-            grupoId: data.grupoId,
-            grupoNombre: data.grupoNombre,
-            esActual: data.esActual ?? false,
-            estado: data.estado ?? 'activo',
-            tiquet: data.tiquet ?? 'NO',
-            profesionalPrincipalId: data.profesionalPrincipalId,
-            profesionalPrincipalNombre: data.profesionalPrincipalNombre,
-            requiereApoyo: data.requiereApoyo ?? false,
-            sala: data.sala,
-            tiempoReal: data.tiempoReal,
-            supervision: data.supervision ?? false,
-            vecesRealizadoMes: data.vecesRealizadoMes ?? 0,
-            ultimaRealizacion: data.ultimaRealizacion?.toDate?.(),
-            proximaRealizacion: data.proximaRealizacion?.toDate?.(),
-            notas: data.notas,
-            createdAt: data.createdAt?.toDate?.() ?? new Date(),
-            updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
-            creadoPor: data.creadoPor ?? 'sistema'
-          } as ServicioAsignado;
-        });
-
-        setServiciosRelacionados(serviciosData);
-      } catch (err) {
-        console.error('Error cargando servicios relacionados', err);
-        setRelacionesError('No se pudieron cargar los servicios relacionados.');
-        setServiciosRelacionados([]);
-      } finally {
-        }
-    },
+  // Datos derivados con memos
+  const actividadesTimeline = useMemo(() => historialToActividades(historial), [historial]);
+  const citas = useMemo(() => historialToCitas(historial), [historial]);
+  const proximasCitas = useMemo(() => getProximasCitas(citas), [citas]);
+  const documentosFirestoreMap = useMemo(
+    () => new Map(documentosFirestore.map((doc) => [doc.id, doc])),
+    [documentosFirestore]
+  );
+  const documentos = useMemo(() => {
+    const docsFirestore = documentosFirestore.map((doc) => ({
+      id: doc.id,
+      nombre: doc.nombre,
+      tipo: doc.tipo,
+      tamaño: doc.tamaño,
+      url: doc.url,
+      fechaSubida: doc.fechaSubida,
+      subidoPor: doc.subidoPor,
+      etiquetas: doc.etiquetas,
+    }));
+    const docsExtraidos = extractDocumentos(paciente, historial);
+    return [...docsFirestore, ...docsExtraidos];
+  }, [documentosFirestore, paciente, historial]);
+  const notas = useMemo(() => historialToNotas(historial), [historial]);
+  const alergiasData = useMemo(() => extractAlergias(paciente), [paciente]);
+  const antecedentesData = useMemo(() => extractAntecedentes(paciente), [paciente]);
+  const historialFiltrado = useMemo(
+    () => filtrarHistorial(historial, historialFiltro),
+    [historial, historialFiltro]
+  );
+  const currencyFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat('es-ES', {
+        style: 'currency',
+        currency: 'EUR',
+      }),
     []
   );
 
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      if (!pacienteId) {
-        setError('Identificador de paciente no válido.');
-        setLoading(false);
-        return;
-      }
+  const agendaLinkBuilder = useMemo(() => createAgendaLinkBuilder(paciente), [paciente]);
+  const agendaLink = agendaLinkBuilder?.({});
+  const inferirTipoDocumento = useCallback((file: File) => {
+    const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+    if (file.type.includes('image')) return 'imagen';
+    if (['pdf', 'doc', 'docx'].includes(extension)) return 'informe';
+    if (['xls', 'xlsx', 'csv'].includes(extension)) return 'analitica';
+    if (extension === 'jpg' || extension === 'jpeg' || extension === 'png') return 'imagen';
+    return 'otro';
+  }, []);
 
-      setLoading(true);
-      try {
-        const pacienteRef = doc(db, 'pacientes', pacienteId);
-        const pacienteSnap = await getDoc(pacienteRef);
-        if (!pacienteSnap.exists()) {
-          setError('Paciente no encontrado');
-          setPaciente(null);
-          setLoading(false);
-          return;
-        }
-
-        const data = pacienteSnap.data() ?? {};
-        const consentimientos = Array.isArray(data.consentimientos)
-          ? data.consentimientos.map((item: ConsentimientoRaw) => ({
-              tipo: item?.tipo ?? 'general',
-              fecha: item?.fecha?.toDate?.() ?? new Date(),
-              documentoId: item?.documentoId,
-              firmadoPor: item?.firmadoPor
-            }))
-          : [];
-
-        const pacienteData: Paciente = {
-          id: pacienteSnap.id,
-          nombre: data.nombre ?? 'Sin nombre',
-          apellidos: data.apellidos ?? '',
-          fechaNacimiento: data.fechaNacimiento?.toDate?.() ?? new Date('1970-01-01'),
-          genero: data.genero ?? 'no-especificado',
-          documentoId: data.documentoId,
-          tipoDocumento: data.tipoDocumento,
-          telefono: data.telefono,
-          email: data.email,
-          direccion: data.direccion,
-          ciudad: data.ciudad,
-          codigoPostal: data.codigoPostal,
-          aseguradora: data.aseguradora,
-          numeroPoliza: data.numeroPoliza,
-          alergias: Array.isArray(data.alergias) ? data.alergias : [],
-          alertasClinicas: Array.isArray(data.alertasClinicas) ? data.alertasClinicas : [],
-          diagnosticosPrincipales: Array.isArray(data.diagnosticosPrincipales)
-            ? data.diagnosticosPrincipales
-            : [],
-          riesgo: data.riesgo ?? 'medio',
-          contactoEmergencia: data.contactoEmergencia
-            ? {
-                nombre: data.contactoEmergencia.nombre ?? '',
-                parentesco: data.contactoEmergencia.parentesco ?? '',
-                telefono: data.contactoEmergencia.telefono ?? ''
-              }
-            : undefined,
-          consentimientos,
-          estado: data.estado ?? 'activo',
-          profesionalReferenteId: data.profesionalReferenteId,
-          grupoPacienteId: data.grupoPacienteId,
-          notasInternas: data.notasInternas,
-          createdAt: data.createdAt?.toDate?.() ?? new Date(),
-          updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
-          creadoPor: data.creadoPor ?? 'desconocido',
-          modificadoPor: data.modificadoPor
-        };
-
-        setPaciente(pacienteData);
-
-        const profesionalesSnap = await getDocs(
-          query(collection(db, 'profesionales'), orderBy('apellidos'), limit(200))
-        );
-        setProfesionales(
-          profesionalesSnap.docs.map((docSnap) => {
-            const profData = docSnap.data() ?? {};
-            return {
-              id: docSnap.id,
-              nombre: profData.nombre ?? 'Sin nombre',
-              apellidos: profData.apellidos ?? '',
-              especialidad: profData.especialidad ?? 'medicina',
-              email: profData.email ?? '',
-              telefono: profData.telefono,
-              activo: profData.activo ?? true,
-              horasSemanales: profData.horasSemanales ?? 0,
-              diasTrabajo: Array.isArray(profData.diasTrabajo) ? profData.diasTrabajo : [],
-              horaInicio: profData.horaInicio ?? '09:00',
-              horaFin: profData.horaFin ?? '17:00',
-              serviciosAsignados: profData.serviciosAsignados ?? 0,
-              cargaTrabajo: profData.cargaTrabajo ?? 0,
-              createdAt: profData.createdAt?.toDate?.() ?? new Date(),
-              updatedAt: profData.updatedAt?.toDate?.() ?? new Date()
-            } as Profesional;
-          })
-        );
-
-        const historialSnap = await getDocs(
-          query(
-            collection(db, 'pacientes-historial'),
-            where('pacienteId', '==', pacienteId),
-            orderBy('fecha', 'desc'),
-            limit(100)
-          )
-        );
-        setHistorial(
-          historialSnap.docs.map((docSnap) => {
-            const histData = docSnap.data() ?? {};
-            return {
-              id: docSnap.id,
-              pacienteId: histData.pacienteId ?? pacienteId,
-              eventoAgendaId: histData.eventoAgendaId,
-              servicioId: histData.servicioId,
-              servicioNombre: histData.servicioNombre,
-              profesionalId: histData.profesionalId,
-              profesionalNombre: histData.profesionalNombre,
-              fecha: histData.fecha?.toDate?.() ?? new Date(),
-              tipo: histData.tipo ?? 'consulta',
-              descripcion: histData.descripcion ?? '',
-              resultado: histData.resultado,
-              planesSeguimiento: histData.planesSeguimiento,
-              adjuntos: Array.isArray(histData.adjuntos) ? histData.adjuntos : [],
-              createdAt: histData.createdAt?.toDate?.() ?? new Date(),
-              creadoPor: histData.creadoPor ?? 'sistema'
-            } satisfies RegistroHistorialPaciente;
-          })
-        );
-
-        if (pacienteData.grupoPacienteId) {
-          await fetchRelacionesGrupo(pacienteData.grupoPacienteId);
-        }
-      } catch (err) {
-        console.error('Error cargando paciente:', err);
-        setError('No se pudo cargar la información del paciente.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchInitialData();
-  }, [pacienteId, fetchRelacionesGrupo]);
-
-  const profesionalReferente = useMemo(() => {
-    if (!paciente?.profesionalReferenteId) return null;
-    return profesionales.find((prof) => prof.id === paciente.profesionalReferenteId) ?? null;
-  }, [paciente, profesionales]);
-
-  const actividadesTimeline = useMemo<TimelineActivity[]>(() => {
-    return historial.map((registro) => {
-      const tipo = mapRegistroToActivityType(registro.tipo);
-      const estado = registro.resultado
-        ? 'success'
-        : registro.planesSeguimiento
-        ? 'info'
-        : undefined;
-
-      return {
-        id: registro.id,
-        tipo,
-        titulo: registro.servicioNombre ?? registro.tipo,
-        descripcion: registro.descripcion,
-        fecha: registro.fecha,
-        usuario: registro.profesionalNombre ?? registro.creadoPor,
-        estado,
-        agendaContext:
-          tipo === 'cita'
-            ? {
-                profesionalId: registro.profesionalId ?? undefined,
-                date: registro.fecha,
-              }
-            : undefined,
-      } satisfies TimelineActivity;
-    });
-  }, [historial]);
-
-  const citas = useMemo<Cita[]>(() => {
-  return historial.map((registro) => mapRegistroToCita(registro));
-}, [historial]);
-
-const proximasCitas = useMemo(() => {
-  const now = new Date();
-  return citas
-    .filter((cita) => cita.fecha >= now)
-    .sort((a, b) => a.fecha.getTime() - b.fecha.getTime())
-    .slice(0, 8)
-    .map((cita) => ({
-      id: cita.id,
-      fecha: cita.fecha,
-      profesional: cita.profesional,
-      profesionalId: cita.profesionalId,
-      tipo: cita.tipo,
-      estado: cita.estado,
-    }));
-}, [citas]);
-const profesionalesOptions = useMemo(
-  () => profesionales.map((prof) => ({ id: prof.id, nombre: `${prof.nombre} ${prof.apellidos}` })),
-  [profesionales]
-);
-
-  const refreshHistorial = useCallback(async () => {
-    if (!pacienteId) return;
-    const historialSnap = await getDocs(
-      query(
-        collection(db, 'pacientes-historial'),
-        where('pacienteId', '==', pacienteId),
-        orderBy('fecha', 'desc'),
-        limit(100)
-      )
-    );
-    setHistorial(
-      historialSnap.docs.map((docSnap) => {
-        const histData = docSnap.data() ?? {};
-        return {
-          id: docSnap.id,
-          pacienteId: histData.pacienteId ?? pacienteId,
-          eventoAgendaId: histData.eventoAgendaId,
-          servicioId: histData.servicioId,
-          servicioNombre: histData.servicioNombre,
-          profesionalId: histData.profesionalId,
-          profesionalNombre: histData.profesionalNombre,
-          fecha: histData.fecha?.toDate?.() ?? new Date(),
-          tipo: histData.tipo ?? 'consulta',
-          descripcion: histData.descripcion ?? '',
-          resultado: histData.resultado,
-          planesSeguimiento: histData.planesSeguimiento,
-          adjuntos: Array.isArray(histData.adjuntos) ? histData.adjuntos : [],
-          createdAt: histData.createdAt?.toDate?.() ?? new Date(),
-          creadoPor: histData.creadoPor ?? 'sistema',
-        } satisfies RegistroHistorialPaciente;
-      })
-    );
-  }, [pacienteId]);
-
+  // Handlers
   const handleResumenQuickAction = useCallback(
     async (eventId: string, action: 'confirm' | 'complete' | 'cancel') => {
       const estadoMap = {
@@ -387,126 +158,24 @@ const profesionalesOptions = useMemo(
     [refreshHistorial]
   );
 
-const agendaLinkBuilder = useMemo(() => {
-  if (!paciente) return undefined;
-  const pacienteNombre = `${paciente.nombre ?? ''} ${paciente.apellidos ?? ''}`.trim();
-  return ((options = {}) => {
-    const params = new URLSearchParams();
-    params.set('view', 'multi');
-    const profesional = options.profesionalId ?? paciente.profesionalReferenteId;
-    if (profesional) {
-      params.set('profesionales', profesional);
+  const handleNuevaCitaDesdePaciente = useCallback(() => {
+    if (!paciente) return;
+    const searchParams = new URLSearchParams({
+      newEvent: '1',
+      pacienteId: paciente.id,
+    });
+    const fullName = `${paciente.nombre ?? ''} ${paciente.apellidos ?? ''}`.trim();
+    if (fullName) {
+      searchParams.set('pacienteNombre', fullName);
     }
-    if (options.date instanceof Date && !Number.isNaN(options.date.getTime())) {
-      params.set('date', options.date.toISOString());
+    if (paciente.profesionalReferenteId) {
+      searchParams.set('profesionalId', paciente.profesionalReferenteId);
     }
-    if (options.newEvent) {
-      params.set('newEvent', '1');
-    }
-    params.set('pacienteId', paciente.id);
-    if (pacienteNombre) {
-      params.set('pacienteNombre', pacienteNombre);
-    }
-    return `/dashboard/agenda?${params.toString()}`;
-  }) as AgendaLinkBuilder;
-}, [paciente]);
+    router.push(`/dashboard/agenda?${searchParams.toString()}`);
+  }, [paciente, router]);
 
-const agendaLink = agendaLinkBuilder?.({});
-
-  const documentos = useMemo<DocumentoPaciente[]>(() => {
-    if (!paciente) return [];
-    const consentimientosDocs = paciente.consentimientos.map((consent, index) => ({
-      id: consent.documentoId ?? `cons-${index}`,
-      nombre: consent.tipo,
-      tipo: 'consentimiento' as const,
-      tamaño: 0,
-      url: consent.documentoId ?? '#',
-      fechaSubida: consent.fecha ?? new Date(),
-      subidoPor: consent.firmadoPor ?? `${paciente.nombre} ${paciente.apellidos}`,
-      etiquetas: ['consentimiento']
-    }));
-
-    const adjuntosDocs: DocumentoPaciente[] = historial.flatMap((registro) =>
-      (registro.adjuntos ?? []).map((url, index) => ({
-        id: `${registro.id}-adj-${index}`,
-        nombre: registro.servicioNombre ? `${registro.servicioNombre} adjunto` : `Adjunto ${index + 1}`,
-        tipo: 'otro' as const,
-        tamaño: 0,
-        url,
-        fechaSubida: registro.fecha,
-        subidoPor: registro.profesionalNombre ?? registro.creadoPor,
-        etiquetas: ['historial']
-      }))
-    );
-
-    return [...consentimientosDocs, ...adjuntosDocs];
-  }, [paciente, historial]);
-
-  const notas = useMemo<NotaPaciente[]>(() => {
-    return historial.map((registro) => ({
-      id: registro.id,
-      titulo: registro.servicioNombre ?? registro.tipo,
-      contenido: registro.descripcion ?? '',
-      categoria:
-        registro.tipo === 'incidencia'
-          ? 'alerta'
-          : registro.tipo === 'seguimiento'
-          ? 'comunicacion'
-          : 'clinica',
-      autor: registro.profesionalNombre ?? registro.creadoPor ?? 'Sistema',
-      fecha: registro.fecha,
-      esPrivada: false,
-      etiquetas: [registro.tipo]
-    }));
-  }, [historial]);
-
-  const alergiasData = useMemo(() => {
-    return (paciente?.alergias ?? []).map((nombre, index) => ({
-      id: `alergia-${index}`,
-      nombre,
-      severidad: 'moderada' as const
-    }));
-  }, [paciente]);
-
-  const antecedentesData = useMemo(() => {
-    return (paciente?.diagnosticosPrincipales ?? []).map((condicion, index) => ({
-      id: `antecedente-${index}`,
-      tipo: 'personal' as const,
-      condicion
-    }));
-  }, [paciente]);
-
-  const historialFiltrado = useMemo(() => {
-    const tiposClinicos: Array<RegistroHistorialPaciente['tipo']> = ['consulta', 'tratamiento', 'seguimiento'];
-    const esClinico = (tipo: RegistroHistorialPaciente['tipo']) => tiposClinicos.includes(tipo);
-
-    return historial.filter((registro) =>
-      historialFiltro === 'clinico'
-        ? esClinico(registro.tipo)
-        : historialFiltro === 'administrativo'
-        ? !esClinico(registro.tipo)
-        : true
-    );
-  }, [historial, historialFiltro]);
-
-  const actividadesOrdenadas = useMemo(() => historialFiltrado, [historialFiltrado]);
-
-  const badgeColor = (tipo: RegistroHistorialPaciente['tipo']) => {
-    switch (tipo) {
-      case 'consulta':
-        return 'bg-brand-subtle text-brand';
-      case 'tratamiento':
-        return 'bg-success-bg text-success';
-      case 'seguimiento':
-        return 'bg-warn-bg text-warn';
-      case 'incidencia':
-        return 'bg-danger-bg text-danger';
-      default:
-        return 'bg-cardHover text-text-muted';
-    }
-  };
-
-  const generarHistorialPDF = async () => {
+  // Export functions
+  const generarHistorialPDF = useCallback(async () => {
     const [{ default: JsPDF }, autoTableModule] = await Promise.all([
       import('jspdf'),
       import('jspdf-autotable'),
@@ -524,29 +193,32 @@ const agendaLink = agendaLinkBuilder?.({});
       registro.descripcion ?? '-',
       registro.resultado ?? '-',
       registro.planesSeguimiento ?? '-',
-      registro.creadoPor
+      registro.creadoPor,
     ]);
 
     autoTable(doc, {
-      head: [['Fecha', 'Tipo', 'Profesional', 'Descripción', 'Resultado', 'Seguimiento', 'Registrado por']],
+      head: [
+        ['Fecha', 'Tipo', 'Profesional', 'Descripción', 'Resultado', 'Seguimiento', 'Registrado por'],
+      ],
       body: datos,
       startY: 30,
       styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [37, 99, 235] }
+      headStyles: { fillColor: [37, 99, 235] },
     });
     return doc;
-  };
+  }, [historialFiltrado]);
 
-  const exportarHistorialPDF = async () => {
+  const exportarHistorialPDF = useCallback(async () => {
     if (historialFiltrado.length === 0) return;
     const doc = await generarHistorialPDF();
     const fecha = new Date().toISOString().split('T')[0];
     doc.save(`Historial_${paciente?.nombre ?? 'paciente'}_${fecha}.pdf`);
-  };
+  }, [generarHistorialPDF, historialFiltrado.length, paciente?.nombre]);
 
-  const exportarHistorialExcel = async () => {
+  const exportarHistorialExcel = useCallback(async () => {
     if (historialFiltrado.length === 0) return;
     const XLSX = await import('xlsx');
+
     const datos = historialFiltrado.map((registro) => ({
       Fecha: registro.fecha.toLocaleString('es-ES'),
       Tipo: registro.tipo,
@@ -554,7 +226,7 @@ const agendaLink = agendaLinkBuilder?.({});
       Descripción: registro.descripcion ?? '-',
       Resultado: registro.resultado ?? '-',
       Seguimiento: registro.planesSeguimiento ?? '-',
-      'Registrado por': registro.creadoPor ?? '-'
+      'Registrado por': registro.creadoPor ?? '-',
     }));
 
     const ws = XLSX.utils.json_to_sheet(datos);
@@ -562,9 +234,9 @@ const agendaLink = agendaLinkBuilder?.({});
     XLSX.utils.book_append_sheet(wb, ws, 'Historial');
     const fecha = new Date().toISOString().split('T')[0];
     XLSX.writeFile(wb, `Historial_${paciente?.nombre ?? 'paciente'}_${fecha}.xlsx`);
-  };
+  }, [historialFiltrado, paciente?.nombre]);
 
-  const compartirHistorialPorCorreo = async () => {
+  const compartirHistorialPorCorreo = useCallback(async () => {
     if (!pacienteId || historialFiltrado.length === 0) return;
     try {
       setCompartiendo(true);
@@ -578,8 +250,8 @@ const agendaLink = agendaLinkBuilder?.({});
         customMetadata: {
           pacienteId,
           createdAt: new Date().toISOString(),
-          expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString()
-        }
+          expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+        },
       });
       const url = await getDownloadURL(storageRef);
 
@@ -622,8 +294,291 @@ const agendaLink = agendaLinkBuilder?.({});
     } finally {
       setCompartiendo(false);
     }
-  };
+  }, [pacienteId, historialFiltrado.length, generarHistorialPDF, paciente]);
 
+  const handleUploadDocumentos = useCallback(
+    async (files: FileList) => {
+      if (!pacienteId) {
+        toast.error('Paciente no válido para subir documentos.');
+        return;
+      }
+      try {
+        await Promise.all(
+          Array.from(files).map(async (file) => {
+            const storagePath = `pacientes/${pacienteId}/documentos/${Date.now()}-${file.name}`;
+            const storageRef = ref(storage, storagePath);
+            await uploadBytes(storageRef, file);
+            const url = await getDownloadURL(storageRef);
+            await addDoc(collection(db, 'pacientes', pacienteId, 'documentos'), {
+              nombre: file.name,
+              tipo: inferirTipoDocumento(file),
+              tamaño: file.size,
+              url,
+              storagePath,
+              fechaSubida: Timestamp.fromDate(new Date()),
+              subidoPor: user?.displayName || user?.email || 'sistema',
+              etiquetas: [],
+              createdAt: Timestamp.fromDate(new Date()),
+              updatedAt: Timestamp.fromDate(new Date()),
+            });
+          })
+        );
+        toast.success('Documentos subidos correctamente.');
+        await refreshDocumentos();
+      } catch (error) {
+        console.error('Error subiendo documentos', error);
+        toast.error('No se pudieron subir los documentos.');
+      }
+    },
+    [inferirTipoDocumento, pacienteId, refreshDocumentos, user?.displayName, user?.email]
+  );
+
+  const handleDeleteDocumento = useCallback(
+    async (id: string) => {
+      if (!pacienteId) return;
+      const documento = documentosFirestoreMap.get(id);
+      if (!documento) {
+        toast.error('Este documento es de solo lectura.');
+        return;
+      }
+      try {
+        const docRef = doc(db, 'pacientes', pacienteId, 'documentos', id);
+        await deleteDoc(docRef);
+        if (documento.storagePath) {
+          await deleteObject(ref(storage, documento.storagePath));
+        }
+        toast.success('Documento eliminado.');
+        await refreshDocumentos();
+      } catch (error) {
+        console.error('Error eliminando documento', error);
+        toast.error('No se pudo eliminar el documento.');
+      }
+    },
+    [documentosFirestoreMap, pacienteId, refreshDocumentos]
+  );
+
+  const handleShareDocumento = useCallback(
+    async (id: string) => {
+      const documento = documentos.find((doc) => doc.id === id);
+      if (!documento) {
+        toast.error('Documento no encontrado.');
+        return;
+      }
+      try {
+        await navigator?.clipboard?.writeText(documento.url);
+        toast.success('Enlace copiado al portapapeles.');
+      } catch {
+        window.open(documento.url, '_blank');
+        toast.info('No se pudo copiar el enlace. Se abrió en una nueva pestaña.');
+      }
+    },
+    [documentos]
+  );
+
+  const handleDownloadDocumento = useCallback(
+    (id: string) => {
+      const documento = documentos.find((doc) => doc.id === id);
+      if (!documento) {
+        toast.error('Documento no encontrado.');
+        return;
+      }
+      window.open(documento.url, '_blank');
+    },
+    [documentos]
+  );
+
+  const handleViewDocumento = useCallback(
+    (id: string) => {
+      const documento = documentos.find((doc) => doc.id === id);
+      if (!documento) {
+        toast.error('Documento no encontrado.');
+        return;
+      }
+      window.open(documento.url, '_blank', 'noopener,noreferrer');
+    },
+    [documentos]
+  );
+
+  const handleVerDocumento = useCallback(
+    (id: string) => {
+      const factura = facturas.find((f) => f.id === id);
+      if (factura) {
+        setFacturaSeleccionada(factura);
+        setPresupuestoSeleccionado(null);
+        setDetalleTab('resumen');
+        return;
+      }
+      const presupuesto = presupuestos.find((p) => p.id === id);
+      if (presupuesto) {
+        setPresupuestoSeleccionado(presupuesto);
+        setFacturaSeleccionada(null);
+        setDetalleTab('resumen');
+        return;
+      }
+      toast.error('No se encontró el documento seleccionado.');
+    },
+    [facturas, presupuestos]
+  );
+
+  const generarFacturaPDF = useCallback(
+    async (factura: PacienteFactura) => {
+      const [{ default: JsPDF }, autoTableModule] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable'),
+      ]);
+      const autoTable = autoTableModule.default ?? autoTableModule;
+      const doc = new JsPDF();
+      const pacienteNombre = `${paciente?.nombre ?? ''} ${paciente?.apellidos ?? ''}`.trim();
+
+      doc.setFontSize(16);
+      doc.text(`Factura ${factura.numero}`, 14, 20);
+      doc.setFontSize(11);
+      doc.text(`Paciente: ${pacienteNombre || 'Paciente sin nombre'}`, 14, 30);
+      doc.text(`Fecha emisión: ${factura.fecha.toLocaleDateString('es-ES')}`, 14, 36);
+      doc.text(
+        `Importe: ${currencyFormatter.format(factura.total)} (${factura.estado.toUpperCase()})`,
+        14,
+        42
+      );
+
+      autoTable(doc, {
+        startY: 52,
+        head: [['Concepto', 'Cant.', 'Precio', 'Total']],
+        body:
+          factura.items.length > 0
+            ? factura.items.map((item) => [
+                item.concepto,
+                String(item.cantidad),
+                currencyFormatter.format(item.precioUnitario),
+                currencyFormatter.format(item.total),
+              ])
+            : [['Sin conceptos', '-', '-', '-']],
+      });
+
+      const docWithTable = doc as unknown as { lastAutoTable?: { finalY: number } };
+      const finalY = docWithTable.lastAutoTable?.finalY ?? 80;
+      doc.text(
+        `Pendiente: ${currencyFormatter.format(Math.max(factura.total - factura.pagado, 0))}`,
+        14,
+        finalY + 10
+      );
+      doc.save(`Factura_${factura.numero}.pdf`);
+    },
+    [currencyFormatter, paciente?.apellidos, paciente?.nombre]
+  );
+
+  const generarPresupuestoPDF = useCallback(
+    async (presupuesto: PacientePresupuesto) => {
+      const [{ default: JsPDF }, autoTableModule] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable'),
+      ]);
+      const autoTable = autoTableModule.default ?? autoTableModule;
+      const doc = new JsPDF();
+      const pacienteNombre = `${paciente?.nombre ?? ''} ${paciente?.apellidos ?? ''}`.trim();
+
+      doc.setFontSize(16);
+      doc.text(`Presupuesto ${presupuesto.numero}`, 14, 20);
+      doc.setFontSize(11);
+      doc.text(`Paciente: ${pacienteNombre || 'Paciente sin nombre'}`, 14, 30);
+      doc.text(`Emitido: ${presupuesto.fecha.toLocaleDateString('es-ES')}`, 14, 36);
+      if (presupuesto.validoHasta) {
+        doc.text(`Válido hasta: ${presupuesto.validoHasta.toLocaleDateString('es-ES')}`, 14, 42);
+      }
+
+      autoTable(doc, {
+        startY: 52,
+        head: [['Concepto', 'Cant.', 'Precio', 'Total']],
+        body:
+          presupuesto.items.length > 0
+            ? presupuesto.items.map((item) => [
+                item.concepto,
+                String(item.cantidad),
+                currencyFormatter.format(item.precioUnitario),
+                currencyFormatter.format(item.total),
+              ])
+            : [['Sin conceptos', '-', '-', '-']],
+      });
+
+      const docWithTable = doc as unknown as { lastAutoTable?: { finalY: number } };
+      const finalY = docWithTable.lastAutoTable?.finalY ?? 80;
+      doc.text(`Importe total: ${currencyFormatter.format(presupuesto.total)}`, 14, finalY + 10);
+      doc.save(`Presupuesto_${presupuesto.numero}.pdf`);
+    },
+    [currencyFormatter, paciente?.apellidos, paciente?.nombre]
+  );
+
+  const handleDescargarFactura = useCallback(
+    async (id: string) => {
+      const factura = facturas.find((f) => f.id === id);
+      if (factura) {
+        await generarFacturaPDF(factura);
+        return;
+      }
+      const presupuesto = presupuestos.find((p) => p.id === id);
+      if (presupuesto) {
+        await generarPresupuestoPDF(presupuesto);
+        return;
+      }
+      toast.error('Documento no encontrado para descarga.');
+    },
+    [facturas, generarFacturaPDF, generarPresupuestoPDF, presupuestos]
+  );
+
+  const handleEnviarFactura = useCallback(
+    (id: string) => {
+      const factura = facturas.find((f) => f.id === id);
+      const presupuesto = factura ? null : presupuestos.find((p) => p.id === id);
+      const tipo = factura ? 'Factura' : presupuesto ? 'Presupuesto' : null;
+      if (!tipo) {
+        toast.error('Documento no encontrado.');
+        return;
+      }
+      const destinatario = paciente?.email ? paciente.email : 'el paciente';
+      toast.success(`${tipo} enviada correctamente a ${destinatario}.`);
+    },
+    [facturas, paciente?.email, presupuestos]
+  );
+
+  const handleRegistrarPago = useCallback(
+    async (id: string) => {
+      const factura = facturas.find((f) => f.id === id);
+      if (!factura || !pacienteId) {
+        toast.error('Factura no encontrada.');
+        return;
+      }
+      try {
+        const facturaRef = doc(db, 'pacientes', pacienteId, 'facturas', id);
+        const ahora = new Date();
+        await updateDoc(facturaRef, {
+          estado: 'pagada',
+          pagado: factura.total,
+          fechaPago: Timestamp.fromDate(ahora),
+          updatedAt: Timestamp.fromDate(ahora),
+        });
+        toast.success('Pago registrado correctamente.');
+        setFacturaSeleccionada({
+          ...factura,
+          estado: 'pagada',
+          pagado: factura.total,
+          fechaPago: ahora,
+        });
+        await refreshFacturacion();
+      } catch (error) {
+        console.error('Error registrando pago', error);
+        toast.error('No se pudo registrar el pago.');
+      }
+    },
+    [facturas, pacienteId, refreshFacturacion]
+  );
+
+  const handleCloseDetalle = useCallback(() => {
+    setFacturaSeleccionada(null);
+    setPresupuestoSeleccionado(null);
+    setDetalleTab('resumen');
+  }, []);
+
+  // Early returns
   if (!pacienteId) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-700">
@@ -633,7 +588,9 @@ const agendaLink = agendaLinkBuilder?.({});
   }
 
   if (loading) {
-    return <div className="rounded-lg border border-border bg-card p-6 text-text">Cargando ficha...</div>;
+    return (
+      <div className="rounded-lg border border-border bg-card p-6 text-text">Cargando ficha...</div>
+    );
   }
 
   if (error || !paciente) {
@@ -646,6 +603,7 @@ const agendaLink = agendaLinkBuilder?.({});
 
   const seguimientoPendiente = hasActiveFollowUpInHistory(historial);
 
+  // Tab renderers
   const renderResumenTab = () => (
     <div className="space-y-4">
       <PatientResumenTab
@@ -656,13 +614,13 @@ const agendaLink = agendaLinkBuilder?.({});
           id: servicio.id,
           nombre: servicio.catalogoServicioNombre ?? 'Servicio',
           progreso: servicio.esActual ? 70 : 40,
-          profesional: servicio.profesionalPrincipalNombre ?? 'Sin profesional'
+          profesional: servicio.profesionalPrincipalNombre ?? 'Sin profesional',
         }))}
         estadisticas={{
           totalCitas: historial.length,
           ultimaVisita: historial[0]?.fecha,
-          tratamientosCompletados: historial.filter((registro) => registro.tipo === 'tratamiento').length,
-          facturasPendientes: 0
+          tratamientosCompletados: historial.filter((r) => r.tipo === 'tratamiento').length,
+          facturasPendientes: 0,
         }}
         agendaLink={agendaLink}
         buildAgendaLink={agendaLinkBuilder}
@@ -678,7 +636,9 @@ const agendaLink = agendaLinkBuilder?.({});
         <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase text-text-muted">Tratamientos y servicios</p>
+              <p className="text-xs font-semibold uppercase text-text-muted">
+                Tratamientos y servicios
+              </p>
               <p className="text-lg font-semibold text-text">Seguimiento en curso</p>
             </div>
             <Link
@@ -694,7 +654,9 @@ const agendaLink = agendaLinkBuilder?.({});
             <div className="space-y-3">
               {serviciosRelacionados.slice(0, 3).map((servicio) => (
                 <div key={servicio.id} className="rounded-2xl border border-border px-4 py-3">
-                  <p className="text-sm font-semibold text-text">{servicio.catalogoServicioNombre ?? 'Servicio'}</p>
+                  <p className="text-sm font-semibold text-text">
+                    {servicio.catalogoServicioNombre ?? 'Servicio'}
+                  </p>
                   <p className="text-xs text-text-muted">
                     {servicio.profesionalPrincipalNombre ?? 'Sin profesional'} ·{' '}
                     {servicio.esActual ? 'En progreso' : 'Planificado'}
@@ -705,13 +667,18 @@ const agendaLink = agendaLinkBuilder?.({});
           )}
         </div>
 
-        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
+        <div className="space-y-4 rounded-3xl border border-border bg-card p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase text-text-muted">Pendientes y documentos</p>
+              <p className="text-xs font-semibold uppercase text-text-muted">
+                Pendientes y documentos
+              </p>
               <p className="text-lg font-semibold text-text">Integración con otros módulos</p>
             </div>
-            <Link href={`/dashboard/pacientes/${paciente.id}`} className="text-xs font-semibold text-brand hover:underline">
+            <Link
+              href={`/dashboard/pacientes/${paciente.id}`}
+              className="text-xs font-semibold text-brand hover:underline"
+            >
               Ver ficha completa
             </Link>
           </div>
@@ -719,7 +686,8 @@ const agendaLink = agendaLinkBuilder?.({});
             <div className="rounded-2xl border border-warn bg-warn-bg/30 px-4 py-3 text-sm">
               <p className="font-semibold text-warn">Seguimiento pendiente</p>
               <p className="text-text">
-                Hay tareas de seguimiento registradas en el historial reciente. Revisa la pestaña de notas o marca el seguimiento como resuelto.
+                Hay tareas de seguimiento registradas en el historial reciente. Revisa la pestaña de
+                notas o marca el seguimiento como resuelto.
               </p>
               <form action={resolverSeguimientoAction} className="mt-2">
                 <input type="hidden" name="pacienteId" value={pacienteId} />
@@ -733,20 +701,30 @@ const agendaLink = agendaLinkBuilder?.({});
           )}
 
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase text-text-muted">Documentos recientes</p>
+            <p className="mb-2 text-xs font-semibold uppercase text-text-muted">
+              Documentos recientes
+            </p>
             {documentos.length === 0 ? (
               <p className="text-sm text-text-muted">Sin documentos adjuntos.</p>
             ) : (
               <div className="space-y-2">
                 {documentos.slice(0, 3).map((doc) => (
-                  <div key={doc.id} className="flex items-center justify-between rounded-2xl border border-border px-3 py-2 text-sm">
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between rounded-2xl border border-border px-3 py-2 text-sm"
+                  >
                     <div>
                       <p className="font-medium text-text">{doc.nombre}</p>
                       <p className="text-xs text-text-muted">
                         {doc.fechaSubida.toLocaleDateString('es-ES')} · {doc.subidoPor}
                       </p>
                     </div>
-                    <a href={doc.url} target="_blank" rel="noreferrer" className="text-xs font-semibold text-brand hover:underline">
+                    <a
+                      href={doc.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-semibold text-brand hover:underline"
+                    >
                       Abrir
                     </a>
                   </div>
@@ -774,7 +752,7 @@ const agendaLink = agendaLinkBuilder?.({});
         vacunas={[]}
       />
 
-      <section className="space-y-4 panel-block p-6">
+      <section className="panel-block space-y-4 p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-text">Historial del paciente</h2>
@@ -829,7 +807,7 @@ const agendaLink = agendaLinkBuilder?.({});
           </div>
         ) : (
           <div className="space-y-4">
-            {actividadesOrdenadas.map((registro) => (
+            {historialFiltrado.map((registro) => (
               <article key={registro.id} className="panel-block shadow-sm">
                 <header className="flex flex-col gap-2 border-b border-border/70 px-6 py-4 md:flex-row md:items-center md:justify-between">
                   <div>
@@ -839,11 +817,15 @@ const agendaLink = agendaLinkBuilder?.({});
                         month: 'long',
                         year: 'numeric',
                         hour: '2-digit',
-                        minute: '2-digit'
+                        minute: '2-digit',
                       })}
                     </p>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <span className={`rounded-pill px-2 py-1 text-xs font-semibold ${badgeColor(registro.tipo)}`}>
+                      <span
+                        className={`rounded-pill px-2 py-1 text-xs font-semibold ${
+                          HISTORIAL_BADGE_COLORS[registro.tipo] ?? 'bg-cardHover text-text-muted'
+                        }`}
+                      >
                         {registro.tipo.toUpperCase()}
                       </span>
                       <p className="text-sm text-text-muted">
@@ -878,41 +860,6 @@ const agendaLink = agendaLinkBuilder?.({});
     </div>
   );
 
-  const renderDocumentosTab = () => (
-    <PatientDocumentosTab
-      documentos={documentos}
-      onUpload={undefined}
-      onDelete={undefined}
-      onShare={undefined}
-      onDownload={undefined}
-      onView={undefined}
-    />
-  );
-
-  const renderFacturacionTab = () => (
-    <PatientFacturacionTab facturas={[]} presupuestos={[]} />
-  );
-
-  const renderNotasTab = () => (
-    <PatientNotasTab notas={notas} />
-  );
-
-  const handleNuevaCitaDesdePaciente = () => {
-    if (!paciente) return;
-    const params = new URLSearchParams({
-      newEvent: '1',
-      pacienteId: paciente.id,
-    });
-    const fullName = `${paciente.nombre ?? ''} ${paciente.apellidos ?? ''}`.trim();
-    if (fullName) {
-      params.set('pacienteNombre', fullName);
-    }
-    if (paciente.profesionalReferenteId) {
-      params.set('profesionalId', paciente.profesionalReferenteId);
-    }
-    router.push(`/dashboard/agenda?${params.toString()}`);
-  };
-
   const renderCitasTab = () => (
     <PatientCitasTab
       citas={citas}
@@ -923,6 +870,30 @@ const agendaLink = agendaLinkBuilder?.({});
       onRequestRefresh={refreshHistorial}
     />
   );
+
+  const renderDocumentosTab = () => (
+    <PatientDocumentosTab
+      documentos={documentos}
+      onUpload={handleUploadDocumentos}
+      onDelete={handleDeleteDocumento}
+      onShare={handleShareDocumento}
+      onDownload={handleDownloadDocumento}
+      onView={handleViewDocumento}
+    />
+  );
+
+  const renderFacturacionTab = () => (
+    <PatientFacturacionTab
+      facturas={facturas}
+      presupuestos={presupuestos}
+      onVerFactura={handleVerDocumento}
+      onDescargarPDF={handleDescargarFactura}
+      onEnviarFactura={handleEnviarFactura}
+      onRegistrarPago={handleRegistrarPago}
+    />
+  );
+
+  const renderNotasTab = () => <PatientNotasTab notas={notas} />;
 
   const renderTratamientosTab = () => (
     <div className="panel-block p-6 text-sm text-text-muted">
@@ -952,74 +923,178 @@ const agendaLink = agendaLinkBuilder?.({});
   };
 
   const tabs = [
-    { key: 'resumen' as PatientTab, label: 'Resumen', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { key: 'historial-clinico' as PatientTab, label: 'Historial Clínico', icon: <Heart className="w-4 h-4" /> },
-    { key: 'citas' as PatientTab, label: 'Citas', icon: <CalendarIcon className="w-4 h-4" /> },
-    { key: 'tratamientos' as PatientTab, label: 'Tratamientos', icon: <ActivityIcon className="w-4 h-4" /> },
-    { key: 'documentos' as PatientTab, label: 'Documentos', icon: <Folder className="w-4 h-4" /> },
-    { key: 'facturacion' as PatientTab, label: 'Facturación', icon: <DollarSign className="w-4 h-4" /> },
-    { key: 'notas' as PatientTab, label: 'Notas', icon: <StickyNote className="w-4 h-4" /> }
+    { key: 'resumen' as PatientTab, label: 'Resumen', icon: <LayoutDashboard className="h-4 w-4" /> },
+    {
+      key: 'historial-clinico' as PatientTab,
+      label: 'Historial Clínico',
+      icon: <Heart className="h-4 w-4" />,
+    },
+    { key: 'citas' as PatientTab, label: 'Citas', icon: <CalendarIcon className="h-4 w-4" /> },
+    {
+      key: 'tratamientos' as PatientTab,
+      label: 'Tratamientos',
+      icon: <ActivityIcon className="h-4 w-4" />,
+    },
+    { key: 'documentos' as PatientTab, label: 'Documentos', icon: <Folder className="h-4 w-4" /> },
+    {
+      key: 'facturacion' as PatientTab,
+      label: 'Facturación',
+      icon: <DollarSign className="h-4 w-4" />,
+    },
+    { key: 'notas' as PatientTab, label: 'Notas', icon: <StickyNote className="h-4 w-4" /> },
   ];
 
+  const documentoDetalle = facturaSeleccionada ?? presupuestoSeleccionado;
+  const detalleHeaderColor = facturaSeleccionada ? 'from-emerald-600 to-emerald-700' : 'from-indigo-600 to-indigo-700';
+  const detalleTitulo = facturaSeleccionada
+    ? `Factura ${facturaSeleccionada.numero}`
+    : presupuestoSeleccionado
+    ? `Presupuesto ${presupuestoSeleccionado.numero}`
+    : '';
+  const detalleResumen = documentoDetalle ? (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-2xl border border-border px-3 py-2">
+          <p className="text-xs uppercase text-text-muted">Estado</p>
+          <p className="text-lg font-semibold text-text">
+            {facturaSeleccionada
+              ? facturaSeleccionada.estado.toUpperCase()
+              : presupuestoSeleccionado?.estado.toUpperCase()}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-border px-3 py-2">
+          <p className="text-xs uppercase text-text-muted">
+            {facturaSeleccionada ? 'Importe total' : 'Importe estimado'}
+          </p>
+          <p className="text-lg font-semibold text-text">
+            {currencyFormatter.format(documentoDetalle.total)}
+          </p>
+        </div>
+        {facturaSeleccionada && (
+          <div className="rounded-2xl border border-border px-3 py-2">
+            <p className="text-xs uppercase text-text-muted">Pagado</p>
+            <p className="text-lg font-semibold text-success">
+              {currencyFormatter.format(facturaSeleccionada.pagado)}
+            </p>
+          </div>
+        )}
+        {facturaSeleccionada?.vencimiento && (
+          <div className="rounded-2xl border border-border px-3 py-2">
+            <p className="text-xs uppercase text-text-muted">Vence</p>
+            <p className="text-lg font-semibold text-text">
+              {facturaSeleccionada.vencimiento.toLocaleDateString('es-ES')}
+            </p>
+          </div>
+        )}
+        {presupuestoSeleccionado?.validoHasta && (
+          <div className="rounded-2xl border border-border px-3 py-2">
+            <p className="text-xs uppercase text-text-muted">Válido hasta</p>
+            <p className="text-lg font-semibold text-text">
+              {presupuestoSeleccionado.validoHasta.toLocaleDateString('es-ES')}
+            </p>
+          </div>
+        )}
+      </div>
+      <div className="rounded-2xl border border-dashed border-border px-4 py-3 text-sm text-text-muted">
+        {documentoDetalle.concepto}
+      </div>
+    </div>
+  ) : null;
+
+  const detalleConceptos = documentoDetalle ? (
+    <div className="overflow-x-auto rounded-2xl border border-border">
+      {documentoDetalle.items.length === 0 ? (
+        <p className="p-4 text-sm text-text-muted">No hay conceptos asociados.</p>
+      ) : (
+        <table className="min-w-full divide-y divide-border text-sm">
+          <thead className="bg-muted text-xs uppercase text-text-muted">
+            <tr>
+              <th className="px-4 py-2 text-left">Concepto</th>
+              <th className="px-4 py-2 text-left">Cantidad</th>
+              <th className="px-4 py-2 text-left">Precio</th>
+              <th className="px-4 py-2 text-left">Total</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border bg-white">
+            {documentoDetalle.items.map((item) => (
+              <tr key={`${item.concepto}-${item.total}`}>
+                <td className="px-4 py-2 font-medium text-text">{item.concepto}</td>
+                <td className="px-4 py-2 text-text-muted">{item.cantidad}</td>
+                <td className="px-4 py-2 text-text-muted">
+                  {currencyFormatter.format(item.precioUnitario)}
+                </td>
+                <td className="px-4 py-2 text-text">
+                  {currencyFormatter.format(item.total)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  ) : null;
+
+  const detalleTabs = documentoDetalle
+    ? [
+        { id: 'resumen', label: 'Resumen', content: detalleResumen },
+        { id: 'conceptos', label: 'Conceptos', content: detalleConceptos },
+      ]
+    : [];
+
   return (
-    <PatientProfileLayout
-      paciente={paciente}
-      actividades={actividadesTimeline}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      tabs={tabs}
-      onNewCita={handleNuevaCitaDesdePaciente}
-      onNewNota={() => setActiveTab('notas')}
-      onUploadDoc={() => setActiveTab('documentos')}
-      agendaLinkBuilder={agendaLinkBuilder}
-      agendaLink={agendaLink}
-    >
-      {renderTabContent()}
-    </PatientProfileLayout>
+    <>
+      <PatientProfileLayout
+        paciente={paciente}
+        actividades={actividadesTimeline}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        tabs={tabs}
+        onNewCita={handleNuevaCitaDesdePaciente}
+        onNewNota={() => setActiveTab('notas')}
+        onUploadDoc={() => setActiveTab('documentos')}
+        agendaLinkBuilder={agendaLinkBuilder}
+        agendaLink={agendaLink}
+      >
+        {renderTabContent()}
+      </PatientProfileLayout>
+
+      <DetailPanel
+        isOpen={Boolean(documentoDetalle)}
+        onClose={handleCloseDetalle}
+        title={detalleTitulo}
+        subtitle={`${paciente.nombre} ${paciente.apellidos}`}
+        tabs={detalleTabs}
+        currentTab={detalleTab}
+        onTabChange={(tab) => setDetalleTab(tab as 'resumen' | 'conceptos')}
+        variant="drawer"
+        headerColor={detalleHeaderColor}
+        actions={
+          documentoDetalle && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => void handleDescargarFactura(documentoDetalle.id)}
+                className="rounded-full border border-white/70 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700"
+              >
+                Descargar PDF
+              </button>
+              <button
+                onClick={() => handleEnviarFactura(documentoDetalle.id)}
+                className="rounded-full border border-white/70 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700"
+              >
+                Enviar
+              </button>
+              {facturaSeleccionada && facturaSeleccionada.estado !== 'pagada' && (
+                <button
+                  onClick={() => handleRegistrarPago(facturaSeleccionada.id)}
+                  className="rounded-full border border-white/70 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700"
+                >
+                  Registrar pago
+                </button>
+              )}
+            </div>
+          )
+        }
+      />
+    </>
   );
-}
-
-function mapRegistroToActivityType(tipo: RegistroHistorialPaciente['tipo']): TimelineActivity['tipo'] {
-  switch (tipo) {
-    case 'consulta':
-      return 'cita';
-    case 'tratamiento':
-      return 'tratamiento';
-    case 'seguimiento':
-      return 'nota';
-    case 'incidencia':
-      return 'documento';
-    default:
-      return 'documento';
-  }
-}
-
-function mapRegistroToCita(registro: RegistroHistorialPaciente): Cita {
-  const now = new Date();
-  const estado = registro.fecha > now ? 'programada' : 'realizada';
-  const tipoMap: Record<RegistroHistorialPaciente['tipo'], Cita['tipo']> = {
-    consulta: 'consulta',
-    tratamiento: 'tratamiento',
-    seguimiento: 'seguimiento',
-    incidencia: 'revision'
-  };
-
-  return {
-    id: registro.id,
-    fecha: registro.fecha,
-    profesional: registro.profesionalNombre ?? 'Sin asignar',
-    profesionalId: registro.profesionalId ?? 'desconocido',
-    tipo: tipoMap[registro.tipo] ?? 'consulta',
-    estado,
-    sala: undefined,
-    motivo: registro.descripcion,
-    notas: registro.resultado,
-    evolucion: registro.planesSeguimiento,
-    diagnosticos: registro.resultado ? [registro.resultado] : [],
-    documentos: (registro.adjuntos ?? []).map((url, index) => ({
-      id: `${registro.id}-doc-${index}`,
-      nombre: `Adjunto ${index + 1}`,
-      url
-    }))
-  };
 }

@@ -177,6 +177,21 @@ export function PacienteForm({
           <p className="text-sm text-gray-500">Información básica necesaria para la gestión.</p>
         </div>
 
+        {/* Mostrar NHC solo si es un paciente existente */}
+        {defaultValues?.numeroHistoria && (
+          <div className="mb-4 rounded-lg border border-brand-subtle bg-brand-subtle/30 p-4">
+            <label className="block text-sm font-medium text-gray-700">
+              Número de Historia Clínica (NHC)
+            </label>
+            <p className="mt-1 text-lg font-semibold text-brand">
+              {defaultValues.numeroHistoria}
+            </p>
+            <p className="mt-1 text-xs text-gray-500">
+              El NHC es único e inmutable para cada paciente.
+            </p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className="block text-sm font-medium text-gray-700">Nombre *</label>

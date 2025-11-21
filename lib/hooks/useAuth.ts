@@ -73,7 +73,7 @@ export const useAuth = () => {
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
       try {
-        await createUserProfile(result.user.uid, email, 'staff', displayName);
+        await createUserProfile(result.user.uid, email, 'invitado', displayName);
       } catch (profileError) {
         console.warn('[auth] No se pudo crear el perfil del usuario', profileError);
       }

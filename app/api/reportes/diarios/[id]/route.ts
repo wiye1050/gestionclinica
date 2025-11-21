@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { deleteDailyReport, updateDailyReport } from '@/lib/server/reports';
 
-const ALLOWED_ROLES = new Set(['admin', 'coordinacion', 'operador']);
+const ALLOWED_ROLES = new Set(['admin', 'coordinador', 'operador']);
 
 async function ensureAuth() {
   const user = await getCurrentUser();

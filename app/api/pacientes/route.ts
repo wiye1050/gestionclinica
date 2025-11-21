@@ -6,8 +6,8 @@ import { adminDb } from '@/lib/firebaseAdmin';
 import { validateRequest } from '@/lib/utils/apiValidation';
 import type { Query } from 'firebase-admin/firestore';
 
-const CREATE_UPDATE_ROLES = new Set(['admin', 'coordinacion']);
-const ADMIN_ROLES = new Set(['admin', 'coordinacion']);
+const CREATE_UPDATE_ROLES = new Set(['admin', 'coordinador']);
+const ADMIN_ROLES = new Set(['admin', 'coordinador']);
 const CLINICAL_ROLES = new Set(['doctor', 'terapeuta']);
 
 // Schema de validación para crear paciente
@@ -107,6 +107,7 @@ export async function GET(request: Request) {
 
         return {
           id: docSnap.id,
+          numeroHistoria: data.numeroHistoria ?? '',
           nombre: data.nombre ?? '',
           apellidos: data.apellidos ?? '',
           documentoId: data.documentoId ?? null,
@@ -123,7 +124,8 @@ export async function GET(request: Request) {
         if (!busqueda) return true;
         const nombre = `${String(paciente['nombre'] ?? '')} ${String(paciente['apellidos'] ?? '')}`.toLowerCase();
         const documento = String(paciente['documentoId'] ?? '').toLowerCase();
-        return nombre.includes(busqueda) || documento.includes(busqueda);
+        const nhc = String(paciente['numeroHistoria'] ?? '').toLowerCase();
+        return nombre.includes(busqueda) || documento.includes(busqueda) || nhc.includes(busqueda);
       });
 
     return NextResponse.json(

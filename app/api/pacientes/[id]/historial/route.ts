@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { addPacienteHistorial } from '@/lib/server/pacientesAdmin';
 
-const ALLOWED_ROLES = new Set(['admin', 'coordinacion', 'operador']);
+const ALLOWED_ROLES = new Set(['admin', 'coordinador', 'operador']);
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();

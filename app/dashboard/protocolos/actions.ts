@@ -11,7 +11,7 @@ type ActionState = { success: boolean; error: string | null };
 
 export async function createProtocolAction(prevState: ActionState, formData: FormData) {
   const user = await getCurrentUser();
-  if (!user || !user.roles?.includes('coordinacion') && !user.roles?.includes('admin')) {
+  if (!user || !user.roles?.includes('coordinador') && !user.roles?.includes('admin')) {
     return { success: false, error: 'No tienes permisos para crear protocolos.' };
   }
 
@@ -98,7 +98,7 @@ export async function registerReadingAction(formData: FormData) {
 
 export async function createProtocolVersionAction(prevState: ActionState, formData: FormData) {
   const user = await getCurrentUser();
-  if (!user || (!user.roles?.includes('admin') && !user.roles?.includes('coordinacion'))) {
+  if (!user || (!user.roles?.includes('admin') && !user.roles?.includes('coordinador'))) {
     return { success: false, error: 'No tienes permisos para crear versiones.' };
   }
 

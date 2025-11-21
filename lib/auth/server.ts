@@ -20,7 +20,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       uid: mockUid,
       email: cookieStore.get('mock_email')?.value,
       displayName: cookieStore.get('mock_name')?.value,
-      roles: (cookieStore.get('mock_roles')?.value?.split(',') as AppRole[]) ?? ['coordinacion']
+      roles: (cookieStore.get('mock_roles')?.value?.split(',') as AppRole[]) ?? ['coordinador']
     };
   }
 
@@ -52,7 +52,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     const roles =
       Array.isArray(rawRoles)
         ? (rawRoles.filter((role): role is AppRole =>
-            ['admin', 'coordinacion', 'terapeuta', 'admin_ops', 'marketing', 'invitado'].includes(
+            ['admin', 'coordinador', 'profesional', 'recepcion', 'invitado'].includes(
               String(role)
             )
           ) as AppRole[])
