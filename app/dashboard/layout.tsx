@@ -201,6 +201,11 @@ export default function DashboardLayout({
             </div>
           </header>
 
+          {/* Sidebar visible en móviles (debajo del header) */}
+          <div className="mt-3 lg:hidden">
+            <Sidebar />
+          </div>
+
           <div className="mt-3 flex gap-3">
             <div className="hidden shrink-0 lg:block">
               <div className="sticky top-24 w-48">
