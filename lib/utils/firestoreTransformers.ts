@@ -133,6 +133,8 @@ export function transformHistorialPaciente(
     resultado: data.resultado,
     planesSeguimiento: data.planesSeguimiento,
     adjuntos: Array.isArray(data.adjuntos) ? data.adjuntos : [],
+    adjuntosMetadata: Array.isArray(data.adjuntosMetadata) ? data.adjuntosMetadata : [],
+    linkExpiresAt: data.linkExpiresAt?.toDate?.() ?? undefined,
     createdAt: data.createdAt?.toDate?.() ?? new Date(),
     creadoPor: data.creadoPor ?? 'sistema',
   };

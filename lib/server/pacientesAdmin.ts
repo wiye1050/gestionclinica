@@ -255,12 +255,19 @@ export async function addPacienteHistorial(
     profesionalNombre?: string | null;
     adjuntos?: string[];
     planesSeguimiento?: string | null;
+    linkExpiresAt?: Date | string | null;
+    adjuntosMetadata?: Array<{ url: string; storagePath?: string | null }>;
   },
   user: { email?: string | null; uid: string }
 ) {
   if (!adminDb) {
     throw new Error('Firebase Admin no está configurado.');
   }
+
+  const linkExpiresAt =
+    typeof data.linkExpiresAt === 'string'
+      ? new Date(data.linkExpiresAt)
+      : data.linkExpiresAt ?? null;
 
   await adminDb.collection('pacientes-historial').add({
     pacienteId,
@@ -275,6 +282,8 @@ export async function addPacienteHistorial(
     resultado: null,
     planesSeguimiento: data.planesSeguimiento ?? null,
     adjuntos: data.adjuntos ?? [],
+    adjuntosMetadata: data.adjuntosMetadata ?? [],
+    linkExpiresAt: linkExpiresAt,
     createdAt: new Date(),
     creadoPor: user.email ?? user.uid,
   });

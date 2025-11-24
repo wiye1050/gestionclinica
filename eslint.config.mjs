@@ -18,6 +18,7 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "functions/dist/**",
+      "functions/lib/**",
       "next-env.d.ts",
       "set-roles.js",
     ],

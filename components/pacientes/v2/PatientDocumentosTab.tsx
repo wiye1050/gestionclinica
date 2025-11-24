@@ -22,6 +22,7 @@ interface Props {
   onShare?: (id: string) => void;
   onDownload?: (id: string) => void;
   onView?: (id: string) => void;
+  readOnlyIds?: string[];
 }
 
 const TIPOS_DOCUMENTOS = [
@@ -34,18 +35,20 @@ const TIPOS_DOCUMENTOS = [
   { value: 'otro', label: 'Otros', icon: File, color: 'gray' }
 ];
 
-export default function PatientDocumentosTab({ 
-  documentos, 
-  onUpload, 
-  onDelete, 
+export default function PatientDocumentosTab({
+  documentos,
+  onUpload,
+  onDelete,
   onShare,
   onDownload,
-  onView 
+  onView,
+  readOnlyIds = [],
 }: Props) {
   const [busqueda, setBusqueda] = useState('');
   const [tipoFiltro, setTipoFiltro] = useState<string>('todos');
   const [vistaGrid, setVistaGrid] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
+  const readOnlySet = useMemo(() => new Set(readOnlyIds), [readOnlyIds]);
 
   const documentosFiltrados = useMemo(() => {
     return documentos.filter(doc => {
@@ -232,7 +235,9 @@ export default function PatientDocumentosTab({
         </div>
       ) : vistaGrid ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {documentosFiltrados.map((doc) => (
+          {documentosFiltrados.map((doc) => {
+            const isReadOnly = readOnlySet.has(doc.id);
+            return (
             <div
               key={doc.id}
               className="bg-card border border-border rounded-2xl p-4 hover:shadow-md transition-shadow"
@@ -249,6 +254,9 @@ export default function PatientDocumentosTab({
                     {formatBytes(doc.tamaño)} • {format(doc.fechaSubida, 'dd MMM yyyy', { locale: es })}
                   </p>
                   <p className="text-xs text-text-muted">Por {doc.subidoPor}</p>
+                  {isReadOnly && (
+                    <p className="mt-1 text-[11px] font-semibold text-amber-600">Solo lectura</p>
+                  )}
                   {doc.etiquetas.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {doc.etiquetas.slice(0, 2).map((tag, idx) => (
@@ -286,18 +294,26 @@ export default function PatientDocumentosTab({
                   <Share2 className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => onDelete?.(doc.id)}
-                  className="flex items-center justify-center gap-1 px-3 py-1.5 text-sm text-danger hover:bg-danger-bg rounded transition-colors"
+                  onClick={() => !isReadOnly && onDelete?.(doc.id)}
+                  disabled={isReadOnly}
+                  className={`flex items-center justify-center gap-1 px-3 py-1.5 text-sm rounded transition-colors ${
+                    isReadOnly
+                      ? 'text-text-muted bg-muted cursor-not-allowed opacity-60'
+                      : 'text-danger hover:bg-danger-bg'
+                  }`}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
       ) : (
         <div className="bg-card border border-border rounded-2xl divide-y divide-border">
-          {documentosFiltrados.map((doc) => (
+          {documentosFiltrados.map((doc) => {
+            const isReadOnly = readOnlySet.has(doc.id);
+            return (
             <div
               key={doc.id}
               className="p-4 hover:bg-cardHover transition-colors"
@@ -311,6 +327,9 @@ export default function PatientDocumentosTab({
                   <p className="text-sm text-text-muted">
                     {formatBytes(doc.tamaño)} • {format(doc.fechaSubida, 'dd MMM yyyy', { locale: es })} • Por {doc.subidoPor}
                   </p>
+                  {isReadOnly && (
+                    <p className="text-[11px] font-semibold text-amber-600 mt-1">Solo lectura</p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -335,16 +354,22 @@ export default function PatientDocumentosTab({
                     <Share2 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => onDelete?.(doc.id)}
-                    className="p-2 text-danger hover:bg-danger-bg rounded transition-colors"
-                    title="Eliminar"
+                    onClick={() => !isReadOnly && onDelete?.(doc.id)}
+                    disabled={isReadOnly}
+                    className={`p-2 rounded transition-colors ${
+                      isReadOnly
+                        ? 'text-text-muted cursor-not-allowed opacity-60'
+                        : 'text-danger hover:bg-danger-bg'
+                    }`}
+                    title={isReadOnly ? 'Documento de solo lectura' : 'Eliminar'}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
     </div>

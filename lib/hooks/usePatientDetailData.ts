@@ -5,18 +5,9 @@
  * en la vista de detalle de paciente
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  where,
-} from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type {
   Paciente,
@@ -31,10 +22,6 @@ import {
   transformPaciente,
   transformProfesional,
   transformHistorialPaciente,
-  transformServicioAsignado,
-  transformPacienteFactura,
-  transformPacientePresupuesto,
-  transformPacienteDocumento,
 } from '@/lib/utils/firestoreTransformers';
 
 type UsePatientDetailDataOptions = {
@@ -67,35 +54,55 @@ type UsePatientDetailDataReturn = {
   profesionalesOptions: Array<{ id: string; nombre: string }>;
 };
 
+type PatientDetailPayload = {
+  paciente: Paciente;
+  historial: RegistroHistorialPaciente[];
+  serviciosRelacionados: ServicioAsignado[];
+  facturas: PacienteFactura[];
+  presupuestos: PacientePresupuesto[];
+  documentos: PacienteDocumento[];
+};
+
+const reviveDates = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map(reviveDates);
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, val]) => [key, reviveDates(val)])
+    );
+  }
+  if (typeof value === 'string') {
+    const timestamp = Date.parse(value);
+    if (!Number.isNaN(timestamp) && value.includes('-')) {
+      return new Date(value);
+    }
+  }
+  return value;
+};
+
 export function usePatientDetailData({
   pacienteId,
 }: UsePatientDetailDataOptions): UsePatientDetailDataReturn {
-
-  // Estado para errores de relaciones (no crítico)
-  const [relacionesError, setRelacionesError] = useState<string | null>(null);
-
-  // Query para el paciente individual
   const {
-    data: paciente,
-    isLoading: loadingPaciente,
-    error: pacienteError,
-    refetch: refetchPaciente,
+    data: detail,
+    isLoading: loadingDetalle,
+    error: detalleError,
+    refetch: refetchDetalle,
   } = useQuery({
-    queryKey: ['paciente', pacienteId],
+    queryKey: ['paciente-detalle', pacienteId],
     queryFn: async () => {
       if (!pacienteId) return null;
-
-      const pacienteRef = doc(db, 'pacientes', pacienteId);
-      const pacienteSnap = await getDoc(pacienteRef);
-
-      if (!pacienteSnap.exists()) {
-        throw new Error('Paciente no encontrado');
+      const response = await fetch(`/api/pacientes/${pacienteId}/detail`);
+      const raw = await response.text();
+      const payload = raw ? (JSON.parse(raw) as PatientDetailPayload & { error?: string }) : null;
+      if (!response.ok) {
+        throw new Error(payload?.error ?? 'No se pudo cargar el paciente');
       }
-
-      return transformPaciente(pacienteSnap);
+      return reviveDates(payload) as PatientDetailPayload;
     },
     enabled: !!pacienteId,
-    staleTime: 2 * 60 * 1000, // 2 minutos
+    staleTime: 60 * 1000,
   });
 
   // Query para profesionales (usando cache compartido)
@@ -109,146 +116,21 @@ export function usePatientDetailData({
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
   });
-
-  // Query para historial del paciente
-  const {
-    data: historial = [],
-    isLoading: loadingHistorial,
-    refetch: refetchHistorial,
-  } = useQuery({
-    queryKey: ['paciente-historial', pacienteId],
-    queryFn: async () => {
-      if (!pacienteId) return [];
-
-      const historialSnap = await getDocs(
-        query(
-          collection(db, 'pacientes-historial'),
-          where('pacienteId', '==', pacienteId),
-          orderBy('fecha', 'desc'),
-          limit(100)
-        )
-      );
-
-      return historialSnap.docs.map((docSnap) =>
-        transformHistorialPaciente(docSnap, pacienteId)
-      );
-    },
-    enabled: !!pacienteId,
-    staleTime: 1 * 60 * 1000, // 1 minuto - historial puede cambiar más frecuentemente
-  });
-
-  // Query para servicios relacionados por grupo
-  const { data: serviciosRelacionados = [], isLoading: loadingServicios } = useQuery({
-    queryKey: ['servicios-grupo', paciente?.grupoPacienteId],
-    queryFn: async () => {
-      if (!paciente?.grupoPacienteId) return [];
-
-      setRelacionesError(null);
-      try {
-        const serviciosSnap = await getDocs(
-          query(
-            collection(db, 'servicios-asignados'),
-            where('grupoId', '==', paciente.grupoPacienteId),
-            limit(25)
-          )
-        );
-
-        return serviciosSnap.docs.map(transformServicioAsignado);
-      } catch (err) {
-        console.error('Error cargando servicios relacionados', err);
-        setRelacionesError('No se pudieron cargar los servicios relacionados.');
-        return [];
-      }
-    },
-    enabled: !!paciente?.grupoPacienteId,
-    staleTime: 3 * 60 * 1000, // 3 minutos
-  });
-
-  const {
-    data: facturas = [],
-    isLoading: loadingFacturas,
-    refetch: refetchFacturas,
-  } = useQuery({
-    queryKey: ['paciente-facturas', pacienteId],
-    queryFn: async () => {
-      if (!pacienteId) return [];
-
-      const snapshot = await getDocs(
-        query(
-          collection(db, 'pacientes', pacienteId, 'facturas'),
-          orderBy('fecha', 'desc'),
-          limit(100)
-        )
-      );
-
-      return snapshot.docs.map((docSnap) => transformPacienteFactura(docSnap, pacienteId));
-    },
-    enabled: !!pacienteId,
-    staleTime: 60 * 1000,
-  });
-
-  const {
-    data: presupuestos = [],
-    isLoading: loadingPresupuestos,
-    refetch: refetchPresupuestos,
-  } = useQuery({
-    queryKey: ['paciente-presupuestos', pacienteId],
-    queryFn: async () => {
-      if (!pacienteId) return [];
-
-      const snapshot = await getDocs(
-        query(
-          collection(db, 'pacientes', pacienteId, 'presupuestos'),
-          orderBy('fecha', 'desc'),
-          limit(100)
-        )
-      );
-
-      return snapshot.docs.map((docSnap) => transformPacientePresupuesto(docSnap, pacienteId));
-    },
-    enabled: !!pacienteId,
-    staleTime: 60 * 1000,
-  });
-
-  const {
-    data: documentos = [],
-    isLoading: loadingDocumentos,
-    refetch: refetchDocumentos,
-  } = useQuery({
-    queryKey: ['paciente-documentos', pacienteId],
-    queryFn: async () => {
-      if (!pacienteId) return [];
-
-      const snapshot = await getDocs(
-        query(
-          collection(db, 'pacientes', pacienteId, 'documentos'),
-          orderBy('fechaSubida', 'desc'),
-          limit(100)
-        )
-      );
-
-      return snapshot.docs.map((docSnap) => transformPacienteDocumento(docSnap, pacienteId));
-    },
-    enabled: !!pacienteId,
-    staleTime: 60 * 1000,
-  });
-
-  // Acciones de refresco
-  const refreshHistorial = useCallback(async () => {
-    await refetchHistorial();
-  }, [refetchHistorial]);
+  const paciente = detail?.paciente ?? null;
+  const historial = detail?.historial ?? [];
+  const serviciosRelacionados = detail?.serviciosRelacionados ?? [];
+  const facturas = detail?.facturas ?? [];
+  const presupuestos = detail?.presupuestos ?? [];
+  const documentos = detail?.documentos ?? [];
+  const relacionesError = null;
 
   const refreshPaciente = useCallback(async () => {
-    await refetchPaciente();
-  }, [refetchPaciente]);
+    await refetchDetalle();
+  }, [refetchDetalle]);
 
-  const refreshFacturacion = useCallback(async () => {
-    await Promise.all([refetchFacturas(), refetchPresupuestos()]);
-  }, [refetchFacturas, refetchPresupuestos]);
-
-  const refreshDocumentos = useCallback(async () => {
-    await refetchDocumentos();
-  }, [refetchDocumentos]);
+  const refreshHistorial = refreshPaciente;
+  const refreshFacturacion = refreshPaciente;
+  const refreshDocumentos = refreshPaciente;
 
   // Datos derivados
   const profesionalReferente =
@@ -261,20 +143,11 @@ export function usePatientDetailData({
     nombre: `${prof.nombre} ${prof.apellidos}`.trim(),
   }));
 
-  // Estado de carga combinado
-  const loading =
-    loadingPaciente ||
-    loadingProfesionales ||
-    loadingHistorial ||
-    loadingServicios ||
-    loadingFacturas ||
-    loadingPresupuestos ||
-    loadingDocumentos;
+  const loading = loadingDetalle || loadingProfesionales;
 
-  // Manejo de errores
-  const error = pacienteError
-    ? pacienteError instanceof Error
-      ? pacienteError.message
+  const error = detalleError
+    ? detalleError instanceof Error
+      ? detalleError.message
       : 'Error al cargar el paciente'
     : !pacienteId
     ? 'Identificador de paciente no válido'

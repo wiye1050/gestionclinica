@@ -251,7 +251,7 @@ function PacientesContent() {
             </button>
             <Link
               href="/dashboard/pacientes/nuevo"
-              className="inline-flex items-center gap-2 rounded-pill bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:bg-brand-700 hover:shadow-lg focus-visible:focus-ring"
+              className="btn-gradient rounded-pill px-5 py-2 text-sm font-semibold"
             >
               <Plus className="h-4 w-4" />
               Nuevo paciente

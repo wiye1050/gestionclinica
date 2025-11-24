@@ -101,6 +101,13 @@ export default function PacienteDetallePage() {
     const docsExtraidos = extractDocumentos(paciente, historial);
     return [...docsFirestore, ...docsExtraidos];
   }, [documentosFirestore, paciente, historial]);
+  const readOnlyDocumentoIds = useMemo(
+    () =>
+      documentos
+        .filter((doc) => !documentosFirestoreMap.has(doc.id))
+        .map((doc) => doc.id),
+    [documentos, documentosFirestoreMap]
+  );
   const notas = useMemo(() => historialToNotas(historial), [historial]);
   const alergiasData = useMemo(() => extractAlergias(paciente), [paciente]);
   const antecedentesData = useMemo(() => extractAntecedentes(paciente), [paciente]);
@@ -244,7 +251,8 @@ export default function PacienteDetallePage() {
       const blob = doc.output('blob');
       const timestamp = Date.now();
       const fileName = `historial_${pacienteId}_${timestamp}.pdf`;
-      const storageRef = ref(storage, `patient-history/${pacienteId}/${fileName}`);
+      const storagePath = `patient-history/${pacienteId}/${fileName}`;
+      const storageRef = ref(storage, storagePath);
       await uploadBytes(storageRef, blob, {
         contentType: 'application/pdf',
         customMetadata: {
@@ -286,6 +294,8 @@ export default function PacienteDetallePage() {
           descripcion: `Historial compartido por correo. Enlace disponible hasta ${expiracion.toLocaleString('es-ES')}.`,
           planesSeguimiento: 'Confirmar recepción del informe',
           adjuntos: [url],
+          linkExpiresAt: expiracion.toISOString(),
+          adjuntosMetadata: [{ url, storagePath }],
         }),
       });
     } catch (err) {
@@ -879,6 +889,7 @@ export default function PacienteDetallePage() {
       onShare={handleShareDocumento}
       onDownload={handleDownloadDocumento}
       onView={handleViewDocumento}
+      readOnlyIds={readOnlyDocumentoIds}
     />
   );
 

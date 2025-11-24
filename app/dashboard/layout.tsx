@@ -12,7 +12,6 @@ import { QueryProvider } from '@/lib/providers/QueryProvider';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { Breadcrumbs } from '@/components/dashboard/Breadcrumbs';
 import { UserDropdown } from '@/components/dashboard/UserDropdown';
-import { MobileMenu } from '@/components/dashboard/MobileMenu';
 import { collection, getCountFromServer, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -144,7 +143,6 @@ export default function DashboardLayout({
             <div className="flex items-center justify-between gap-3">
               {/* Lado izquierdo: Menu móvil + Logo + Breadcrumbs */}
               <div className="flex items-center gap-3">
-                <MobileMenu />
                 <div className="flex items-center gap-3">
                   <h1 className="text-sm font-semibold text-slate-900">IO</h1>
                   <Breadcrumbs />
@@ -201,17 +199,10 @@ export default function DashboardLayout({
             </div>
           </header>
 
-          {/* Sidebar visible en móviles (debajo del header) */}
-          <div className="mt-3 lg:hidden">
-            <Sidebar />
-          </div>
-
-          <div className="mt-3 flex gap-3">
-            <div className="hidden shrink-0 lg:block">
-              <div className="sticky top-24 w-48">
-                <Sidebar />
-              </div>
-            </div>
+          <div className="mt-3 flex flex-col gap-3 lg:flex-row">
+            <aside className="lg:sticky lg:top-24 lg:w-48 lg:flex-shrink-0">
+              <Sidebar />
+            </aside>
             <main className="flex-1 min-w-0">
               <div className="dashboard-canvas">
                 <div className="dashboard-canvas__inner">

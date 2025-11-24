@@ -259,7 +259,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="sidebar-panel flex h-full w-full flex-col gap-2 px-3 py-4">
+    <aside className="sidebar-panel flex w-full flex-col gap-2 px-3 py-4">
       <nav className="space-y-1">
         {filteredSections.map((section) => {
           const SectionIcon = section.icon;

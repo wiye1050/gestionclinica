@@ -1,6 +1,7 @@
 import { getApps, initializeApp, cert, type App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 
 type ServiceAccountConfig = {
   projectId: string;
@@ -38,6 +39,7 @@ const globalForAdmin = globalThis as typeof globalThis & {
   _adminApp?: App | null;
   _adminDb?: ReturnType<typeof getFirestore> | null;
   _adminDbSettingsApplied?: boolean;
+  _adminStorage?: ReturnType<typeof getStorage> | null;
 };
 
 let adminApp: App | null = globalForAdmin._adminApp ?? null;
@@ -67,11 +69,17 @@ export const adminAuth = adminApp ? getAuth(adminApp) : null;
 
 let adminDbInstance: ReturnType<typeof getFirestore> | null =
   globalForAdmin._adminDb ?? null;
+let adminStorageInstance: ReturnType<typeof getStorage> | null =
+  globalForAdmin._adminStorage ?? null;
 
 if (adminApp) {
   if (!adminDbInstance) {
     adminDbInstance = getFirestore(adminApp);
     globalForAdmin._adminDb = adminDbInstance;
+  }
+  if (!adminStorageInstance) {
+    adminStorageInstance = getStorage(adminApp);
+    globalForAdmin._adminStorage = adminStorageInstance;
   }
 
   const settingsApplied = globalForAdmin._adminDbSettingsApplied ?? false;
@@ -82,3 +90,4 @@ if (adminApp) {
 }
 
 export const adminDb = adminDbInstance;
+export const adminStorage = adminStorageInstance;

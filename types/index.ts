@@ -694,6 +694,8 @@ export interface RegistroHistorialPaciente {
   resultado?: string;
   planesSeguimiento?: string;
   adjuntos?: string[];
+  adjuntosMetadata?: Array<{ url: string; storagePath?: string }>;
+  linkExpiresAt?: Date;
   createdAt: Date;
   creadoPor: string;
 }

@@ -1,8 +1,18 @@
 import { NextResponse } from 'next/server';
 import { Timestamp } from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { getCurrentUser } from '@/lib/auth/server';
+import { canViewFinances } from '@/lib/auth/roles';
 
 export async function GET() {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return NextResponse.json({ error: 'No autenticado.' }, { status: 401 });
+  }
+  if (!canViewFinances(currentUser.roles)) {
+    return NextResponse.json({ error: 'No autorizado.' }, { status: 403 });
+  }
+
   if (!adminDb) {
     return NextResponse.json(
       { error: 'Firebase Admin no está configurado para el resumen financiero.' },
