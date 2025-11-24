@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { getCurrentUser } from '@/lib/auth/server';
 import { canViewFullPatientHistory } from '@/lib/auth/roles';
@@ -11,9 +11,8 @@ import {
   transformPacienteDocumento,
 } from '@/lib/utils/firestoreTransformers';
 
-export async function GET(_request: NextRequest, context: { params: { id: string } }) {
-  const { params } = context;
-  const pacienteId = params.id;
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id: pacienteId } = await params;
   if (!pacienteId) {
     return NextResponse.json({ error: 'Paciente no especificado.' }, { status: 400 });
   }
