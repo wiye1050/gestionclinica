@@ -11,11 +11,8 @@ import {
   transformPacienteDocumento,
 } from '@/lib/utils/firestoreTransformers';
 
-type RouteParams = {
-  params: { id: string };
-};
-
-export async function GET(_request: Request, { params }: RouteParams) {
+export async function GET(_request: Request, context: { params: { id: string } }) {
+  const { params } = context;
   const pacienteId = params.id;
   if (!pacienteId) {
     return NextResponse.json({ error: 'Paciente no especificado.' }, { status: 400 });
