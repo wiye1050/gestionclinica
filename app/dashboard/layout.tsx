@@ -200,10 +200,10 @@ export default function DashboardLayout({
           </header>
 
           <div className="mt-3 flex flex-col gap-3 lg:flex-row">
-            <aside className="lg:sticky lg:top-24 lg:w-48 lg:flex-shrink-0">
+            <aside className="w-full shrink-0 lg:sticky lg:top-24 lg:w-48">
               <Sidebar />
             </aside>
-            <main className="flex-1 min-w-0">
+            <main className="min-w-0 flex-1">
               <div className="dashboard-canvas">
                 <div className="dashboard-canvas__inner">
                   <ErrorBoundary>

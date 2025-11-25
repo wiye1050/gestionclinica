@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Activity,
   TrendingUp,
+  TrendingDown,
   CalendarDays,
   Users,
   FolderKanban,
@@ -14,6 +15,12 @@ import {
   CheckCircle2,
   Circle,
   Clock,
+  Zap,
+  Target,
+  DollarSign,
+  BarChart3,
+  Star,
+  AlertCircle,
 } from 'lucide-react';
 import {
   TodayAppointment,
@@ -33,7 +40,7 @@ const currencyFormatter = new Intl.NumberFormat('es-ES', {
   maximumFractionDigits: 0,
 });
 
-// ========== CITAS DE HOY ==========
+// ========== CITAS DE HOY (REDISEÑADO) ==========
 interface AppointmentsWidgetProps {
   appointments: TodayAppointment[];
   loading: boolean;
@@ -42,74 +49,105 @@ interface AppointmentsWidgetProps {
 export function AppointmentsWidget({ appointments, loading }: AppointmentsWidgetProps) {
   const now = new Date();
   const citasCompletadas = appointments.filter((c) => c.completada).length;
+  const progreso = appointments.length > 0 ? (citasCompletadas / appointments.length) * 100 : 0;
 
   return (
-    <div className="surface-card p-4 border-l-2 border-l-brand">
-      <div className="flex items-center justify-between mb-3">
+    <div className="rounded-xl border border-blue-200 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+      {/* Header compacto */}
+      <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <CalendarDays className="h-4 w-4 text-brand" />
-          <h3 className="text-sm font-semibold text-slate-900">Citas de hoy</h3>
+          <div className="rounded-lg p-1.5" style={{ background: 'linear-gradient(135deg, #0087cd, #006ba4)' }}>
+            <CalendarDays className="h-4 w-4 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xs font-semibold text-slate-900">Agenda de hoy</h3>
+            <p className="text-[10px] text-slate-500">
+              {new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {!loading && (
-            <>
-              <span className="text-xs text-success font-medium">{citasCompletadas} ✓</span>
-              <span className="text-xs text-slate-300">|</span>
-              <span className="text-xs text-slate-600 font-medium">{appointments.length} total</span>
-            </>
-          )}
-        </div>
+        {!loading && (
+          <div className="rounded-lg bg-blue-100 px-2 py-1">
+            <span className="text-lg font-bold text-blue-700">{appointments.length}</span>
+          </div>
+        )}
       </div>
+
+      {/* Progress bar compacto */}
+      {!loading && appointments.length > 0 && (
+        <div className="mb-3">
+          <div className="mb-1.5 flex items-center justify-between text-[10px] text-slate-600">
+            <span>{citasCompletadas} completadas</span>
+            <span>{Math.round(progreso)}%</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${progreso}%`, background: 'linear-gradient(90deg, #0087cd, #006ba4)' }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Content compacto */}
       {loading ? (
-        <p className="text-xs text-slate-500">Cargando...</p>
+        <div className="space-y-1.5">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-10 animate-pulse rounded bg-slate-100" />
+          ))}
+        </div>
       ) : appointments.length === 0 ? (
-        <p className="text-xs text-slate-500">Sin citas programadas para hoy</p>
+        <div className="py-4 text-center">
+          <CheckCircle2 className="mx-auto mb-1 h-6 w-6 text-slate-400" />
+          <p className="text-xs text-slate-500">Sin citas</p>
+        </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {appointments
             .filter((c) => !c.completada)
-            .slice(0, 5)
+            .slice(0, 3)
             .map((cita) => (
               <div
                 key={cita.id}
-                className={`rounded-lg px-3 py-2 ${
-                  cita.fecha <= now ? 'bg-brand/10 border border-brand/20' : 'bg-slate-50'
+                className={`rounded-lg border p-2 transition-all ${
+                  cita.fecha <= now
+                    ? 'border-blue-300 bg-blue-50'
+                    : 'border-slate-200 bg-slate-50'
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-slate-900 truncate">{cita.paciente}</p>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-slate-900 truncate">{cita.paciente}</p>
+                    <p className="text-[10px] text-slate-600 truncate">
+                      {cita.fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                      {cita.profesional && ` · ${cita.profesional}`}
+                    </p>
+                  </div>
                   {cita.fecha <= now && (
-                    <span className="text-[9px] font-semibold text-brand uppercase px-1.5 py-0.5 bg-brand/20 rounded">
-                      En curso
+                    <span className="flex items-center gap-0.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-semibold text-white shrink-0">
+                      <Zap className="h-2.5 w-2.5" />
+                      Ahora
                     </span>
                   )}
                 </div>
-                <p className="text-[10px] text-slate-500 mt-0.5">
-                  {cita.fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                  {cita.profesional && ` · ${cita.profesional}`}
-                  {cita.servicio && ` · ${cita.servicio}`}
-                </p>
               </div>
             ))}
-          {citasCompletadas > 0 && (
-            <p className="text-[10px] text-success flex items-center gap-1 pt-1">
-              <CheckCircle2 className="h-3 w-3" />
-              {citasCompletadas} completada{citasCompletadas !== 1 ? 's' : ''} hoy
-            </p>
-          )}
         </div>
       )}
+
+      {/* Footer */}
       <Link
         href="/dashboard/agenda"
-        className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-brand hover:text-brand/80"
+        className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-brand-600 transition-all hover:gap-2"
       >
-        Ver agenda completa <ArrowRight className="h-3 w-3" />
+        Ir a la agenda
+        <ArrowRight className="h-3 w-3" />
       </Link>
     </div>
   );
 }
 
-// ========== MIS TAREAS ==========
+// ========== MIS TAREAS (REDISEÑADO) ==========
 interface TasksWidgetProps {
   tasks: UserTask[];
   loading: boolean;
@@ -117,61 +155,90 @@ interface TasksWidgetProps {
 
 export function TasksWidget({ tasks, loading }: TasksWidgetProps) {
   const now = new Date();
+  const tareasUrgentes = tasks.filter((t) => t.prioridad === 'alta').length;
 
   return (
-    <div className="surface-card p-4 border-l-2 border-l-brand bg-sky-50/20">
-      <div className="flex items-center justify-between mb-3">
+    <div className="rounded-xl border border-violet-200 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+      {/* Header compacto */}
+      <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-brand" />
-          <h3 className="text-sm font-semibold text-slate-900">Mis tareas</h3>
+          <div className="rounded-lg p-1.5" style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
+            <Clock className="h-4 w-4 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xs font-semibold text-slate-900">Mis tareas</h3>
+            <p className="text-[10px] text-slate-500">Pendientes</p>
+          </div>
         </div>
         {!loading && tasks.length > 0 && (
-          <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand">
-            {tasks.length} pendiente{tasks.length !== 1 ? 's' : ''}
-          </span>
+          <div className="flex items-center gap-1.5">
+            {tareasUrgentes > 0 && (
+              <span className="flex items-center gap-0.5 rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700">
+                <AlertCircle className="h-2.5 w-2.5" />
+                {tareasUrgentes}
+              </span>
+            )}
+            <div className="rounded-lg bg-violet-100 px-2 py-1">
+              <span className="text-lg font-bold text-violet-700">{tasks.length}</span>
+            </div>
+          </div>
         )}
       </div>
+
+      {/* Content compacto */}
       {loading ? (
-        <p className="text-xs text-slate-500">Cargando...</p>
+        <div className="space-y-1.5">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-12 animate-pulse rounded bg-slate-100" />
+          ))}
+        </div>
       ) : tasks.length === 0 ? (
-        <p className="text-xs text-success">Sin tareas pendientes</p>
+        <div className="py-4 text-center">
+          <CheckCircle2 className="mx-auto mb-1 h-6 w-6 text-emerald-500" />
+          <p className="text-xs font-medium text-slate-900">¡Todo al día!</p>
+        </div>
       ) : (
-        <div className="space-y-2">
-          {tasks.slice(0, 5).map((task) => (
-            <div key={task.id} className="flex items-start gap-2 bg-white rounded-lg px-3 py-2">
-              <Circle
-                className={`h-3 w-3 mt-0.5 shrink-0 ${
+        <div className="space-y-1.5">
+          {tasks.slice(0, 3).map((task) => (
+            <div
+              key={task.id}
+              className="group flex items-start gap-2 rounded-lg border border-slate-200 bg-white p-2 transition-all hover:border-slate-300 hover:shadow-sm"
+            >
+              <div
+                className={`mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full ${
                   task.prioridad === 'alta'
-                    ? 'text-danger'
+                    ? 'bg-rose-500'
                     : task.prioridad === 'media'
-                    ? 'text-warn'
-                    : 'text-slate-400'
+                    ? 'bg-amber-500'
+                    : 'bg-slate-300'
                 }`}
               />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-slate-900 truncate">{task.titulo}</p>
                 {task.fechaLimite && (
                   <p
-                    className={`text-[9px] ${
-                      task.fechaLimite < now ? 'text-danger font-medium' : 'text-slate-500'
+                    className={`text-[10px] ${
+                      task.fechaLimite < now
+                        ? 'font-medium text-rose-600'
+                        : 'text-slate-500'
                     }`}
                   >
                     {task.fechaLimite < now
                       ? '⚠️ Vencida'
-                      : `Vence: ${task.fechaLimite.toLocaleDateString('es-ES', {
+                      : task.fechaLimite.toLocaleDateString('es-ES', {
                           day: 'numeric',
                           month: 'short',
-                        })}`}
+                        })}
                   </p>
                 )}
               </div>
               <span
-                className={`text-[8px] uppercase font-semibold px-1.5 py-0.5 rounded ${
+                className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase shrink-0 ${
                   task.prioridad === 'alta'
-                    ? 'bg-danger-bg text-danger'
+                    ? 'bg-rose-100 text-rose-700'
                     : task.prioridad === 'media'
-                    ? 'bg-warn-bg text-warn'
-                    : 'bg-slate-100 text-slate-500'
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-slate-100 text-slate-600'
                 }`}
               >
                 {task.prioridad}
@@ -180,75 +247,84 @@ export function TasksWidget({ tasks, loading }: TasksWidgetProps) {
           ))}
         </div>
       )}
+
+      {/* Footer */}
       <Link
         href="/dashboard/proyectos"
-        className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-brand hover:text-brand/80"
+        className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-brand-600 transition-all hover:gap-2"
       >
-        Ver proyectos <ArrowRight className="h-3 w-3" />
+        Ver proyectos
+        <ArrowRight className="h-3 w-3" />
       </Link>
     </div>
   );
 }
 
-// ========== SEGUIMIENTOS PENDIENTES ==========
+// ========== SEGUIMIENTOS (REDISEÑADO) ==========
 interface FollowUpsWidgetProps {
   patients: FollowUpPatient[];
   loading: boolean;
 }
 
 export function FollowUpsWidget({ patients, loading }: FollowUpsWidgetProps) {
+  const hasAlerts = patients.length > 0;
+
   return (
-    <div
-      className={`surface-card p-3 border-l-2 ${
-        patients.length > 0
-          ? 'border-l-amber-500 bg-amber-50/30'
-          : 'border-l-success bg-emerald-50/20'
-      }`}
-    >
-      <div className="flex items-center justify-between mb-2">
+    <div className="rounded-lg border border-amber-200 bg-white p-3 transition-all hover:shadow-sm">
+      <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <Users
-            className={`h-3.5 w-3.5 ${patients.length > 0 ? 'text-amber-600' : 'text-success'}`}
-          />
-          <h3 className="text-xs font-semibold text-slate-900">Seguimientos pendientes</h3>
+          <div className="rounded-lg p-1.5" style={{ background: hasAlerts ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #10b981, #059669)' }}>
+            <Users className="h-3.5 w-3.5 text-white" />
+          </div>
+          <h3 className="text-xs font-semibold text-slate-900">Seguimientos</h3>
         </div>
-        {!loading && patients.length > 0 && (
-          <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700">
-            {patients.length}+
-          </span>
+        {!loading && hasAlerts && (
+          <div className="rounded-lg bg-amber-100 px-2 py-1">
+            <span className="text-sm font-bold text-amber-700">{patients.length}</span>
+          </div>
         )}
       </div>
+
       {loading ? (
-        <p className="text-xs text-slate-500">Cargando...</p>
-      ) : patients.length === 0 ? (
-        <p className="text-xs text-success">Todos al día</p>
-      ) : (
         <div className="space-y-1">
-          {patients.slice(0, 4).map((patient) => (
+          {[1, 2].map((i) => (
+            <div key={i} className="h-6 animate-pulse rounded bg-slate-100" />
+          ))}
+        </div>
+      ) : hasAlerts ? (
+        <div className="space-y-1">
+          {patients.slice(0, 2).map((patient) => (
             <Link
               key={patient.id}
               href={`/dashboard/pacientes/${patient.id}`}
-              className="flex items-center justify-between rounded-lg bg-slate-50 px-2 py-1.5 text-[11px] hover:bg-slate-100"
+              className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs transition-all hover:bg-white hover:border-amber-300"
             >
-              <span className="font-medium text-slate-900 truncate">
+              <span className="font-medium text-slate-900 truncate text-[11px]">
                 {patient.nombre} {patient.apellidos}
               </span>
-              <ArrowRight className="h-3 w-3 text-slate-400" />
+              <ArrowRight className="h-3 w-3 text-slate-400 shrink-0" />
             </Link>
           ))}
         </div>
+      ) : (
+        <div className="py-3 text-center">
+          <CheckCircle2 className="mx-auto mb-1 h-5 w-5 text-slate-400" />
+          <p className="text-[10px] text-slate-500">Todos al día</p>
+        </div>
       )}
+
       <Link
-        href="/dashboard/pacientes"
-        className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-brand hover:text-brand/80"
+        href="/dashboard/pacientes?filtro=seguimiento"
+        className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600"
       >
-        Ver todos <ArrowRight className="h-3 w-3" />
+        Ver pacientes
+        <ArrowRight className="h-2.5 w-2.5" />
       </Link>
     </div>
   );
 }
 
-// ========== PROYECTOS EN CURSO ==========
+// ========== PROYECTOS (REDISEÑADO) ==========
 interface ProjectsWidgetProps {
   proyectos: Proyecto[];
   estadisticas?: {
@@ -262,209 +338,272 @@ export function ProjectsWidget({ proyectos, estadisticas, loading }: ProjectsWid
   const enCurso = proyectos.filter((p) => p.estado === 'en-curso');
 
   return (
-    <div className="surface-card p-3 border-l-2 border-l-accent-500 bg-emerald-50/20">
-      <div className="flex items-center justify-between mb-2">
+    <div className="rounded-lg border border-emerald-200 bg-white p-3 transition-all hover:shadow-sm">
+      <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <FolderKanban className="h-3.5 w-3.5 text-accent-600" />
-          <h3 className="text-xs font-semibold text-slate-900">Proyectos en curso</h3>
+          <div className="rounded-lg p-1.5" style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
+            <FolderKanban className="h-3.5 w-3.5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xs font-semibold text-slate-900">Proyectos</h3>
+            <p className="text-[9px] text-slate-500">En curso</p>
+          </div>
         </div>
         {!loading && estadisticas && (
-          <span className="rounded-full bg-accent-100 px-1.5 py-0.5 text-[9px] font-semibold text-accent-700">
-            {estadisticas.porEstado['en-curso']}
-          </span>
+          <div className="rounded-lg bg-emerald-100 px-2 py-1">
+            <span className="text-sm font-bold text-emerald-700">
+              {estadisticas.porEstado['en-curso'] || 0}
+            </span>
+          </div>
         )}
       </div>
+
       {loading ? (
-        <p className="text-xs text-slate-500">Cargando...</p>
+        <div className="space-y-1.5">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-10 animate-pulse rounded bg-slate-100" />
+          ))}
+        </div>
       ) : enCurso.length === 0 ? (
-        <p className="text-xs text-slate-500">Sin proyectos activos</p>
+        <div className="py-3 text-center">
+          <Target className="mx-auto mb-1 h-5 w-5 text-slate-400" />
+          <p className="text-[10px] text-slate-500">Sin proyectos activos</p>
+        </div>
       ) : (
         <div className="space-y-1.5">
-          {enCurso.slice(0, 3).map((proyecto) => (
-            <div key={proyecto.id} className="rounded-lg bg-slate-50 px-2 py-1.5">
-              <p className="text-[11px] font-medium text-slate-900 truncate">{proyecto.nombre}</p>
-              <div className="mt-1 flex items-center gap-2">
-                <div className="flex-1 h-1 bg-slate-200 rounded-full overflow-hidden">
+          {enCurso.slice(0, 2).map((proyecto) => (
+            <div key={proyecto.id} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+              <p className="mb-1.5 text-[11px] font-semibold text-slate-900 truncate">
+                {proyecto.nombre}
+              </p>
+              <div className="flex items-center gap-1.5">
+                <div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-200">
                   <div
-                    className="h-full bg-accent-500 rounded-full"
-                    style={{ width: `${proyecto.progreso}%` }}
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${proyecto.progreso}%`, background: 'linear-gradient(90deg, #10b981, #059669)' }}
                   />
                 </div>
-                <span className="text-[9px] text-slate-500">{proyecto.progreso}%</span>
+                <span className="text-[9px] font-semibold text-emerald-700">
+                  {proyecto.progreso}%
+                </span>
               </div>
             </div>
           ))}
         </div>
       )}
+
       {estadisticas && estadisticas.proyectosAtrasados > 0 && (
-        <p className="mt-1.5 text-[10px] text-danger">
-          ⚠️ {estadisticas.proyectosAtrasados} atrasado(s)
-        </p>
+        <div className="mt-1.5 flex items-center gap-1 rounded bg-rose-100 px-1.5 py-0.5">
+          <AlertTriangle className="h-2.5 w-2.5 text-rose-600" />
+          <p className="text-[9px] font-medium text-rose-700">
+            {estadisticas.proyectosAtrasados} atrasado(s)
+          </p>
+        </div>
       )}
+
       <Link
         href="/dashboard/proyectos"
-        className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-brand hover:text-brand/80"
+        className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 hover:gap-2 transition-all"
       >
-        Ver todos <ArrowRight className="h-3 w-3" />
+        Ver kanban
+        <ArrowRight className="h-2.5 w-2.5" />
       </Link>
     </div>
   );
 }
 
-// ========== FINANZAS ==========
+// ========== FINANZAS (REDISEÑADO) ==========
 interface FinanceWidgetProps {
   summary: FinanceSummary;
   loading: boolean;
 }
 
 export function FinanceWidget({ summary, loading }: FinanceWidgetProps) {
+  const tasaCobro =
+    summary.facturadoMes > 0 ? (summary.cobradoMes / summary.facturadoMes) * 100 : 0;
+
   return (
-    <div className="surface-card p-3 border-l-2 border-l-violet-500 bg-violet-50/30">
-      <div className="flex items-center gap-1.5 mb-2">
-        <TrendingUp className="h-3.5 w-3.5 text-violet-600" />
-        <h3 className="text-xs font-semibold text-slate-900">Finanzas del mes</h3>
+    <div className="rounded-lg border border-purple-200 bg-white p-3 transition-all hover:shadow-sm">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <div className="rounded-lg p-1.5" style={{ background: 'linear-gradient(135deg, #a855f7, #9333ea)' }}>
+            <DollarSign className="h-3.5 w-3.5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xs font-semibold text-slate-900">Finanzas</h3>
+            <p className="text-[9px] text-slate-500">Este mes</p>
+          </div>
+        </div>
+        <TrendingUp className="h-3.5 w-3.5 text-purple-600" />
       </div>
+
       {loading ? (
         <div className="space-y-1.5">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-3 bg-slate-100 rounded animate-pulse" />
+          {[1, 2].map((i) => (
+            <div key={i} className="h-3 animate-pulse rounded bg-slate-100" />
           ))}
         </div>
       ) : (
-        <div className="space-y-1">
-          <div className="flex justify-between text-[11px]">
-            <span className="text-slate-500">Facturado</span>
-            <span className="font-semibold text-slate-900">
-              {currencyFormatter.format(summary.facturadoMes)}
-            </span>
-          </div>
-          <div className="flex justify-between text-[11px]">
-            <span className="text-slate-500">Cobrado</span>
-            <span className="font-semibold text-slate-900">
-              {currencyFormatter.format(summary.cobradoMes)}
-            </span>
-          </div>
-          <div className="flex justify-between text-[11px]">
-            <span className="text-slate-500">Pendiente</span>
-            <span className="font-semibold text-amber-600">
-              {currencyFormatter.format(summary.totalPendiente)}
-            </span>
-          </div>
-          {summary.totalVencido > 0 && (
-            <div className="flex justify-between text-[11px]">
-              <span className="text-slate-500">Vencido</span>
-              <span className="font-semibold text-rose-600">
-                {currencyFormatter.format(summary.totalVencido)}
+        <>
+          <div className="space-y-1.5">
+            <div className="flex items-baseline justify-between">
+              <span className="text-[9px] uppercase tracking-wide text-slate-500">
+                Facturado
+              </span>
+              <span className="text-xs font-bold text-slate-900">
+                {currencyFormatter.format(summary.facturadoMes)}
               </span>
             </div>
-          )}
-        </div>
+            <div className="flex items-baseline justify-between">
+              <span className="text-[9px] uppercase tracking-wide text-slate-500">Cobrado</span>
+              <span className="text-xs font-bold text-emerald-600">
+                {currencyFormatter.format(summary.cobradoMes)}
+              </span>
+            </div>
+          </div>
+
+          {/* Tasa de cobro */}
+          <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-1.5">
+            <div className="mb-1 flex items-center justify-between">
+              <span className="text-[9px] text-slate-500">Tasa de cobro</span>
+              <span className="text-[10px] font-semibold text-purple-700">
+                {Math.round(tasaCobro)}%
+              </span>
+            </div>
+            <div className="h-1 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{ width: `${tasaCobro}%`, background: 'linear-gradient(90deg, #a855f7, #9333ea)' }}
+              />
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
 }
 
-// ========== REPORTES PENDIENTES ==========
+// ========== REPORTES (REDISEÑADO) ==========
 interface ReportsWidgetProps {
   pendingCount: number;
 }
 
 export function ReportsWidget({ pendingCount }: ReportsWidgetProps) {
+  const hasReports = pendingCount > 0;
+
   return (
-    <div
-      className={`surface-card p-3 border-l-2 ${
-        pendingCount > 0 ? 'border-l-danger bg-rose-50/30' : 'border-l-slate-200'
-      }`}
-    >
-      <div className="flex items-center justify-between mb-2">
+    <div className="rounded-lg border border-rose-200 bg-white p-3 transition-all hover:shadow-sm">
+      <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <AlertTriangle
-            className={`h-3.5 w-3.5 ${pendingCount > 0 ? 'text-danger' : 'text-slate-400'}`}
-          />
-          <h3 className="text-xs font-semibold text-slate-900">Reportes pendientes</h3>
+          <div className="rounded-lg p-1.5" style={{ background: hasReports ? 'linear-gradient(135deg, #f43f5e, #e11d48)' : 'linear-gradient(135deg, #94a3b8, #64748b)' }}>
+            <AlertTriangle className="h-3.5 w-3.5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xs font-semibold text-slate-900">Reportes</h3>
+            <p className="text-[9px] text-slate-500">Pendientes</p>
+          </div>
         </div>
-        {pendingCount > 0 && (
-          <span className="rounded-full bg-danger-bg px-1.5 py-0.5 text-[9px] font-semibold text-danger">
-            {pendingCount}
-          </span>
+        {hasReports && (
+          <div className="rounded-lg bg-rose-100 px-2 py-1">
+            <span className="text-sm font-bold text-rose-700">{pendingCount}</span>
+          </div>
         )}
       </div>
-      {pendingCount === 0 ? (
-        <p className="text-xs text-success">Sin reportes pendientes</p>
-      ) : (
-        <div className="space-y-1.5">
-          <p className="text-[11px] text-slate-600">{pendingCount} reporte(s) requieren atención</p>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+
+      {hasReports ? (
+        <div>
+          <p className="mb-1.5 text-[10px] text-slate-600">{pendingCount} reporte(s) pendientes</p>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-1.5">
+            <div className="h-1 overflow-hidden rounded-full bg-slate-200">
               <div
-                className="h-full bg-danger rounded-full"
-                style={{ width: `${Math.min(pendingCount * 20, 100)}%` }}
+                className="h-full rounded-full transition-all"
+                style={{ width: `${Math.min(pendingCount * 15, 100)}%`, background: 'linear-gradient(90deg, #f43f5e, #e11d48)' }}
               />
             </div>
           </div>
         </div>
+      ) : (
+        <div className="py-3 text-center">
+          <CheckCircle2 className="mx-auto mb-1 h-5 w-5 text-slate-400" />
+          <p className="text-[10px] text-slate-500">Sin reportes pendientes</p>
+        </div>
       )}
+
       <Link
         href="/dashboard/reporte-diario"
-        className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-brand hover:text-brand/80"
+        className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 hover:gap-2 transition-all"
       >
-        Ver reportes <ArrowRight className="h-3 w-3" />
+        Ver reportes
+        <ArrowRight className="h-2.5 w-2.5" />
       </Link>
     </div>
   );
 }
 
-// ========== STOCK BAJO ==========
+// ========== STOCK (REDISEÑADO) ==========
 interface StockWidgetProps {
   alerts: StockAlerts;
   loading: boolean;
 }
 
 export function StockWidget({ alerts, loading }: StockWidgetProps) {
+  const hasAlerts = alerts.total > 0;
+
   return (
-    <div
-      className={`surface-card p-3 border-l-2 ${
-        alerts.total > 0 ? 'border-l-warn bg-orange-50/40' : 'border-l-slate-200'
-      }`}
-    >
-      <div className="flex items-center justify-between mb-2">
+    <div className="rounded-lg border border-orange-200 bg-white p-3 transition-all hover:shadow-sm">
+      <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <Package className="h-3.5 w-3.5 text-warn" />
-          <h3 className="text-xs font-semibold text-slate-900">Stock bajo</h3>
+          <div className="rounded-lg p-1.5" style={{ background: hasAlerts ? 'linear-gradient(135deg, #f97316, #ea580c)' : 'linear-gradient(135deg, #94a3b8, #64748b)' }}>
+            <Package className="h-3.5 w-3.5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xs font-semibold text-slate-900">Inventario</h3>
+            <p className="text-[9px] text-slate-500">Stock bajo</p>
+          </div>
         </div>
-        {alerts.total > 0 && (
-          <span className="rounded-full bg-warn-bg px-1.5 py-0.5 text-[9px] font-semibold text-warn">
-            {alerts.total}
-          </span>
+        {hasAlerts && (
+          <div className="rounded-lg bg-orange-100 px-2 py-1">
+            <span className="text-sm font-bold text-orange-700">{alerts.total}</span>
+          </div>
         )}
       </div>
+
       {loading ? (
-        <p className="text-xs text-slate-500">Cargando...</p>
-      ) : alerts.top.length === 0 ? (
-        <p className="text-xs text-success">Sin alertas de stock</p>
-      ) : (
         <div className="space-y-1">
-          {alerts.top.slice(0, 3).map((item) => (
-            <div key={item.id} className="flex justify-between text-[11px]">
-              <span className="text-slate-600 truncate pr-2">{item.nombre}</span>
-              <span className="font-semibold text-slate-800">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-5 animate-pulse rounded bg-slate-100" />
+          ))}
+        </div>
+      ) : hasAlerts ? (
+        <div className="space-y-1">
+          {alerts.top.slice(0, 2).map((item) => (
+            <div key={item.id} className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-2 py-1">
+              <span className="text-[11px] text-slate-700 truncate pr-2">{item.nombre}</span>
+              <span className="text-[10px] font-bold text-orange-700">
                 {item.stock}/{item.stockMinimo}
               </span>
             </div>
           ))}
         </div>
+      ) : (
+        <div className="py-3 text-center">
+          <CheckCircle2 className="mx-auto mb-1 h-5 w-5 text-slate-400" />
+          <p className="text-[10px] text-slate-500">Stock normal</p>
+        </div>
       )}
+
       <Link
         href="/dashboard/inventario"
-        className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-brand hover:text-brand/80"
+        className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 hover:gap-2 transition-all"
       >
-        Ver inventario <ArrowRight className="h-3 w-3" />
+        Ver inventario
+        <ArrowRight className="h-2.5 w-2.5" />
       </Link>
     </div>
   );
 }
 
-// ========== ACTIVIDAD RECIENTE ==========
+// ========== ACTIVIDAD (REDISEÑADO) ==========
 interface ActivityWidgetProps {
   activity: RecentActivity[];
   loading: boolean;
@@ -472,21 +611,37 @@ interface ActivityWidgetProps {
 
 export function ActivityWidget({ activity, loading }: ActivityWidgetProps) {
   return (
-    <div className="surface-card p-3 border-l-2 border-l-brand bg-sky-50/20">
-      <div className="flex items-center gap-1.5 mb-2">
-        <Activity className="h-3.5 w-3.5 text-brand" />
-        <h3 className="text-xs font-semibold text-slate-900">Actividad reciente</h3>
+    <div className="rounded-lg border border-cyan-200 bg-white p-3 transition-all hover:shadow-sm">
+      <div className="mb-2 flex items-center gap-1.5">
+        <div className="rounded-lg p-1.5" style={{ background: 'linear-gradient(135deg, #06b6d4, #0891b2)' }}>
+          <Activity className="h-3.5 w-3.5 text-white" />
+        </div>
+        <div>
+          <h3 className="text-xs font-semibold text-slate-900">Actividad</h3>
+          <p className="text-[9px] text-slate-500">Recientes</p>
+        </div>
       </div>
+
       {loading ? (
-        <p className="text-xs text-slate-500">Cargando...</p>
+        <div className="space-y-1">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-8 animate-pulse rounded bg-slate-100" />
+          ))}
+        </div>
       ) : activity.length === 0 ? (
-        <p className="text-xs text-slate-500">Sin actividad</p>
+        <div className="py-3 text-center">
+          <Activity className="mx-auto mb-1 h-5 w-5 text-slate-400" />
+          <p className="text-[10px] text-slate-500">Sin actividad</p>
+        </div>
       ) : (
-        <div className="space-y-1.5">
-          {activity.slice(0, 4).map((item) => (
-            <div key={item.id} className="border-b border-slate-100 pb-1.5 last:border-0 last:pb-0">
+        <div className="space-y-1">
+          {activity.slice(0, 3).map((item) => (
+            <div
+              key={item.id}
+              className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 transition-all hover:bg-white hover:border-cyan-300"
+            >
               <p className="text-[11px] font-medium text-slate-900 truncate">{item.descripcion}</p>
-              <p className="text-[10px] text-slate-500">
+              <p className="text-[9px] text-slate-500">
                 {item.tipo} ·{' '}
                 {item.fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
               </p>
@@ -494,17 +649,19 @@ export function ActivityWidget({ activity, loading }: ActivityWidgetProps) {
           ))}
         </div>
       )}
+
       <Link
         href="/dashboard/auditoria"
-        className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-brand hover:text-brand/80"
+        className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 hover:gap-2 transition-all"
       >
-        Ver historial <ArrowRight className="h-3 w-3" />
+        Ver auditoría
+        <ArrowRight className="h-2.5 w-2.5" />
       </Link>
     </div>
   );
 }
 
-// ========== MÉTRICAS CLAVE ==========
+// ========== MÉTRICAS (REDISEÑADO) ==========
 interface MetricsWidgetProps {
   serviciosActivos: number;
   profesionalesActivos: number;
@@ -517,79 +674,141 @@ export function MetricsWidget({
   eventosSemana,
 }: MetricsWidgetProps) {
   return (
-    <div className="surface-card p-4 border-l-2 border-l-slate-300 bg-slate-50/50">
-      <h3 className="text-sm font-semibold text-slate-900 mb-3">Métricas clave</h3>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="text-center">
-          <span className="text-2xl font-bold text-slate-900">{serviciosActivos}</span>
-          <p className="text-[10px] uppercase tracking-wide text-slate-500 mt-1">Servicios activos</p>
+    <div className="rounded-xl border border-indigo-200 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+      <div className="mb-3 flex items-center gap-2">
+        <div className="rounded-lg p-1.5" style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}>
+          <BarChart3 className="h-4 w-4 text-white" />
         </div>
-        <div className="text-center">
-          <span className="text-2xl font-bold text-slate-900">{profesionalesActivos}</span>
-          <p className="text-[10px] uppercase tracking-wide text-slate-500 mt-1">Profesionales</p>
-        </div>
-        <div className="text-center">
-          <span className="text-2xl font-bold text-brand">{eventosSemana}</span>
-          <p className="text-[10px] uppercase tracking-wide text-slate-500 mt-1">Eventos/sem</p>
+        <div>
+          <h3 className="text-xs font-semibold text-slate-900">Métricas clave</h3>
+          <p className="text-[9px] text-slate-500">Visión general</p>
         </div>
       </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <div className="text-center">
+          <div className="mb-1 rounded-lg border border-blue-200 bg-blue-50 p-2">
+            <span className="block text-lg font-bold text-blue-700">{serviciosActivos}</span>
+          </div>
+          <p className="text-[9px] font-medium uppercase tracking-wide text-slate-600">
+            Servicios
+          </p>
+        </div>
+        <div className="text-center">
+          <div className="mb-1 rounded-lg border border-purple-200 bg-purple-50 p-2">
+            <span className="block text-lg font-bold text-purple-700">
+              {profesionalesActivos}
+            </span>
+          </div>
+          <p className="text-[9px] font-medium uppercase tracking-wide text-slate-600">
+            Profesionales
+          </p>
+        </div>
+        <div className="text-center">
+          <div className="mb-1 rounded-lg border border-emerald-200 bg-emerald-50 p-2">
+            <span className="block text-lg font-bold text-emerald-700">{eventosSemana}</span>
+          </div>
+          <p className="text-[9px] font-medium uppercase tracking-wide text-slate-600">
+            Eventos/sem
+          </p>
+        </div>
+      </div>
+
       <Link
         href="/dashboard/kpis"
-        className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-brand hover:text-brand/80"
+        className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 transition-all hover:gap-2"
       >
-        Ver todos los KPIs <ArrowRight className="h-3 w-3" />
+        Ver KPIs
+        <ArrowRight className="h-2.5 w-2.5" />
       </Link>
     </div>
   );
 }
 
-// ========== SUPERVISIÓN QA ==========
+// ========== EVALUACIONES (REDISEÑADO) ==========
 interface EvaluationsWidgetProps {
   evaluations: RecentEvaluation[];
   loading: boolean;
 }
 
 export function EvaluationsWidget({ evaluations, loading }: EvaluationsWidgetProps) {
+  const promedioTotal =
+    evaluations.length > 0
+      ? evaluations.reduce((acc, e) => acc + e.promedioGeneral, 0) / evaluations.length
+      : 0;
+
   return (
-    <div className="surface-card p-4 border-l-2 border-l-accent-500 bg-emerald-50/30">
-      <div className="flex items-center gap-2 mb-3">
-        <ClipboardCheck className="h-4 w-4 text-accent-600" />
-        <h3 className="text-sm font-semibold text-slate-900">Supervisión QA</h3>
+    <div className="rounded-xl border border-teal-200 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="rounded-lg p-1.5" style={{ background: 'linear-gradient(135deg, #14b8a6, #0d9488)' }}>
+            <ClipboardCheck className="h-4 w-4 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xs font-semibold text-slate-900">Supervisión QA</h3>
+            <p className="text-[9px] text-slate-500">Evaluaciones</p>
+          </div>
+        </div>
+        {evaluations.length > 0 && (
+          <div className="text-center">
+            <div className="flex items-center gap-1">
+              <Star className="h-3.5 w-3.5 text-amber-500" />
+              <span className="text-lg font-bold text-slate-900">
+                {promedioTotal.toFixed(1)}
+              </span>
+            </div>
+            <p className="text-[8px] text-slate-500">Promedio</p>
+          </div>
+        )}
       </div>
+
       {loading ? (
-        <p className="text-xs text-slate-500">Cargando...</p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-14 animate-pulse rounded-lg bg-slate-100" />
+          ))}
+        </div>
       ) : evaluations.length === 0 ? (
-        <p className="text-xs text-slate-500">Sin evaluaciones recientes</p>
+        <div className="py-4 text-center">
+          <ClipboardCheck className="mx-auto mb-1 h-6 w-6 text-slate-400" />
+          <p className="text-[10px] text-slate-500">Sin evaluaciones recientes</p>
+        </div>
       ) : (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-1.5">
           {evaluations.slice(0, 4).map((evaluation) => (
-            <div key={evaluation.id} className="rounded-lg bg-white px-3 py-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-slate-900 truncate">
+            <div
+              key={evaluation.id}
+              className="rounded-lg border border-slate-200 bg-slate-50 p-2 transition-all hover:bg-white hover:shadow-sm"
+            >
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-slate-900 truncate">
                   {evaluation.profesionalNombre}
                 </span>
-                <span
-                  className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
+                <div
+                  className={`flex items-center gap-0.5 rounded-full px-1 py-0.5 ${
                     evaluation.promedioGeneral >= 4
-                      ? 'bg-success-bg text-success'
+                      ? 'bg-emerald-100 text-emerald-700'
                       : evaluation.promedioGeneral >= 3
-                      ? 'bg-warn-bg text-warn'
-                      : 'bg-danger-bg text-danger'
+                      ? 'bg-amber-100 text-amber-700'
+                      : 'bg-rose-100 text-rose-700'
                   }`}
                 >
-                  {evaluation.promedioGeneral}
-                </span>
+                  <Star className="h-2.5 w-2.5" />
+                  <span className="text-[9px] font-bold">{evaluation.promedioGeneral}</span>
+                </div>
               </div>
-              <p className="text-[10px] text-slate-500 truncate">{evaluation.servicioNombre}</p>
+              <p className="text-[9px] text-slate-500 truncate">{evaluation.servicioNombre}</p>
             </div>
           ))}
         </div>
       )}
+
       <Link
         href="/dashboard/supervision"
-        className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-brand hover:text-brand/80"
+        className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 transition-all hover:gap-2"
       >
-        Ver supervisión <ArrowRight className="h-3 w-3" />
+        Ver evaluaciones
+        <ArrowRight className="h-2.5 w-2.5" />
       </Link>
     </div>
   );

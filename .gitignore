@@ -19,6 +19,10 @@
 
 # production
 /build
+/functions/node_modules
+/functions/lib
+/functions/.firebase
+/functions/package-lock.json
 
 # misc
 .DS_Store

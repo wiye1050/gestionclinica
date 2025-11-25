@@ -57,7 +57,7 @@ interface SidebarBadges {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { role } = useUserRole();
+  const { role, loading: roleLoading } = useUserRole();
 
   // Estado de secciones colapsables
   const [sectionStates, setSectionStates] = useState<Record<string, boolean>>({
@@ -74,8 +74,8 @@ export default function Sidebar() {
     mejorasPendientes: 0,
   });
 
-  // Rol del usuario (default a invitado si no está cargado)
-  const userRole: UserRole = role || 'invitado';
+  // Rol del usuario (default a recepcion para mostrar al menos módulos básicos mientras carga)
+  const userRole: UserRole = role || 'recepcion';
 
   // Cargar estado guardado de localStorage
   useEffect(() => {
@@ -257,6 +257,29 @@ export default function Sidebar() {
         return 'bg-slate-500 text-white';
     }
   };
+
+  // Mostrar skeleton mientras carga el rol
+  if (roleLoading) {
+    return (
+      <aside className="sidebar-panel flex w-full flex-col gap-2 px-3 py-4">
+        <div className="space-y-3">
+          {/* Skeleton de sección Principal */}
+          <div className="space-y-1">
+            <div className="h-4 w-20 animate-pulse rounded bg-slate-200" />
+            <div className="space-y-1">
+              <div className="h-9 animate-pulse rounded-lg bg-slate-100" />
+              <div className="h-9 animate-pulse rounded-lg bg-slate-100" />
+              <div className="h-9 animate-pulse rounded-lg bg-slate-100" />
+            </div>
+          </div>
+          {/* Skeleton de otras secciones */}
+          <div className="space-y-1">
+            <div className="h-9 animate-pulse rounded-lg bg-slate-100" />
+          </div>
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside className="sidebar-panel flex w-full flex-col gap-2 px-3 py-4">
