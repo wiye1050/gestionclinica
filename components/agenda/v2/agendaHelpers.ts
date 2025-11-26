@@ -44,15 +44,10 @@ export const AGENDA_CONFIG = {
   TIMELINE_HEIGHT_PER_HOUR: 80, // pixels
 };
 
-// Colores por tipo de cita
-export const EVENT_TYPE_COLORS = {
-  consulta: { bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-gray-900' },
-  seguimiento: { bg: 'bg-green-100', border: 'border-green-400', text: 'text-gray-900' },
-  revision: { bg: 'bg-yellow-100', border: 'border-yellow-400', text: 'text-gray-900' },
-  tratamiento: { bg: 'bg-purple-100', border: 'border-purple-400', text: 'text-gray-900' },
-  urgencia: { bg: 'bg-red-100', border: 'border-red-400', text: 'text-gray-900' },
-  administrativo: { bg: 'bg-gray-100', border: 'border-gray-400', text: 'text-gray-900' },
-};
+/**
+ * Color por defecto usado en toda la aplicación para profesionales y servicios
+ */
+export const DEFAULT_COLOR = '#3B82F6';
 
 // Colores por estado
 export const EVENT_STATE_STYLES = {
@@ -67,6 +62,11 @@ export const EVENT_STATE_STYLES = {
  * 1. Color del servicio (si tiene servicioId y existe en el catálogo)
  * 2. Color directo del evento (si está definido)
  * 3. Fallback al color del tipo de evento
+ * 4. Fallback final al DEFAULT_COLOR
+ *
+ * @param event - Evento de agenda
+ * @param catalogoServicios - Catálogo de servicios con colores
+ * @returns Color hexadecimal (#RRGGBB)
  */
 export function getEventColor(
   event: AgendaEvent,
@@ -87,15 +87,15 @@ export function getEventColor(
 
   // Prioridad 3: Fallback según tipo (mapeo a colores hexadecimales)
   const typeColorMap: Record<string, string> = {
-    consulta: '#3B82F6',      // Azul
-    seguimiento: '#10B981',   // Verde
-    revision: '#F59E0B',      // Amarillo
-    tratamiento: '#A855F7',   // Morado
-    urgencia: '#EF4444',      // Rojo
+    consulta: DEFAULT_COLOR,   // Azul
+    seguimiento: '#10B981',    // Verde
+    revision: '#F59E0B',       // Amarillo
+    tratamiento: '#A855F7',    // Morado
+    urgencia: '#EF4444',       // Rojo
     administrativo: '#6B7280', // Gris
   };
 
-  return typeColorMap[event.tipo] || '#3B82F6';
+  return typeColorMap[event.tipo] || DEFAULT_COLOR;
 }
 
 // Generar slots de tiempo

@@ -7,6 +7,8 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { CatalogoServicio, Profesional } from '@/types';
 import { Plus, Edit2, Trash2, Save, X, Clock } from 'lucide-react';
 import { sanitizeHTML, sanitizeInput, sanitizeStringArray } from '@/lib/utils/sanitize';
+import ColorPicker from '@/components/shared/ColorPicker';
+import { DEFAULT_COLOR } from '@/components/agenda/v2/agendaHelpers';
 
 export default function CatalogoServiciosPage() {
   const { user } = useAuth();
@@ -19,7 +21,7 @@ export default function CatalogoServiciosPage() {
   const [formData, setFormData] = useState({
     nombre: '',
     categoria: 'medicina' as 'medicina' | 'fisioterapia' | 'enfermeria',
-    color: '#3B82F6',
+    color: DEFAULT_COLOR,
     descripcion: '',
     tiempoEstimado: 30,
     requiereSala: true,
@@ -66,7 +68,7 @@ export default function CatalogoServiciosPage() {
     setFormData({
       nombre: '',
       categoria: 'medicina',
-      color: '#3B82F6',
+      color: DEFAULT_COLOR,
       descripcion: '',
       tiempoEstimado: 30,
       requiereSala: true,
@@ -123,7 +125,7 @@ export default function CatalogoServiciosPage() {
     setFormData({
       nombre: sanitizeInput(servicio.nombre),
       categoria: servicio.categoria,
-      color: servicio.color || '#3B82F6',
+      color: servicio.color || DEFAULT_COLOR,
       descripcion: servicio.descripcion ? sanitizeHTML(servicio.descripcion) : '',
       tiempoEstimado: servicio.tiempoEstimado,
       requiereSala: servicio.requiereSala,
@@ -282,31 +284,14 @@ export default function CatalogoServiciosPage() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Color en Agenda *</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={formData.color}
-                    onChange={(e) => setFormData({...formData, color: e.target.value})}
-                    className="h-10 w-20 rounded border border-gray-300 cursor-pointer"
-                    required
-                    title="Selecciona el color que se mostrará en la agenda"
-                  />
-                  <div className="flex items-center gap-2 flex-1">
-                    <div
-                      className="h-10 flex-1 rounded border border-gray-300 flex items-center justify-center text-xs font-medium"
-                      style={{ backgroundColor: formData.color, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
-                    >
-                      Vista previa
-                    </div>
-                    <span className="text-xs text-gray-600 font-mono">{formData.color.toUpperCase()}</span>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Este color se usará para identificar el servicio en la agenda
-                </p>
-              </div>
+              <ColorPicker
+                value={formData.color}
+                onChange={(color) => setFormData({...formData, color})}
+                label="Color en Agenda"
+                helpText="Este color se usará para identificar el servicio en la agenda"
+                previewText="Servicio de ejemplo"
+                required
+              />
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tiempo Estimado (minutos) *</label>

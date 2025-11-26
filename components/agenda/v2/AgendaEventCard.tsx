@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { Draggable } from '@hello-pangea/dnd';
-import { 
-  Clock, 
-  User, 
-  MapPin, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Clock,
+  User,
+  MapPin,
+  CheckCircle,
+  XCircle,
   Circle,
   AlertTriangle,
   Edit,
@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import {
   AgendaEvent,
-  EVENT_TYPE_COLORS,
   EVENT_STATE_STYLES,
   formatTimeRange,
   formatDuration,
@@ -75,9 +74,11 @@ export default function AgendaEventCard({
   const initialHeight = useRef(0);
   const initialMouseY = useRef(0);
 
-  // Obtener color dinámico del evento (servicio > evento > tipo)
-  const eventColor = getEventColor(event, catalogoServicios);
-  const typeColors = EVENT_TYPE_COLORS[event.tipo] || EVENT_TYPE_COLORS.consulta;
+  // Obtener color dinámico del evento (servicio > evento > tipo) - memoizado para performance
+  const eventColor = useMemo(
+    () => getEventColor(event, catalogoServicios),
+    [event.servicioId, event.color, event.tipo, catalogoServicios]
+  );
   const stateStyle = EVENT_STATE_STYLES[event.estado];
   const stateBadge = EVENT_STATE_BADGES[event.estado];
   const typeBadgeClass = EVENT_TYPE_BADGES[event.tipo] ?? 'bg-gray-200 text-gray-700';
@@ -194,7 +195,7 @@ export default function AgendaEventCard({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1 mb-0.5">
                     {estadoIcon}
-                    <span className={`font-semibold truncate ${typeColors.text}`}>
+                    <span className="font-semibold truncate text-gray-900">
                       {event.titulo}
                     </span>
                   </div>

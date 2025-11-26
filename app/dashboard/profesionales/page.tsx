@@ -7,6 +7,8 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { Profesional } from '@/types';
 import { Plus, Edit2, Trash2, Save, X, UserCheck, Mail, Phone, Clock, Calendar } from 'lucide-react';
 import { sanitizeInput, sanitizeStringArray } from '@/lib/utils/sanitize';
+import ColorPicker from '@/components/shared/ColorPicker';
+import { DEFAULT_COLOR } from '@/components/agenda/v2/agendaHelpers';
 
 export default function ProfesionalesPage() {
   const { user } = useAuth();
@@ -19,7 +21,7 @@ export default function ProfesionalesPage() {
     nombre: '',
     apellidos: '',
     especialidad: 'medicina' as 'medicina' | 'fisioterapia' | 'enfermeria',
-    color: '#3B82F6',
+    color: DEFAULT_COLOR,
     email: '',
     telefono: '',
     horasSemanales: 40,
@@ -51,7 +53,7 @@ export default function ProfesionalesPage() {
       nombre: '',
       apellidos: '',
       especialidad: 'medicina',
-      color: '#3B82F6',
+      color: DEFAULT_COLOR,
       email: '',
       telefono: '',
       horasSemanales: 40,
@@ -107,7 +109,7 @@ export default function ProfesionalesPage() {
       nombre: sanitizeInput(prof.nombre),
       apellidos: sanitizeInput(prof.apellidos),
       especialidad: prof.especialidad,
-      color: prof.color || '#3B82F6',
+      color: prof.color || DEFAULT_COLOR,
       email: sanitizeInput(prof.email),
       telefono: prof.telefono ? sanitizeInput(prof.telefono) : '',
       horasSemanales: prof.horasSemanales,
@@ -282,31 +284,14 @@ export default function ProfesionalesPage() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Color en Agenda *</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={formData.color}
-                    onChange={(e) => setFormData({...formData, color: e.target.value})}
-                    className="h-10 w-20 rounded border border-border cursor-pointer"
-                    required
-                    title="Color del profesional en la agenda"
-                  />
-                  <div className="flex items-center gap-2 flex-1">
-                    <div
-                      className="h-10 flex-1 rounded border border-border flex items-center justify-center text-xs font-medium"
-                      style={{ backgroundColor: formData.color, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
-                    >
-                      Vista previa
-                    </div>
-                    <span className="text-xs text-text-muted font-mono">{formData.color.toUpperCase()}</span>
-                  </div>
-                </div>
-                <p className="text-xs text-text-muted mt-1">
-                  Color identificativo en la vista multi-profesional de la agenda
-                </p>
-              </div>
+              <ColorPicker
+                value={formData.color}
+                onChange={(color) => setFormData({...formData, color})}
+                label="Color en Agenda"
+                helpText="Color identificativo en la vista multi-profesional de la agenda"
+                previewText="Dr. {nombre}"
+                required
+              />
 
               <div>
                 <label className="block text-sm font-medium text-text mb-1">Email *</label>

@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { Search, X, Calendar, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { AgendaEvent, EVENT_TYPE_COLORS } from './agendaHelpers';
+import { AgendaEvent } from './agendaHelpers';
 
 interface AgendaSearchProps {
   events: AgendaEvent[];
@@ -108,7 +108,6 @@ export default function AgendaSearch({ events, onEventSelect, onDateSelect }: Ag
                 {filteredEvents.length} resultado{filteredEvents.length !== 1 ? 's' : ''}
               </div>
               {filteredEvents.map((event) => {
-                const typeColors = EVENT_TYPE_COLORS[event.tipo];
                 return (
                   <button
                     key={event.id}
@@ -116,7 +115,7 @@ export default function AgendaSearch({ events, onEventSelect, onDateSelect }: Ag
                     className="w-full px-3 py-2 hover:bg-gray-50 transition-colors text-left"
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`w-1 h-full ${typeColors.border} rounded-full flex-shrink-0 mt-1`} />
+                      <div className="w-1 h-full border-brand rounded-full flex-shrink-0 mt-1" />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-gray-900 truncate">
                           {event.titulo}
@@ -136,7 +135,7 @@ export default function AgendaSearch({ events, onEventSelect, onDateSelect }: Ag
                           )}
                         </div>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${typeColors.bg} ${typeColors.text}`}>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-brand-subtle text-brand">
                             {event.tipo}
                           </span>
                           <span
