@@ -52,30 +52,30 @@ export function AppointmentsWidget({ appointments, loading }: AppointmentsWidget
   const progreso = appointments.length > 0 ? (citasCompletadas / appointments.length) * 100 : 0;
 
   return (
-    <div className="rounded-xl border border-blue-200 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+    <div className="h-full flex flex-col rounded-lg border border-blue-200 bg-white p-2 shadow-sm transition-all hover:shadow-md">
       {/* Header compacto */}
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="mb-1.5 flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
           <div className="rounded-lg p-1.5" style={{ background: 'linear-gradient(135deg, #0087cd, #006ba4)' }}>
-            <CalendarDays className="h-4 w-4 text-white" />
+            <CalendarDays className="h-3.5 w-3.5 text-white" />
           </div>
           <div>
             <h3 className="text-xs font-semibold text-slate-900">Agenda de hoy</h3>
-            <p className="text-[10px] text-slate-500">
+            <p className="text-[9px] text-slate-500">
               {new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
             </p>
           </div>
         </div>
         {!loading && (
           <div className="rounded-lg bg-blue-100 px-2 py-1">
-            <span className="text-lg font-bold text-blue-700">{appointments.length}</span>
+            <span className="text-sm font-bold text-blue-700">{appointments.length}</span>
           </div>
         )}
       </div>
 
       {/* Progress bar compacto */}
       {!loading && appointments.length > 0 && (
-        <div className="mb-3">
+        <div className="mb-1.5">
           <div className="mb-1.5 flex items-center justify-between text-[10px] text-slate-600">
             <span>{citasCompletadas} completadas</span>
             <span>{Math.round(progreso)}%</span>
@@ -90,58 +90,60 @@ export function AppointmentsWidget({ appointments, loading }: AppointmentsWidget
       )}
 
       {/* Content compacto */}
-      {loading ? (
-        <div className="space-y-1.5">
-          {[1, 2].map((i) => (
-            <div key={i} className="h-10 animate-pulse rounded bg-slate-100" />
-          ))}
-        </div>
-      ) : appointments.length === 0 ? (
-        <div className="py-4 text-center">
-          <CheckCircle2 className="mx-auto mb-1 h-6 w-6 text-slate-400" />
-          <p className="text-xs text-slate-500">Sin citas</p>
-        </div>
-      ) : (
-        <div className="space-y-1.5">
-          {appointments
-            .filter((c) => !c.completada)
-            .slice(0, 3)
-            .map((cita) => (
-              <div
-                key={cita.id}
-                className={`rounded-lg border p-2 transition-all ${
-                  cita.fecha <= now
-                    ? 'border-blue-300 bg-blue-50'
-                    : 'border-slate-200 bg-slate-50'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-900 truncate">{cita.paciente}</p>
-                    <p className="text-[10px] text-slate-600 truncate">
-                      {cita.fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                      {cita.profesional && ` · ${cita.profesional}`}
-                    </p>
-                  </div>
-                  {cita.fecha <= now && (
-                    <span className="flex items-center gap-0.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-semibold text-white shrink-0">
-                      <Zap className="h-2.5 w-2.5" />
-                      Ahora
-                    </span>
-                  )}
-                </div>
-              </div>
+      <div className="flex-1 overflow-y-auto">
+        {loading ? (
+          <div className="space-y-1.5">
+            {[1, 2].map((i) => (
+              <div key={i} className="h-10 animate-pulse rounded bg-slate-100" />
             ))}
-        </div>
-      )}
+          </div>
+        ) : appointments.length === 0 ? (
+          <div className="py-4 text-center">
+            <CheckCircle2 className="mx-auto mb-1 h-6 w-6 text-slate-400" />
+            <p className="text-xs text-slate-500">Sin citas</p>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {appointments
+              .filter((c) => !c.completada)
+              .slice(0, 3)
+              .map((cita) => (
+                <div
+                  key={cita.id}
+                  className={`rounded-lg border p-2 transition-all ${
+                    cita.fecha <= now
+                      ? 'border-blue-300 bg-blue-50'
+                      : 'border-slate-200 bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-slate-900 truncate">{cita.paciente}</p>
+                      <p className="text-[10px] text-slate-600 truncate">
+                        {cita.fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                        {cita.profesional && ` · ${cita.profesional}`}
+                      </p>
+                    </div>
+                    {cita.fecha <= now && (
+                      <span className="flex items-center gap-0.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-semibold text-white shrink-0">
+                        <Zap className="h-2.5 w-2.5" />
+                        Ahora
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+      </div>
 
       {/* Footer */}
       <Link
         href="/dashboard/agenda"
-        className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-brand-600 transition-all hover:gap-2"
+        className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 transition-all hover:gap-2"
       >
         Ir a la agenda
-        <ArrowRight className="h-3 w-3" />
+        <ArrowRight className="h-2.5 w-2.5" />
       </Link>
     </div>
   );
@@ -158,16 +160,16 @@ export function TasksWidget({ tasks, loading }: TasksWidgetProps) {
   const tareasUrgentes = tasks.filter((t) => t.prioridad === 'alta').length;
 
   return (
-    <div className="rounded-xl border border-violet-200 bg-white p-4 shadow-sm transition-all hover:shadow-md">
+    <div className="h-full flex flex-col rounded-lg border border-violet-200 bg-white p-2 shadow-sm transition-all hover:shadow-md">
       {/* Header compacto */}
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="mb-1.5 flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
           <div className="rounded-lg p-1.5" style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
-            <Clock className="h-4 w-4 text-white" />
+            <Clock className="h-3.5 w-3.5 text-white" />
           </div>
           <div>
             <h3 className="text-xs font-semibold text-slate-900">Mis tareas</h3>
-            <p className="text-[10px] text-slate-500">Pendientes</p>
+            <p className="text-[9px] text-slate-500">Pendientes</p>
           </div>
         </div>
         {!loading && tasks.length > 0 && (
@@ -179,82 +181,84 @@ export function TasksWidget({ tasks, loading }: TasksWidgetProps) {
               </span>
             )}
             <div className="rounded-lg bg-violet-100 px-2 py-1">
-              <span className="text-lg font-bold text-violet-700">{tasks.length}</span>
+              <span className="text-sm font-bold text-violet-700">{tasks.length}</span>
             </div>
           </div>
         )}
       </div>
 
       {/* Content compacto */}
-      {loading ? (
-        <div className="space-y-1.5">
-          {[1, 2].map((i) => (
-            <div key={i} className="h-12 animate-pulse rounded bg-slate-100" />
-          ))}
-        </div>
-      ) : tasks.length === 0 ? (
-        <div className="py-4 text-center">
-          <CheckCircle2 className="mx-auto mb-1 h-6 w-6 text-emerald-500" />
-          <p className="text-xs font-medium text-slate-900">¡Todo al día!</p>
-        </div>
-      ) : (
-        <div className="space-y-1.5">
-          {tasks.slice(0, 3).map((task) => (
-            <div
-              key={task.id}
-              className="group flex items-start gap-2 rounded-lg border border-slate-200 bg-white p-2 transition-all hover:border-slate-300 hover:shadow-sm"
-            >
+      <div className="flex-1 overflow-y-auto">
+        {loading ? (
+          <div className="space-y-1.5">
+            {[1, 2].map((i) => (
+              <div key={i} className="h-12 animate-pulse rounded bg-slate-100" />
+            ))}
+          </div>
+        ) : tasks.length === 0 ? (
+          <div className="py-4 text-center">
+            <CheckCircle2 className="mx-auto mb-1 h-6 w-6 text-emerald-500" />
+            <p className="text-xs font-medium text-slate-900">¡Todo al día!</p>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {tasks.slice(0, 3).map((task) => (
               <div
-                className={`mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full ${
-                  task.prioridad === 'alta'
-                    ? 'bg-rose-500'
-                    : task.prioridad === 'media'
-                    ? 'bg-amber-500'
-                    : 'bg-slate-300'
-                }`}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-slate-900 truncate">{task.titulo}</p>
-                {task.fechaLimite && (
-                  <p
-                    className={`text-[10px] ${
-                      task.fechaLimite < now
-                        ? 'font-medium text-rose-600'
-                        : 'text-slate-500'
-                    }`}
-                  >
-                    {task.fechaLimite < now
-                      ? '⚠️ Vencida'
-                      : task.fechaLimite.toLocaleDateString('es-ES', {
-                          day: 'numeric',
-                          month: 'short',
-                        })}
-                  </p>
-                )}
-              </div>
-              <span
-                className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase shrink-0 ${
-                  task.prioridad === 'alta'
-                    ? 'bg-rose-100 text-rose-700'
-                    : task.prioridad === 'media'
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'bg-slate-100 text-slate-600'
-                }`}
+                key={task.id}
+                className="group flex items-start gap-2 rounded-lg border border-slate-200 bg-white p-2 transition-all hover:border-slate-300 hover:shadow-sm"
               >
-                {task.prioridad}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
+                <div
+                  className={`mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full ${
+                    task.prioridad === 'alta'
+                      ? 'bg-rose-500'
+                      : task.prioridad === 'media'
+                      ? 'bg-amber-500'
+                      : 'bg-slate-300'
+                  }`}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-slate-900 truncate">{task.titulo}</p>
+                  {task.fechaLimite && (
+                    <p
+                      className={`text-[10px] ${
+                        task.fechaLimite < now
+                          ? 'font-medium text-rose-600'
+                          : 'text-slate-500'
+                      }`}
+                    >
+                      {task.fechaLimite < now
+                        ? '⚠️ Vencida'
+                        : task.fechaLimite.toLocaleDateString('es-ES', {
+                            day: 'numeric',
+                            month: 'short',
+                          })}
+                    </p>
+                  )}
+                </div>
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase shrink-0 ${
+                    task.prioridad === 'alta'
+                      ? 'bg-rose-100 text-rose-700'
+                      : task.prioridad === 'media'
+                      ? 'bg-amber-100 text-amber-700'
+                      : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {task.prioridad}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Footer */}
       <Link
         href="/dashboard/proyectos"
-        className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-brand-600 transition-all hover:gap-2"
+        className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 transition-all hover:gap-2"
       >
         Ver proyectos
-        <ArrowRight className="h-3 w-3" />
+        <ArrowRight className="h-2.5 w-2.5" />
       </Link>
     </div>
   );
@@ -270,13 +274,16 @@ export function FollowUpsWidget({ patients, loading }: FollowUpsWidgetProps) {
   const hasAlerts = patients.length > 0;
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-white p-3 transition-all hover:shadow-sm">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="h-full flex flex-col rounded-lg border border-amber-200 bg-white p-2 shadow-sm transition-all hover:shadow-md">
+      <div className="mb-1.5 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <div className="rounded-lg p-1.5" style={{ background: hasAlerts ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #10b981, #059669)' }}>
             <Users className="h-3.5 w-3.5 text-white" />
           </div>
-          <h3 className="text-xs font-semibold text-slate-900">Seguimientos</h3>
+          <div>
+            <h3 className="text-xs font-semibold text-slate-900">Seguimientos</h3>
+            <p className="text-[9px] text-slate-500">Pendientes</p>
+          </div>
         </div>
         {!loading && hasAlerts && (
           <div className="rounded-lg bg-amber-100 px-2 py-1">
@@ -315,7 +322,7 @@ export function FollowUpsWidget({ patients, loading }: FollowUpsWidgetProps) {
 
       <Link
         href="/dashboard/pacientes?filtro=seguimiento"
-        className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600"
+        className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600"
       >
         Ver pacientes
         <ArrowRight className="h-2.5 w-2.5" />
@@ -338,8 +345,8 @@ export function ProjectsWidget({ proyectos, estadisticas, loading }: ProjectsWid
   const enCurso = proyectos.filter((p) => p.estado === 'en-curso');
 
   return (
-    <div className="rounded-lg border border-emerald-200 bg-white p-3 transition-all hover:shadow-sm">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="h-full flex flex-col rounded-lg border border-emerald-200 bg-white p-2 transition-all hover:shadow-sm">
+      <div className="mb-1.5 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <div className="rounded-lg p-1.5" style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
             <FolderKanban className="h-3.5 w-3.5 text-white" />
@@ -403,7 +410,7 @@ export function ProjectsWidget({ proyectos, estadisticas, loading }: ProjectsWid
 
       <Link
         href="/dashboard/proyectos"
-        className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 hover:gap-2 transition-all"
+        className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 hover:gap-2 transition-all"
       >
         Ver kanban
         <ArrowRight className="h-2.5 w-2.5" />
@@ -423,8 +430,8 @@ export function FinanceWidget({ summary, loading }: FinanceWidgetProps) {
     summary.facturadoMes > 0 ? (summary.cobradoMes / summary.facturadoMes) * 100 : 0;
 
   return (
-    <div className="rounded-lg border border-purple-200 bg-white p-3 transition-all hover:shadow-sm">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="h-full flex flex-col rounded-lg border border-purple-200 bg-white p-2 transition-all hover:shadow-sm">
+      <div className="mb-1.5 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <div className="rounded-lg p-1.5" style={{ background: 'linear-gradient(135deg, #a855f7, #9333ea)' }}>
             <DollarSign className="h-3.5 w-3.5 text-white" />
@@ -492,8 +499,8 @@ export function ReportsWidget({ pendingCount }: ReportsWidgetProps) {
   const hasReports = pendingCount > 0;
 
   return (
-    <div className="rounded-lg border border-rose-200 bg-white p-3 transition-all hover:shadow-sm">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="h-full flex flex-col rounded-lg border border-rose-200 bg-white p-2 transition-all hover:shadow-sm">
+      <div className="mb-1.5 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <div className="rounded-lg p-1.5" style={{ background: hasReports ? 'linear-gradient(135deg, #f43f5e, #e11d48)' : 'linear-gradient(135deg, #94a3b8, #64748b)' }}>
             <AlertTriangle className="h-3.5 w-3.5 text-white" />
@@ -531,7 +538,7 @@ export function ReportsWidget({ pendingCount }: ReportsWidgetProps) {
 
       <Link
         href="/dashboard/reporte-diario"
-        className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 hover:gap-2 transition-all"
+        className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 hover:gap-2 transition-all"
       >
         Ver reportes
         <ArrowRight className="h-2.5 w-2.5" />
@@ -550,8 +557,8 @@ export function StockWidget({ alerts, loading }: StockWidgetProps) {
   const hasAlerts = alerts.total > 0;
 
   return (
-    <div className="rounded-lg border border-orange-200 bg-white p-3 transition-all hover:shadow-sm">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="h-full flex flex-col rounded-lg border border-orange-200 bg-white p-2 transition-all hover:shadow-sm">
+      <div className="mb-1.5 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <div className="rounded-lg p-1.5" style={{ background: hasAlerts ? 'linear-gradient(135deg, #f97316, #ea580c)' : 'linear-gradient(135deg, #94a3b8, #64748b)' }}>
             <Package className="h-3.5 w-3.5 text-white" />
@@ -594,7 +601,7 @@ export function StockWidget({ alerts, loading }: StockWidgetProps) {
 
       <Link
         href="/dashboard/inventario"
-        className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 hover:gap-2 transition-all"
+        className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 hover:gap-2 transition-all"
       >
         Ver inventario
         <ArrowRight className="h-2.5 w-2.5" />
@@ -611,8 +618,8 @@ interface ActivityWidgetProps {
 
 export function ActivityWidget({ activity, loading }: ActivityWidgetProps) {
   return (
-    <div className="rounded-lg border border-cyan-200 bg-white p-3 transition-all hover:shadow-sm">
-      <div className="mb-2 flex items-center gap-1.5">
+    <div className="h-full flex flex-col rounded-lg border border-cyan-200 bg-white p-2 transition-all hover:shadow-sm">
+      <div className="mb-1.5 flex items-center gap-1.5">
         <div className="rounded-lg p-1.5" style={{ background: 'linear-gradient(135deg, #06b6d4, #0891b2)' }}>
           <Activity className="h-3.5 w-3.5 text-white" />
         </div>
@@ -652,7 +659,7 @@ export function ActivityWidget({ activity, loading }: ActivityWidgetProps) {
 
       <Link
         href="/dashboard/auditoria"
-        className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 hover:gap-2 transition-all"
+        className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 hover:gap-2 transition-all"
       >
         Ver auditoría
         <ArrowRight className="h-2.5 w-2.5" />
@@ -674,10 +681,10 @@ export function MetricsWidget({
   eventosSemana,
 }: MetricsWidgetProps) {
   return (
-    <div className="rounded-xl border border-indigo-200 bg-white p-4 shadow-sm transition-all hover:shadow-md">
-      <div className="mb-3 flex items-center gap-2">
+    <div className="h-full flex flex-col rounded-lg border border-indigo-200 bg-white p-2 shadow-sm transition-all hover:shadow-md">
+      <div className="mb-1.5 flex items-center gap-1.5">
         <div className="rounded-lg p-1.5" style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}>
-          <BarChart3 className="h-4 w-4 text-white" />
+          <BarChart3 className="h-3.5 w-3.5 text-white" />
         </div>
         <div>
           <h3 className="text-xs font-semibold text-slate-900">Métricas clave</h3>
@@ -716,7 +723,7 @@ export function MetricsWidget({
 
       <Link
         href="/dashboard/kpis"
-        className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 transition-all hover:gap-2"
+        className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 transition-all hover:gap-2"
       >
         Ver KPIs
         <ArrowRight className="h-2.5 w-2.5" />
@@ -738,11 +745,11 @@ export function EvaluationsWidget({ evaluations, loading }: EvaluationsWidgetPro
       : 0;
 
   return (
-    <div className="rounded-xl border border-teal-200 bg-white p-4 shadow-sm transition-all hover:shadow-md">
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+    <div className="h-full flex flex-col rounded-lg border border-teal-200 bg-white p-2 shadow-sm transition-all hover:shadow-md">
+      <div className="mb-1.5 flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
           <div className="rounded-lg p-1.5" style={{ background: 'linear-gradient(135deg, #14b8a6, #0d9488)' }}>
-            <ClipboardCheck className="h-4 w-4 text-white" />
+            <ClipboardCheck className="h-3.5 w-3.5 text-white" />
           </div>
           <div>
             <h3 className="text-xs font-semibold text-slate-900">Supervisión QA</h3>
@@ -805,7 +812,7 @@ export function EvaluationsWidget({ evaluations, loading }: EvaluationsWidgetPro
 
       <Link
         href="/dashboard/supervision"
-        className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 transition-all hover:gap-2"
+        className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-brand-600 transition-all hover:gap-2"
       >
         Ver evaluaciones
         <ArrowRight className="h-2.5 w-2.5" />

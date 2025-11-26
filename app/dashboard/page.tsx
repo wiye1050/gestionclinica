@@ -143,8 +143,9 @@ function DashboardContent() {
   ];
 
   // Clases de espaciado basadas en modo compacto
-  const spacing = compactMode ? 'space-y-2' : 'space-y-3';
-  const gap = compactMode ? 'gap-2' : 'gap-3';
+  const spacing = compactMode ? 'space-y-0.5' : 'space-y-1';
+  const gapX = compactMode ? 'gap-x-0.5' : 'gap-x-1';
+  const gapY = 'gap-y-0';
   const padding = compactMode ? 'p-2 sm:p-3' : 'p-3 sm:p-4';
 
   // Función para renderizar un widget por ID
@@ -158,7 +159,7 @@ function DashboardContent() {
         return (
           <DraggableWidget key={widgetId} id={widgetId}>
             <LazyWidget delay={delay} skeleton={<AppointmentsSkeleton />}>
-              <div className="animate-fade-in" style={{ animationDelay: `${delay}ms` }}>
+              <div className="animate-fade-in h-full" style={{ animationDelay: `${delay}ms` }}>
                 <AppointmentsWidget appointments={todayAppointments} loading={loadingAppointments} />
               </div>
             </LazyWidget>
@@ -169,7 +170,7 @@ function DashboardContent() {
         return (
           <DraggableWidget key={widgetId} id={widgetId}>
             <LazyWidget delay={delay} skeleton={<TasksSkeleton />}>
-              <div className="animate-fade-in" style={{ animationDelay: `${delay}ms` }}>
+              <div className="animate-fade-in h-full" style={{ animationDelay: `${delay}ms` }}>
                 <TasksWidget tasks={userTasks} loading={loadingTasks} />
               </div>
             </LazyWidget>
@@ -180,7 +181,7 @@ function DashboardContent() {
         return (
           <DraggableWidget key={widgetId} id={widgetId}>
             <LazyWidget delay={delay} skeleton={<CompactWidgetSkeleton borderColor="border-amber-200" iconBg="bg-amber-200" />}>
-              <div className="animate-fade-in" style={{ animationDelay: `${delay}ms` }}>
+              <div className="animate-fade-in h-full" style={{ animationDelay: `${delay}ms` }}>
                 <FollowUpsWidget patients={followUpPatients} loading={loadingFollowUps} />
               </div>
             </LazyWidget>
@@ -191,7 +192,7 @@ function DashboardContent() {
         return (
           <DraggableWidget key={widgetId} id={widgetId}>
             <LazyWidget delay={delay} skeleton={<CompactWidgetSkeleton borderColor="border-emerald-200" iconBg="bg-emerald-200" />}>
-              <div className="animate-fade-in" style={{ animationDelay: `${delay}ms` }}>
+              <div className="animate-fade-in h-full" style={{ animationDelay: `${delay}ms` }}>
                 <ProjectsWidget proyectos={proyectos} estadisticas={proyectosStats} loading={loadingProyectos} />
               </div>
             </LazyWidget>
@@ -202,7 +203,7 @@ function DashboardContent() {
         return (
           <DraggableWidget key={widgetId} id={widgetId}>
             <LazyWidget delay={delay} skeleton={<FinanceSkeleton />}>
-              <div className="animate-fade-in" style={{ animationDelay: `${delay}ms` }}>
+              <div className="animate-fade-in h-full" style={{ animationDelay: `${delay}ms` }}>
                 <FinanceWidget summary={financeSummary} loading={loadingFinance} />
               </div>
             </LazyWidget>
@@ -213,7 +214,7 @@ function DashboardContent() {
         return (
           <DraggableWidget key={widgetId} id={widgetId}>
             <LazyWidget delay={delay} skeleton={<CompactWidgetSkeleton borderColor="border-rose-200" iconBg="bg-rose-200" />}>
-              <div className="animate-fade-in" style={{ animationDelay: `${delay}ms` }}>
+              <div className="animate-fade-in h-full" style={{ animationDelay: `${delay}ms` }}>
                 <ReportsWidget pendingCount={kpisData?.reportesPendientes ?? 0} />
               </div>
             </LazyWidget>
@@ -224,7 +225,7 @@ function DashboardContent() {
         return (
           <DraggableWidget key={widgetId} id={widgetId}>
             <LazyWidget delay={delay} skeleton={<CompactWidgetSkeleton borderColor="border-orange-200" iconBg="bg-orange-200" />}>
-              <div className="animate-fade-in" style={{ animationDelay: `${delay}ms` }}>
+              <div className="animate-fade-in h-full" style={{ animationDelay: `${delay}ms` }}>
                 <StockWidget alerts={stockAlerts} loading={loadingStock} />
               </div>
             </LazyWidget>
@@ -235,7 +236,7 @@ function DashboardContent() {
         return (
           <DraggableWidget key={widgetId} id={widgetId}>
             <LazyWidget delay={delay} skeleton={<ActivitySkeleton />}>
-              <div className="animate-fade-in" style={{ animationDelay: `${delay}ms` }}>
+              <div className="animate-fade-in h-full" style={{ animationDelay: `${delay}ms` }}>
                 <ActivityWidget activity={recentActivity} loading={loadingActivity} />
               </div>
             </LazyWidget>
@@ -246,7 +247,7 @@ function DashboardContent() {
         return (
           <DraggableWidget key={widgetId} id={widgetId}>
             <LazyWidget delay={delay} skeleton={<MetricsSkeleton />}>
-              <div className="animate-fade-in" style={{ animationDelay: `${delay}ms` }}>
+              <div className="animate-fade-in h-full" style={{ animationDelay: `${delay}ms` }}>
                 <MetricsWidget
                   serviciosActivos={kpisData?.serviciosActivos ?? 0}
                   profesionalesActivos={kpisData?.profesionalesActivos ?? 0}
@@ -261,7 +262,7 @@ function DashboardContent() {
         return (
           <DraggableWidget key={widgetId} id={widgetId}>
             <LazyWidget delay={delay} skeleton={<EvaluationsSkeleton />}>
-              <div className="animate-fade-in" style={{ animationDelay: `${delay}ms` }}>
+              <div className="animate-fade-in h-full" style={{ animationDelay: `${delay}ms` }}>
                 <EvaluationsWidget evaluations={recentEvaluations} loading={loadingEvaluations} />
               </div>
             </LazyWidget>
@@ -290,7 +291,7 @@ function DashboardContent() {
 
         <div className="relative">
           {/* Header compacto - Stack en móvil, inline en desktop */}
-          <div className={`mb-3 flex flex-col ${gap} sm:flex-row sm:items-center sm:justify-between`}>
+          <div className={`mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between`}>
             <div>
               <div className="mb-1 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-white/80" />
@@ -354,7 +355,12 @@ function DashboardContent() {
 
       {/* WIDGETS GRID - Orden personalizable con drag & drop */}
       <SortableContext items={visibleWidgets}>
-        <section className={`grid grid-cols-1 ${gap} sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4`}>
+        <section
+          className={`grid grid-cols-1 ${gapX} ${gapY} sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4`}
+          style={{
+            gridAutoRows: compactMode ? '160px' : '200px'
+          }}
+        >
           {visibleWidgets.map((widgetId, index) => renderWidget(widgetId, index))}
         </section>
       </SortableContext>
