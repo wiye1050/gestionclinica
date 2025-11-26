@@ -1,5 +1,6 @@
 import { db } from './_shared-firebase-client';
 import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { getExtendedPaletteColor } from '../lib/utils/colorGenerator';
 
 /**
  * Script de migración para agregar campo `color` a profesionales y servicios existentes
@@ -7,19 +8,11 @@ import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
  * FASE 1: Fundamentos - Migración de datos
  *
  * Este script asigna colores por defecto a:
- * - Profesionales sin campo color (usa paleta rotativa)
+ * - Profesionales sin campo color (usa paleta extendida con generación HSL)
  * - Servicios del catálogo sin campo color (usa colores por categoría)
+ *
+ * MEJORA: Usa generación dinámica de colores HSL para clínicas con >8 profesionales
  */
-
-// Paleta de colores para profesionales (6 colores distintos)
-const PROFESIONAL_COLORS = [
-  '#3B82F6', // Azul
-  '#10B981', // Verde
-  '#F59E0B', // Naranja
-  '#EF4444', // Rojo
-  '#8B5CF6', // Morado
-  '#06B6D4', // Cyan
-];
 
 // Colores por categoría para servicios
 const SERVICIO_COLORS_BY_CATEGORIA = {
@@ -47,10 +40,10 @@ async function migrateProfesionales() {
   snap.docs.forEach((d, index) => {
     const data = d.data() as ProfesionalDoc;
     if (!data.color) {
-      // Asignar color rotativo de la paleta
-      const color = PROFESIONAL_COLORS[index % PROFESIONAL_COLORS.length];
+      // Usar paleta extendida con generación HSL para >8 profesionales
+      const color = getExtendedPaletteColor(index);
       batch.update(doc(db, 'profesionales', d.id), { color });
-      console.log(`  ✓ ${d.id}: ${color}`);
+      console.log(`  ✓ ${d.id}: ${color} ${index >= 8 ? '(HSL generated)' : '(fixed palette)'}`);
       count++;
     }
   });
