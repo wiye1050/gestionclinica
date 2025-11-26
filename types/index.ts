@@ -81,6 +81,8 @@ export interface Profesional {
   nombre: string;
   apellidos: string;
   especialidad: 'medicina' | 'fisioterapia' | 'enfermeria';
+  /** Color identificativo en formato hexadecimal (ej: "#3B82F6"). Usado en agenda y vistas multi-profesional */
+  color?: string;
   email: string;
   telefono?: string;
   activo: boolean;
@@ -122,6 +124,8 @@ export interface CatalogoServicio {
   id: string;
   nombre: string;
   categoria: 'medicina' | 'fisioterapia' | 'enfermeria';
+  /** Color del servicio en formato hexadecimal (ej: "#10B981"). Se aplica a eventos de agenda de este servicio */
+  color: string;
   descripcion?: string;
   protocolosRequeridos?: string[];
   

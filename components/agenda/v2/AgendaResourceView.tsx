@@ -15,13 +15,7 @@ import {
   calculateOccupancyRate,
 } from './agendaHelpers';
 import { Users, TrendingUp } from 'lucide-react';
-
-const RESOURCE_HEADER_ACCENTS = [
-  { container: 'border-brand/40 bg-brand-subtle', dot: 'bg-brand' },
-  { container: 'border-success/40 bg-success-bg', dot: 'bg-success' },
-  { container: 'border-warn/40 bg-warn-bg', dot: 'bg-warn' },
-  { container: 'border-accent/40 bg-accent-bg', dot: 'bg-accent' },
-];
+import type { CatalogoServicio } from '@/types';
 
 interface Resource {
   id: string;
@@ -34,6 +28,7 @@ interface AgendaResourceViewProps {
   day: Date;
   events: AgendaEvent[];
   resources: Resource[];
+  catalogoServicios?: CatalogoServicio[];
   onEventMove?: (eventId: string, newStart: Date, newResourceId: string) => void;
   onEventResize?: (eventId: string, newDuration: number) => void;
   onEventClick?: (event: AgendaEvent) => void;
@@ -47,6 +42,7 @@ export default function AgendaResourceView({
   day,
   events,
   resources,
+  catalogoServicios = [],
   onEventMove,
   onEventResize,
   onEventClick,
@@ -210,8 +206,10 @@ export default function AgendaResourceView({
                     {resources.map((resource, index) => {
                       const resourceEvents = eventsByResource.get(resource.id) || [];
                       const stats = resourceStats.get(resource.id);
-                      const accent = RESOURCE_HEADER_ACCENTS[index % RESOURCE_HEADER_ACCENTS.length];
                       const occupancyLabel = Math.round(stats?.occupancy ?? 0);
+
+                      // Color dinámico del profesional (con fallback)
+                      const resourceColor = resource.color || '#3B82F6';
 
                       return (
                         <div
@@ -219,10 +217,17 @@ export default function AgendaResourceView({
                           className="flex min-w-[260px] flex-1 flex-col border-r border-border/60 bg-cardHover/20 p-1 last:border-r-0"
                         >
                           <div
-                            className={`sticky top-0 z-20 flex h-16 flex-col justify-center gap-1 rounded-2xl border px-3 text-sm backdrop-blur ${accent.container}`}
+                            className="sticky top-0 z-20 flex h-16 flex-col justify-center gap-1 rounded-2xl border px-3 text-sm backdrop-blur"
+                            style={{
+                              backgroundColor: `${resourceColor}15`,
+                              borderColor: `${resourceColor}66`,
+                            }}
                           >
                             <div className="flex items-center gap-2">
-                              <span className={`h-2.5 w-2.5 rounded-full ${accent.dot}`} />
+                              <span
+                                className="h-2.5 w-2.5 rounded-full"
+                                style={{ backgroundColor: resourceColor }}
+                              />
                               <h3 className="truncate font-semibold text-text">{resource.nombre}</h3>
                             </div>
                             <div className="flex flex-wrap items-center gap-2 text-[11px] text-text-muted">
@@ -279,6 +284,7 @@ export default function AgendaResourceView({
                                       key={event.id}
                                       event={event}
                                       index={eventIndex}
+                                      catalogoServicios={catalogoServicios}
                                       style={{
                                         top: `${position.top}px`,
                                         height: `${position.height}px`,

@@ -199,6 +199,7 @@ export function transformCatalogoServicio(doc: FirestoreDoc): CatalogoServicio {
     id: doc.id,
     nombre: data.nombre ?? 'Sin nombre',
     categoria: data.categoria ?? 'medicina',
+    color: data.color ?? '#3B82F6',
     descripcion: data.descripcion,
     protocolosRequeridos: Array.isArray(data.protocolosRequeridos) ? data.protocolosRequeridos : [],
     tiempoEstimado: data.tiempoEstimado ?? 30,

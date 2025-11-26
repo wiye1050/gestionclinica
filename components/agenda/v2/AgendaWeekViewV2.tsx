@@ -14,10 +14,12 @@ import {
   getEventsForDay,
   calculateOccupancyRate,
 } from './agendaHelpers';
+import type { CatalogoServicio } from '@/types';
 
 interface AgendaWeekViewV2Props {
   weekStart: Date;
   events: AgendaEvent[];
+  catalogoServicios?: CatalogoServicio[];
   onEventMove?: (eventId: string, newStart: Date) => void;
   onEventResize?: (eventId: string, newDuration: number) => void;
   onEventClick?: (event: AgendaEvent) => void;
@@ -30,6 +32,7 @@ interface AgendaWeekViewV2Props {
 export default function AgendaWeekViewV2({
   weekStart,
   events,
+  catalogoServicios = [],
   onEventMove,
   onEventResize,
   onEventClick,
@@ -232,6 +235,7 @@ export default function AgendaWeekViewV2({
                               key={event.id}
                               event={event}
                               index={index}
+                              catalogoServicios={catalogoServicios}
                               style={{
                                 top: `${position.top}px`,
                                 height: `${position.height}px`,

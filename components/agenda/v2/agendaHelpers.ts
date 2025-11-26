@@ -1,5 +1,6 @@
 import { format, differenceInMinutes, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
+import type { CatalogoServicio } from '@/types';
 
 export interface AgendaEvent {
   id: string;
@@ -14,6 +15,7 @@ export interface AgendaEvent {
   profesionalNombre?: string;
   salaId?: string;
   salaNombre?: string;
+  servicioId?: string;
   prioridad?: 'alta' | 'media' | 'baja';
   notas?: string;
   color?: string;
@@ -59,6 +61,42 @@ export const EVENT_STATE_STYLES = {
   realizada: 'opacity-50',
   cancelada: 'line-through opacity-40',
 };
+
+/**
+ * Obtiene el color de un evento basado en prioridad:
+ * 1. Color del servicio (si tiene servicioId y existe en el catálogo)
+ * 2. Color directo del evento (si está definido)
+ * 3. Fallback al color del tipo de evento
+ */
+export function getEventColor(
+  event: AgendaEvent,
+  catalogoServicios: CatalogoServicio[] = []
+): string {
+  // Prioridad 1: Color del servicio del catálogo
+  if (event.servicioId) {
+    const servicio = catalogoServicios.find(s => s.id === event.servicioId);
+    if (servicio?.color) {
+      return servicio.color;
+    }
+  }
+
+  // Prioridad 2: Color directo del evento
+  if (event.color) {
+    return event.color;
+  }
+
+  // Prioridad 3: Fallback según tipo (mapeo a colores hexadecimales)
+  const typeColorMap: Record<string, string> = {
+    consulta: '#3B82F6',      // Azul
+    seguimiento: '#10B981',   // Verde
+    revision: '#F59E0B',      // Amarillo
+    tratamiento: '#A855F7',   // Morado
+    urgencia: '#EF4444',      // Rojo
+    administrativo: '#6B7280', // Gris
+  };
+
+  return typeColorMap[event.tipo] || '#3B82F6';
+}
 
 // Generar slots de tiempo
 export function generateTimeSlots(): TimeSlot[] {

@@ -187,6 +187,7 @@ const mapCatalogo = (doc: QueryDocumentSnapshot): SerializedCatalogoServicio => 
     id: doc.id,
     nombre: ensureString(data.nombre, 'Servicio'),
     categoria: ensureCategoria(data.categoria),
+    color: ensureString(data.color ?? '#3B82F6'),
     descripcion: ensureString(data.descripcion ?? '') || undefined,
     protocolosRequeridos: Array.isArray(data.protocolosRequeridos)
       ? (data.protocolosRequeridos.filter((item: unknown) => typeof item === 'string') as string[])

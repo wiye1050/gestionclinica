@@ -19,6 +19,7 @@ export default function ProfesionalesPage() {
     nombre: '',
     apellidos: '',
     especialidad: 'medicina' as 'medicina' | 'fisioterapia' | 'enfermeria',
+    color: '#3B82F6',
     email: '',
     telefono: '',
     horasSemanales: 40,
@@ -50,6 +51,7 @@ export default function ProfesionalesPage() {
       nombre: '',
       apellidos: '',
       especialidad: 'medicina',
+      color: '#3B82F6',
       email: '',
       telefono: '',
       horasSemanales: 40,
@@ -105,6 +107,7 @@ export default function ProfesionalesPage() {
       nombre: sanitizeInput(prof.nombre),
       apellidos: sanitizeInput(prof.apellidos),
       especialidad: prof.especialidad,
+      color: prof.color || '#3B82F6',
       email: sanitizeInput(prof.email),
       telefono: prof.telefono ? sanitizeInput(prof.telefono) : '',
       horasSemanales: prof.horasSemanales,
@@ -280,6 +283,32 @@ export default function ProfesionalesPage() {
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-text mb-1">Color en Agenda *</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={formData.color}
+                    onChange={(e) => setFormData({...formData, color: e.target.value})}
+                    className="h-10 w-20 rounded border border-border cursor-pointer"
+                    required
+                    title="Color del profesional en la agenda"
+                  />
+                  <div className="flex items-center gap-2 flex-1">
+                    <div
+                      className="h-10 flex-1 rounded border border-border flex items-center justify-center text-xs font-medium"
+                      style={{ backgroundColor: formData.color, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
+                    >
+                      Vista previa
+                    </div>
+                    <span className="text-xs text-text-muted font-mono">{formData.color.toUpperCase()}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-text-muted mt-1">
+                  Color identificativo en la vista multi-profesional de la agenda
+                </p>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-text mb-1">Email *</label>
                 <input
                   type="email"
@@ -418,10 +447,17 @@ export default function ProfesionalesPage() {
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-text">
-                    {prof.nombre} {prof.apellidos}
-                  </h3>
-                  <span className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-medium ${getColorEspecialidad(prof.especialidad)}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div
+                      className="w-4 h-4 rounded-full border-2 border-white shadow-sm flex-shrink-0"
+                      style={{ backgroundColor: prof.color || '#3B82F6' }}
+                      title={`Color: ${prof.color || '#3B82F6'}`}
+                    />
+                    <h3 className="text-lg font-semibold text-text">
+                      {prof.nombre} {prof.apellidos}
+                    </h3>
+                  </div>
+                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getColorEspecialidad(prof.especialidad)}`}>
                     {prof.especialidad.charAt(0).toUpperCase() + prof.especialidad.slice(1)}
                   </span>
                 </div>

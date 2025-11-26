@@ -19,30 +19,33 @@ import {
   EVENT_STATE_STYLES,
   formatTimeRange,
   formatDuration,
+  getEventColor,
 } from './agendaHelpers';
+import type { CatalogoServicio } from '@/types';
 
 const EVENT_STATE_BADGES: Record<
   AgendaEvent['estado'],
   { className: string; label: string }
 > = {
-  programada: { className: 'bg-yellow-100 text-yellow-800', label: 'Programada' },
-  confirmada: { className: 'bg-green-100 text-green-800', label: 'Confirmada' },
-  realizada: { className: 'bg-gray-200 text-gray-700', label: 'Realizada' },
-  cancelada: { className: 'bg-red-100 text-red-800', label: 'Cancelada' },
+  programada: { className: 'bg-warn-bg text-warn', label: 'Programada' },
+  confirmada: { className: 'bg-success-bg text-success', label: 'Confirmada' },
+  realizada: { className: 'bg-muted text-text-muted', label: 'Realizada' },
+  cancelada: { className: 'bg-danger-bg text-danger', label: 'Cancelada' },
 };
 
 const EVENT_TYPE_BADGES: Record<AgendaEvent['tipo'], string> = {
-  consulta: 'bg-blue-100 text-blue-800',
-  seguimiento: 'bg-emerald-100 text-emerald-800',
-  revision: 'bg-amber-100 text-amber-800',
-  tratamiento: 'bg-purple-100 text-purple-800',
-  urgencia: 'bg-rose-100 text-rose-800',
-  administrativo: 'bg-slate-200 text-slate-700',
+  consulta: 'bg-brand-subtle text-brand',
+  seguimiento: 'bg-success-bg text-success',
+  revision: 'bg-warn-bg text-warn',
+  tratamiento: 'bg-cardHover text-text',
+  urgencia: 'bg-danger-bg text-danger',
+  administrativo: 'bg-muted text-text-muted',
 };
 
 interface AgendaEventCardProps {
   event: AgendaEvent;
   index: number;
+  catalogoServicios?: CatalogoServicio[];
   style?: React.CSSProperties;
   isResizable?: boolean;
   onResize?: (eventId: string, newDuration: number) => void;
@@ -56,6 +59,7 @@ interface AgendaEventCardProps {
 export default function AgendaEventCard({
   event,
   index,
+  catalogoServicios = [],
   style,
   isResizable = true,
   onResize,
@@ -71,6 +75,8 @@ export default function AgendaEventCard({
   const initialHeight = useRef(0);
   const initialMouseY = useRef(0);
 
+  // Obtener color dinámico del evento (servicio > evento > tipo)
+  const eventColor = getEventColor(event, catalogoServicios);
   const typeColors = EVENT_TYPE_COLORS[event.tipo] || EVENT_TYPE_COLORS.consulta;
   const stateStyle = EVENT_STATE_STYLES[event.estado];
   const stateBadge = EVENT_STATE_BADGES[event.estado];
@@ -170,13 +176,16 @@ export default function AgendaEventCard({
         >
           <div
             className={`
-              h-full rounded-lg shadow-sm
-              ${typeColors.bg} ${typeColors.border} border-l-4
+              h-full rounded-lg shadow-sm border-l-4
               ${stateStyle}
               ${hasConflict ? 'ring-2 ring-red-400' : ''}
               hover:shadow-md transition-shadow
               relative overflow-hidden
             `}
+            style={{
+              backgroundColor: `${eventColor}15`,
+              borderLeftColor: eventColor,
+            }}
           >
             {/* Contenido */}
             <div className="p-2 h-full flex flex-col text-xs">

@@ -17,10 +17,12 @@ import {
   calculateOccupancyRate,
 } from './agendaHelpers';
 import { Clock } from 'lucide-react';
+import type { CatalogoServicio } from '@/types';
 
 interface AgendaDayViewProps {
   day: Date;
   events: AgendaEvent[];
+  catalogoServicios?: CatalogoServicio[];
   onEventMove?: (eventId: string, newStart: Date) => void;
   onEventResize?: (eventId: string, newDuration: number) => void;
   onEventClick?: (event: AgendaEvent) => void;
@@ -34,6 +36,7 @@ interface AgendaDayViewProps {
 export default function AgendaDayView({
   day,
   events,
+  catalogoServicios = [],
   onEventMove,
   onEventResize,
   onEventClick,
@@ -156,18 +159,18 @@ export default function AgendaDayView({
   return (
     <div className="flex h-full flex-col">
       {/* Header con estadísticas */}
-      <div className="rounded-t-3xl border-b border-border bg-card px-6 py-4">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-text capitalize">{dayLabel}</h2>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="rounded-pill bg-brand-subtle px-2 py-1 font-medium text-brand">
+      <div className="rounded-t-lg border-b border-border bg-card px-2 py-2">
+        <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-xs font-semibold text-text capitalize">{dayLabel}</h2>
+          <div className="flex items-center gap-1.5 text-[9px]">
+            <span className="rounded-full bg-brand-subtle px-2 py-1 font-medium text-brand">
               {stats.totalEvents} eventos
             </span>
-            <span className="rounded-pill bg-success-bg px-2 py-1 font-medium text-success">
+            <span className="rounded-full bg-success-bg px-2 py-1 font-medium text-success">
               {stats.occupancy}% ocupación
             </span>
             {stats.conflicts > 0 && (
-              <span className="rounded-pill bg-danger-bg px-2 py-1 font-medium text-danger">
+              <span className="rounded-full bg-danger-bg px-2 py-1 font-medium text-danger">
                 {stats.conflicts} conflictos
               </span>
             )}
@@ -175,21 +178,21 @@ export default function AgendaDayView({
         </div>
 
         {/* Mini stats */}
-        <div className="grid grid-cols-1 gap-2 text-xs text-text-muted sm:grid-cols-2 lg:grid-cols-4">
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-brand" />
+        <div className="grid grid-cols-1 gap-1.5 text-[9px] text-text-muted sm:grid-cols-2 lg:grid-cols-4">
+          <div className="flex items-center gap-1.5">
+            <div className="h-1.5 w-1.5 rounded-full bg-brand" />
             <span>Programadas: {dayEvents.filter(e => e.estado === 'programada').length}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-success" />
+          <div className="flex items-center gap-1.5">
+            <div className="h-1.5 w-1.5 rounded-full bg-success" />
             <span>Confirmadas: {stats.confirmed}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-muted" />
+          <div className="flex items-center gap-1.5">
+            <div className="h-1.5 w-1.5 rounded-full bg-muted" />
             <span>Realizadas: {stats.completed}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-danger" />
+          <div className="flex items-center gap-1.5">
+            <div className="h-1.5 w-1.5 rounded-full bg-danger" />
             <span>Canceladas: {stats.cancelled}</span>
           </div>
         </div>
@@ -224,6 +227,7 @@ export default function AgendaDayView({
                         key={event.id}
                         event={event}
                         index={index}
+                        catalogoServicios={catalogoServicios}
                         style={{
                           top: `${position.top}px`,
                           height: `${position.height}px`,
@@ -250,9 +254,9 @@ export default function AgendaDayView({
 
       {/* Footer con huecos libres (opcional) */}
       {stats.freeSlots > 0 && (
-        <div className="rounded-b-3xl border-t border-border bg-card px-4 py-2 text-xs text-text-muted">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-brand" />
+        <div className="rounded-b-lg border-t border-border bg-card px-2 py-1.5 text-[9px] text-text-muted">
+          <div className="flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5 text-brand" />
             <span>{stats.freeSlots} huecos libres disponibles</span>
           </div>
         </div>

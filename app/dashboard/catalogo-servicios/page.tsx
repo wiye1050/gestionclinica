@@ -19,6 +19,7 @@ export default function CatalogoServiciosPage() {
   const [formData, setFormData] = useState({
     nombre: '',
     categoria: 'medicina' as 'medicina' | 'fisioterapia' | 'enfermeria',
+    color: '#3B82F6',
     descripcion: '',
     tiempoEstimado: 30,
     requiereSala: true,
@@ -65,6 +66,7 @@ export default function CatalogoServiciosPage() {
     setFormData({
       nombre: '',
       categoria: 'medicina',
+      color: '#3B82F6',
       descripcion: '',
       tiempoEstimado: 30,
       requiereSala: true,
@@ -121,6 +123,7 @@ export default function CatalogoServiciosPage() {
     setFormData({
       nombre: sanitizeInput(servicio.nombre),
       categoria: servicio.categoria,
+      color: servicio.color || '#3B82F6',
       descripcion: servicio.descripcion ? sanitizeHTML(servicio.descripcion) : '',
       tiempoEstimado: servicio.tiempoEstimado,
       requiereSala: servicio.requiereSala,
@@ -277,6 +280,32 @@ export default function CatalogoServiciosPage() {
                   <option value="fisioterapia">Fisioterapia</option>
                   <option value="enfermeria">Enfermería</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Color en Agenda *</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={formData.color}
+                    onChange={(e) => setFormData({...formData, color: e.target.value})}
+                    className="h-10 w-20 rounded border border-gray-300 cursor-pointer"
+                    required
+                    title="Selecciona el color que se mostrará en la agenda"
+                  />
+                  <div className="flex items-center gap-2 flex-1">
+                    <div
+                      className="h-10 flex-1 rounded border border-gray-300 flex items-center justify-center text-xs font-medium"
+                      style={{ backgroundColor: formData.color, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
+                    >
+                      Vista previa
+                    </div>
+                    <span className="text-xs text-gray-600 font-mono">{formData.color.toUpperCase()}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Este color se usará para identificar el servicio en la agenda
+                </p>
               </div>
 
               <div>
@@ -458,9 +487,16 @@ export default function CatalogoServiciosPage() {
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {servicio.nombre}
-                  </h3>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div
+                      className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
+                      style={{ backgroundColor: servicio.color || '#3B82F6' }}
+                      title={`Color: ${servicio.color || '#3B82F6'}`}
+                    />
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {servicio.nombre}
+                    </h3>
+                  </div>
                   <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getColorCategoria(servicio.categoria)}`}>
                     {servicio.categoria.charAt(0).toUpperCase() + servicio.categoria.slice(1)}
                   </span>
