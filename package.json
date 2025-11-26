@@ -12,6 +12,7 @@
     "test:coverage": "vitest run --coverage",
     "seed:servicios": "tsx scripts/seed-servicios.ts",
     "seed:proyectos": "tsx scripts/seed-proyectos.ts",
+    "migrate:colors": "tsx scripts/migrate-add-colors.ts",
     "typecheck": "tsc --noEmit",
     "events:listen": "tsx scripts/events-listener.ts",
     "cleanup:automation": "ts-node --transpile-only scripts/cleanup-automation-processed.ts"

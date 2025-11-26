@@ -72,36 +72,36 @@ export default function MiniCalendar({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-3">
+    <div className="panel-block p-2 transition-all duration-150 hover:shadow-md">
       {/* Header con navegación */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2">
         <button
           onClick={handlePrevMonth}
-          className="p-1 hover:bg-gray-100 rounded transition-colors"
+          className="p-1 hover:bg-cardHover rounded transition-all duration-150"
           aria-label="Mes anterior"
         >
-          <ChevronLeft className="w-4 h-4 text-gray-600" />
+          <ChevronLeft className="w-3.5 h-3.5 text-text-muted" />
         </button>
 
-        <h3 className="text-sm font-semibold text-gray-900 capitalize">
+        <h3 className="text-xs font-semibold text-text capitalize">
           {format(currentDate, 'MMMM yyyy', { locale: es })}
         </h3>
 
         <button
           onClick={handleNextMonth}
-          className="p-1 hover:bg-gray-100 rounded transition-colors"
+          className="p-1 hover:bg-cardHover rounded transition-all duration-150"
           aria-label="Mes siguiente"
         >
-          <ChevronRight className="w-4 h-4 text-gray-600" />
+          <ChevronRight className="w-3.5 h-3.5 text-text-muted" />
         </button>
       </div>
 
       {/* Días de la semana */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="grid grid-cols-7 gap-1 mb-1.5">
         {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((day, i) => (
           <div
             key={i}
-            className="text-center text-xs font-medium text-gray-500 py-1"
+            className="text-center text-[9px] font-medium text-text-muted py-0.5"
           >
             {day}
           </div>
@@ -109,7 +109,7 @@ export default function MiniCalendar({
       </div>
 
       {/* Días del mes */}
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-0.5">
         {days.map((day, i) => {
           const isCurrentMonth = isSameMonth(day, currentDate);
           const isSelected = isSameDay(day, currentDate);
@@ -121,10 +121,10 @@ export default function MiniCalendar({
               key={i}
               onClick={() => handleDayClick(day)}
               className={`
-                relative aspect-square p-1 text-xs rounded-lg transition-all
-                ${!isCurrentMonth ? 'text-gray-400' : 'text-gray-900'}
-                ${isSelected ? 'bg-blue-600 text-white font-semibold' : 'hover:bg-gray-100'}
-                ${isTodayDate && !isSelected ? 'ring-2 ring-blue-400 font-semibold' : ''}
+                relative aspect-square p-0.5 text-[9px] rounded-lg transition-all duration-150
+                ${!isCurrentMonth ? 'text-text-muted' : 'text-text'}
+                ${isSelected ? 'bg-brand text-white font-semibold' : 'hover:bg-cardHover'}
+                ${isTodayDate && !isSelected ? 'ring-2 ring-brand/50 font-semibold' : ''}
               `}
             >
               <span className="flex items-center justify-center h-full">
@@ -134,7 +134,7 @@ export default function MiniCalendar({
               {/* Indicador de eventos */}
               {dayHasEvents && !isSelected && (
                 <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2">
-                  <div className="w-1 h-1 bg-blue-500 rounded-full" />
+                  <div className="w-1 h-1 bg-brand rounded-full" />
                 </div>
               )}
             </button>
@@ -143,13 +143,13 @@ export default function MiniCalendar({
       </div>
 
       {/* Leyenda */}
-      <div className="flex items-center justify-center gap-3 mt-3 pt-3 border-t text-xs text-gray-600">
+      <div className="flex items-center justify-center gap-2 mt-2 pt-2 border-t border-border text-[9px] text-text-muted">
         <div className="flex items-center gap-1">
-          <div className="w-2 h-2 ring-2 ring-blue-400 rounded-full" />
+          <div className="w-1.5 h-1.5 ring-2 ring-brand/50 rounded-full" />
           <span>Hoy</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-2 h-2 bg-blue-500 rounded-full" />
+          <div className="w-1.5 h-1.5 bg-brand rounded-full" />
           <span>Con citas</span>
         </div>
       </div>
