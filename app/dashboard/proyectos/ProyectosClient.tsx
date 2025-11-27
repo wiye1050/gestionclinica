@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { LayoutGrid, List, GanttChart, Plus, Download, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
+import { captureError } from '@/lib/utils/errorLogging';
 import ModuleHeader from '@/components/shared/ModuleHeader';
 import ViewSelector from '@/components/shared/ViewSelector';
 import KanbanView from '@/components/proyectos/KanbanView';

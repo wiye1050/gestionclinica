@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Profesional } from '@/types';
 import { Plus, Edit2, Trash2, Save, X, UserCheck, Mail, Phone, Clock, Calendar } from 'lucide-react';
 import { sanitizeInput, sanitizeStringArray } from '@/lib/utils/sanitize';
+import { captureError } from '@/lib/utils/errorLogging';
 import ColorPicker from '@/components/shared/ColorPicker';
 import { DEFAULT_COLOR } from '@/components/agenda/v2/agendaHelpers';
 import { CompactFilters, type ActiveFilterChip } from '@/components/shared/CompactFilters';
