@@ -213,7 +213,7 @@ export default function ServiciosClient({
     try {
       await patchServicio(servicioId, { esActual: !valorActual });
     } catch (error) {
-      captureError(error, { module: 'servicios-client', action: 'update-servicio', metadata: { id } });
+      captureError(error, { module: 'servicios-client', action: 'update-servicio', metadata: { servicioId } });
     }
   };
 
@@ -222,7 +222,7 @@ export default function ServiciosClient({
     try {
       await patchServicio(servicioId, { tiquet: nuevoTiquet });
     } catch (error) {
-      captureError(error, { module: 'servicios-client', action: 'update-tiquet', metadata: { id } });
+      captureError(error, { module: 'servicios-client', action: 'update-tiquet', metadata: { servicioId } });
     }
   };
 
@@ -237,18 +237,18 @@ export default function ServiciosClient({
         [campo]: profesionalId ? sanitizeInput(profesionalId) : null,
       });
     } catch (error) {
-      captureError(error, { module: 'servicios-client', action: 'update-profesional', metadata: { id } });
+      captureError(error, { module: 'servicios-client', action: 'update-profesional', metadata: { servicioId, campo } });
     }
   };
 
   // Eliminar servicio
   const eliminarServicio = async (servicioId: string) => {
     if (!confirm('¿Eliminar este servicio?')) return;
-    
+
     try {
       await deleteServicio(servicioId);
     } catch (error) {
-      captureError(error, { module: 'servicios-client', action: 'delete-servicio', metadata: { id } });
+      captureError(error, { module: 'servicios-client', action: 'delete-servicio', metadata: { servicioId } });
     }
   };
 
