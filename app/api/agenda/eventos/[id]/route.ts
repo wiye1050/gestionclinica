@@ -4,7 +4,7 @@ import { deleteAgendaEvent, updateAgendaEvent } from '@/lib/server/agendaEvents'
 import { adminDb } from '@/lib/firebaseAdmin';
 import { logAuditServer } from '@/lib/utils/auditServer';
 
-const ALLOWED_ROLES = new Set(['admin', 'coordinador', 'operador']);
+const ALLOWED_ROLES = new Set(['admin', 'coordinador', 'recepcion', 'operador']);
 
 async function ensureAuth() {
   const user = await getCurrentUser();

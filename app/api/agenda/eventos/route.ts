@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/auth/server';
 import { createAgendaEvent } from '@/lib/server/agendaEvents';
 import { validateRequest } from '@/lib/utils/apiValidation';
 
-const ALLOWED_ROLES = new Set(['admin', 'coordinador', 'recepcion']);
+const ALLOWED_ROLES = new Set(['admin', 'coordinador', 'recepcion', 'operador']);
 
 // Schema de validación para crear evento
 const createEventSchema = z.object({
