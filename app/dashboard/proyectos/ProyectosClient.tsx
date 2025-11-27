@@ -257,7 +257,7 @@ export default function ProyectosClient({ initialProyectos }: ProyectosClientPro
       setMostrarForm(false);
       setProyectoEditar(null);
     } catch (error) {
-      captureError(error, { module: 'proyectos-client', action: 'save-proyecto', metadata: { id: editandoId } });
+      captureError(error, { module: 'proyectos-client', action: 'save-proyecto', metadata: { id: proyectoEditar?.id } });
       toast.error('Error al guardar el proyecto');
     }
   };
