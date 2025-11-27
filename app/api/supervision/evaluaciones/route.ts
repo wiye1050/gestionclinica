@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth/server';
+import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 import { createEvaluacion } from '@/lib/server/supervisionAdmin';
 
-const ALLOWED_ROLES = new Set(['admin', 'coordinador']);
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -11,8 +11,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
   }
 
-  const hasAccess = (user.roles ?? []).some((role) => ALLOWED_ROLES.has(role));
-  if (!hasAccess) {
+  if (!hasAnyRole(user.roles, API_ROLES.WRITE)) {
     return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
   }
 

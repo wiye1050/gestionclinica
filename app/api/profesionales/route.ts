@@ -2,9 +2,7 @@ import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth/server';
 import { createProfesional, getSerializedProfesionales } from '@/lib/server/profesionales';
-
-const ALLOWED_ROLES = new Set(['admin', 'coordinador']);
-const VIEW_ROLES = new Set(['admin', 'coordinador', 'profesional']);
+import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -12,8 +10,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
   }
 
-  const canView = (user.roles ?? []).some((role) => VIEW_ROLES.has(role));
-  if (!canView) {
+  if (!hasAnyRole(user.roles, API_ROLES.READ)) {
     return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
   }
 
@@ -36,8 +33,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
   }
 
-  const hasAccess = (user.roles ?? []).some((role) => ALLOWED_ROLES.has(role));
-  if (!hasAccess) {
+  if (!hasAnyRole(user.roles, API_ROLES.WRITE)) {
     return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
   }
 

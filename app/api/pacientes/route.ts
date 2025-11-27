@@ -5,12 +5,9 @@ import { createPaciente } from '@/lib/server/pacientesAdmin';
 import { captureError } from '@/lib/utils/errorLogging';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { validateRequest } from '@/lib/utils/apiValidation';
+import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 import type { Query } from 'firebase-admin/firestore';
 import type { AppRole } from '@/lib/auth/roles';
-
-const CREATE_UPDATE_ROLES = new Set<AppRole>(['admin', 'coordinador']);
-const ADMIN_ROLES = new Set<AppRole>(['admin', 'coordinador']);
-const CLINICAL_ROLES = new Set<AppRole>(['profesional']);
 
 // Schema de validación para crear paciente
 const createPacienteSchema = z.object({
@@ -55,8 +52,8 @@ export async function GET(request: Request) {
     const userDoc = userDocSnap.exists ? userDocSnap.data() ?? {} : {};
 
     const userRoles = (user.roles ?? userDoc.roles ?? []) as AppRole[];
-    const esAdmin = userRoles.some((role) => ADMIN_ROLES.has(role));
-    const esClinico = userRoles.some((role) => CLINICAL_ROLES.has(role));
+    const esAdmin = hasAnyRole(userRoles, API_ROLES.WRITE);
+    const esClinico = hasAnyRole(userRoles, API_ROLES.CLINICAL);
     const professionalId = userDoc.profesionalId ?? null;
     const patientId = userDoc.pacienteId ?? null;
 
@@ -151,8 +148,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
   }
 
-  const hasAccess = (user.roles ?? []).some((role) => CREATE_UPDATE_ROLES.has(role));
-  if (!hasAccess) {
+  if (!hasAnyRole(user.roles, API_ROLES.WRITE)) {
     return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
   }
 

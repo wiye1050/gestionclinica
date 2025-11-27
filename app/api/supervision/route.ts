@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
+import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 import {
   getSerializedEvaluaciones,
   getSerializedServiciosActuales,
@@ -7,15 +8,13 @@ import {
   getSerializedGrupos,
 } from '@/lib/server/supervision';
 
-const VIEW_ROLES = new Set(['admin', 'coordinador', 'profesional']);
 
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
   }
-  const hasAccess = (user.roles ?? []).some((role) => VIEW_ROLES.has(role));
-  if (!hasAccess) {
+  if (!hasAnyRole(user.roles, API_ROLES.WRITE)) {
     return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
   }
 

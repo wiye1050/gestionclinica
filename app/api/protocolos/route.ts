@@ -1,16 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { createProtocolo } from '@/lib/server/protocolos';
-
-const ALLOWED_ROLES = new Set(['admin', 'coordinador']);
+import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
   }
-  const hasAccess = (user.roles ?? []).some((role) => ALLOWED_ROLES.has(role));
-  if (!hasAccess) {
+  if (!hasAnyRole(user.roles, API_ROLES.WRITE)) {
     return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
   }
 

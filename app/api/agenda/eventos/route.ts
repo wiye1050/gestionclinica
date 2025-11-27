@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth/server';
+import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 import { createAgendaEvent } from '@/lib/server/agendaEvents';
 import { validateRequest } from '@/lib/utils/apiValidation';
 
-const ALLOWED_ROLES = new Set(['admin', 'coordinador', 'recepcion', 'operador']);
 
 // Schema de validación para crear evento
 const createEventSchema = z.object({
@@ -28,8 +28,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
   }
 
-  const hasAccess = (user.roles ?? []).some((role) => ALLOWED_ROLES.has(role));
-  if (!hasAccess) {
+  if (!hasAnyRole(user.roles, API_ROLES.WRITE)) {
     return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
   }
 

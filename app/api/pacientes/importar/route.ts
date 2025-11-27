@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth/server';
+import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { initializeNHCCounter } from '@/lib/server/pacientesAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
 
   // Solo admins pueden importar
   const hasAccess = (user.roles ?? []).some((role) => ADMIN_ROLES.has(role));
-  if (!hasAccess) {
+  if (!hasAnyRole(user.roles, API_ROLES.WRITE)) {
     return NextResponse.json(
       { error: 'Solo administradores pueden importar pacientes' },
       { status: 403 }

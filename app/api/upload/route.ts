@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { bucket } from '@/lib/storage/client';
 import { getCurrentUser } from '@/lib/auth/server';
+import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 import type { AppRole } from '@/lib/auth/roles';
 
 // Configuración de seguridad para uploads
@@ -16,7 +17,8 @@ const ALLOWED_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 ];
 
-const ALLOWED_ROLES: AppRole[] = ['admin', 'coordinador', 'profesional', 'recepcion'];
+// Upload allows more permissive access including reception role
+const UPLOAD_ROLES = new Set<AppRole>(['admin', 'coordinador', 'profesional', 'recepcion']);
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,8 +26,7 @@ export async function POST(request: NextRequest) {
     if (!currentUser) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
-    const hasAccess = (currentUser.roles ?? []).some((role) => ALLOWED_ROLES.includes(role));
-    if (!hasAccess) {
+    if (!hasAnyRole(currentUser.roles, UPLOAD_ROLES)) {
       return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
     }
 
