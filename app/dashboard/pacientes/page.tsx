@@ -3,6 +3,7 @@ import PacientesClient from './PacientesClient';
 import { deserializePaciente, type ApiPaciente } from '@/lib/utils/pacientes';
 import type { PacientesResult } from '@/lib/hooks/usePacientes';
 import { captureError } from '@/lib/utils/errorLogging';
+import { ModuleErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 async function fetchInitialPacientes(): Promise<PacientesResult> {
   const headerStore = await headers();
@@ -39,5 +40,9 @@ async function fetchInitialPacientes(): Promise<PacientesResult> {
 
 export default async function PacientesPage() {
   const initialPage = await fetchInitialPacientes();
-  return <PacientesClient initialPage={initialPage} />;
+  return (
+    <ModuleErrorBoundary moduleName="Pacientes">
+      <PacientesClient initialPage={initialPage} />
+    </ModuleErrorBoundary>
+  );
 }

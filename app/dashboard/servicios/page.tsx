@@ -3,6 +3,7 @@ import { deserializeServiciosModule, type SerializedServiciosModule } from '@/li
 import { getCurrentUser } from '@/lib/auth/server';
 import { redirect } from 'next/navigation';
 import { serverFetchGet } from '@/lib/utils/serverFetch';
+import { ModuleErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 export default async function ServiciosPage() {
   const user = await getCurrentUser();
@@ -20,11 +21,13 @@ export default async function ServiciosPage() {
     : { servicios: [], profesionales: [], grupos: [], catalogo: [] };
 
   return (
-    <ServiciosClient
-      initialServicios={servicios}
-      initialProfesionales={profesionales}
-      initialGrupos={grupos}
-      initialCatalogo={catalogo}
-    />
+    <ModuleErrorBoundary moduleName="Servicios">
+      <ServiciosClient
+        initialServicios={servicios}
+        initialProfesionales={profesionales}
+        initialGrupos={grupos}
+        initialCatalogo={catalogo}
+      />
+    </ModuleErrorBoundary>
   );
 }

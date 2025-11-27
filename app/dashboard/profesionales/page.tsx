@@ -5,6 +5,7 @@ import {
   deserializeProfesionales,
   getSerializedProfesionales,
 } from '@/lib/server/profesionales';
+import { ModuleErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 export default async function ProfesionalesPage() {
   const user = await getCurrentUser();
@@ -15,5 +16,9 @@ export default async function ProfesionalesPage() {
   const serialized = await getSerializedProfesionales();
   const profesionales = deserializeProfesionales(serialized);
 
-  return <ProfesionalesClient initialProfesionales={profesionales} />;
+  return (
+    <ModuleErrorBoundary moduleName="Profesionales">
+      <ProfesionalesClient initialProfesionales={profesionales} />
+    </ModuleErrorBoundary>
+  );
 }

@@ -25,8 +25,16 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log error para debugging
-    console.error('Error Boundary caught an error:', error, errorInfo)
+    // Importar captureError dinámicamente para evitar problemas de SSR
+    import('@/lib/utils/errorLogging').then(({ captureError }) => {
+      captureError(error, {
+        module: 'error-boundary',
+        action: 'component-error',
+        metadata: {
+          componentStack: errorInfo.componentStack,
+        },
+      });
+    });
 
     // Callback opcional para reporting (Sentry, etc.)
     this.props.onError?.(error, errorInfo)
