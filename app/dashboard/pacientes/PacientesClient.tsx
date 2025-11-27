@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
+import { captureError, logWarning } from '@/lib/utils/errorLogging';
 
 interface PacientesClientProps {
   initialPage: PacientesResult;
@@ -106,7 +107,7 @@ function PacientesContent({ initialPage }: PacientesClientProps) {
       const validation = SavedFiltersSchema.safeParse(parsed);
 
       if (!validation.success) {
-        console.warn('Filtros guardados inválidos:', validation.error);
+        logWarning('Filtros guardados inválidos', { module: 'pacientes-client', action: 'load-filters', metadata: { error: validation.error } });
         // Limpiar localStorage corrupto
         window.localStorage.removeItem(STORAGE_KEY);
         return;
@@ -124,7 +125,7 @@ function PacientesContent({ initialPage }: PacientesClientProps) {
         setVista(saved.vista);
       }
     } catch (err) {
-      console.warn('Error cargando filtros guardados:', err);
+      logWarning('Error cargando filtros guardados', { module: 'pacientes-client', action: 'load-filters' });
       // Limpiar localStorage corrupto
       window.localStorage.removeItem(STORAGE_KEY);
     } finally {
@@ -143,7 +144,7 @@ function PacientesContent({ initialPage }: PacientesClientProps) {
       });
       window.localStorage.setItem(STORAGE_KEY, payload);
     } catch (err) {
-      console.warn('No se pudieron guardar los filtros', err);
+      logWarning('No se pudieron guardar los filtros', { module: 'pacientes-client', action: 'save-filters' });
     }
   }, [followUpOnly, profesionalFilter, vista, filtersLoaded]);
 
@@ -165,7 +166,7 @@ function PacientesContent({ initialPage }: PacientesClientProps) {
         const ids = await getPendingFollowUpPatientIds();
         setPacientesSeguimiento(ids);
       } catch (err) {
-        console.error('Error al cargar seguimientos pendientes:', err);
+        captureError(err, { module: 'pacientes-client', action: 'load-seguimientos' });
       } finally {
         setLoadingSeguimientos(false);
       }

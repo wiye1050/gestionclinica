@@ -11,6 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { sanitizeInput } from '@/lib/utils/sanitize';
 import { CompactFilters, type ActiveFilterChip } from '@/components/shared/CompactFilters';
 import { KPIGrid } from '@/components/shared/KPIGrid';
+import { captureError } from '@/lib/utils/errorLogging';
 
 // Lazy loading del componente de exportación
 const ExportButton = lazy(() => import('@/components/ui/ExportButton').then(m => ({ default: m.ExportButton })));
@@ -203,7 +204,7 @@ export default function ServiciosClient({
       });
       setMostrarFormulario(false);
     } catch (error) {
-      console.error('Error al crear servicio:', error);
+      captureError(error, { module: 'servicios-client', action: 'create-servicio' });
       alert(error instanceof Error ? error.message : 'Error al crear servicio');
     }
   };
@@ -213,7 +214,7 @@ export default function ServiciosClient({
     try {
       await patchServicio(servicioId, { esActual: !valorActual });
     } catch (error) {
-      console.error('Error al actualizar:', error);
+      captureError(error, { module: 'servicios-client', action: 'update-servicio', metadata: { id } });
     }
   };
 
@@ -222,7 +223,7 @@ export default function ServiciosClient({
     try {
       await patchServicio(servicioId, { tiquet: nuevoTiquet });
     } catch (error) {
-      console.error('Error al actualizar tiquet:', error);
+      captureError(error, { module: 'servicios-client', action: 'update-tiquet', metadata: { id } });
     }
   };
 
@@ -237,7 +238,7 @@ export default function ServiciosClient({
         [campo]: profesionalId ? sanitizeInput(profesionalId) : null,
       });
     } catch (error) {
-      console.error('Error al actualizar profesional:', error);
+      captureError(error, { module: 'servicios-client', action: 'update-profesional', metadata: { id } });
     }
   };
 
@@ -248,7 +249,7 @@ export default function ServiciosClient({
     try {
       await deleteServicio(servicioId);
     } catch (error) {
-      console.error('Error al eliminar:', error);
+      captureError(error, { module: 'servicios-client', action: 'delete-servicio', metadata: { id } });
     }
   };
 

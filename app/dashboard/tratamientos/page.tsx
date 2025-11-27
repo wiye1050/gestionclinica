@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth/server';
 import { redirect } from 'next/navigation';
 import TratamientosClient from './TratamientosClient';
 import { deserializeTratamientosModule, type SerializedTratamientosModule } from '@/lib/utils/tratamientos';
+import { captureError } from '@/lib/utils/errorLogging';
 
 async function fetchTratamientosModule(): Promise<SerializedTratamientosModule | null> {
   const headerStore = await headers();
@@ -21,7 +22,7 @@ async function fetchTratamientosModule(): Promise<SerializedTratamientosModule |
     }
     return (await response.json()) as SerializedTratamientosModule;
   } catch (error) {
-    console.error('[tratamientos] No se pudieron precargar datos', error);
+    captureError(error, { module: 'tratamientos-page', action: 'fetch-tratamientos-module' });
     return null;
   }
 }

@@ -3,6 +3,7 @@ import ServiciosClient from './ServiciosClient';
 import { deserializeServiciosModule, type SerializedServiciosModule } from '@/lib/utils/servicios';
 import { getCurrentUser } from '@/lib/auth/server';
 import { redirect } from 'next/navigation';
+import { captureError } from '@/lib/utils/errorLogging';
 
 async function fetchServiciosModule(): Promise<SerializedServiciosModule | null> {
   const headerStore = await headers();
@@ -21,7 +22,7 @@ async function fetchServiciosModule(): Promise<SerializedServiciosModule | null>
     }
     return (await response.json()) as SerializedServiciosModule;
   } catch (error) {
-    console.error('[servicios] No se pudo precargar el módulo', error);
+    captureError(error, { module: 'servicios-page', action: 'fetch-servicios-module' });
     return null;
   }
 }

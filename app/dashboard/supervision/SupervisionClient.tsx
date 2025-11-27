@@ -8,6 +8,7 @@ import { CompactFilters, type ActiveFilterChip } from '@/components/shared/Compa
 import { KPIGrid } from '@/components/shared/KPIGrid';
 import { sanitizeHTML, sanitizeInput } from '@/lib/utils/sanitize';
 import { useSupervisionModule, useCreateEvaluacion } from '@/lib/hooks/useSupervisionModule';
+import { captureError } from '@/lib/utils/errorLogging';
 
 interface SupervisionClientProps {
   evaluaciones: EvaluacionSesion[];
@@ -132,7 +133,7 @@ export default function SupervisionClient(initialData: SupervisionClientProps) {
       setVistaActual('dashboard');
       alert('✅ Evaluación guardada correctamente');
     } catch (error) {
-      console.error('Error al guardar evaluación:', error);
+      captureError(error, { module: 'supervision-client', action: 'save-evaluacion' });
       alert(error instanceof Error ? error.message : 'Error al guardar evaluación');
     }
   };

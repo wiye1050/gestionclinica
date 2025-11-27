@@ -8,6 +8,7 @@ import { useProfesionalesManager } from '@/lib/hooks/useProfesionalesManager';
 import { CatalogoServicio, Profesional } from '@/types';
 import { Plus, Edit2, Trash2, Save, X, Clock } from 'lucide-react';
 import { sanitizeHTML, sanitizeInput, sanitizeStringArray } from '@/lib/utils/sanitize';
+import { captureError } from '@/lib/utils/errorLogging';
 import ColorPicker from '@/components/shared/ColorPicker';
 import { DEFAULT_COLOR } from '@/components/agenda/v2/agendaHelpers';
 import { CompactFilters, type ActiveFilterChip } from '@/components/shared/CompactFilters';
@@ -97,7 +98,7 @@ export default function CatalogoServiciosClient({ initialServicios, initialProfe
       resetForm();
       invalidateCatalogo();
     } catch (error) {
-      console.error('Error al guardar servicio:', error);
+      captureError(error, { module: 'catalogo-servicios-client', action: 'save-servicio', metadata: { editandoId } });
       alert(error instanceof Error ? error.message : 'Error al guardar servicio');
     }
   };
@@ -136,7 +137,7 @@ export default function CatalogoServiciosClient({ initialServicios, initialProfe
       }
       invalidateCatalogo();
     } catch (error) {
-      console.error('Error al eliminar:', error);
+      captureError(error, { module: 'catalogo-servicios-client', action: 'delete-servicio', metadata: { id } });
       alert(error instanceof Error ? error.message : 'Error al eliminar servicio');
     }
   };
@@ -165,7 +166,7 @@ export default function CatalogoServiciosClient({ initialServicios, initialProfe
       }
       invalidateCatalogo();
     } catch (error) {
-      console.error('Error al cambiar estado:', error);
+      captureError(error, { module: 'catalogo-servicios-client', action: 'toggle-estado', metadata: { id } });
       alert(error instanceof Error ? error.message : 'Error al cambiar estado');
     }
   };

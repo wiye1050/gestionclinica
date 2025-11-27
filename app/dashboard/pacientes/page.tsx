@@ -2,6 +2,7 @@ import { cookies, headers } from 'next/headers';
 import PacientesClient from './PacientesClient';
 import { deserializePaciente, type ApiPaciente } from '@/lib/utils/pacientes';
 import type { PacientesResult } from '@/lib/hooks/usePacientes';
+import { captureError } from '@/lib/utils/errorLogging';
 
 async function fetchInitialPacientes(): Promise<PacientesResult> {
   const headerStore = await headers();
@@ -31,7 +32,7 @@ async function fetchInitialPacientes(): Promise<PacientesResult> {
       limit,
     };
   } catch (error) {
-    console.error('[pacientes] No se pudieron precargar pacientes', error);
+    captureError(error, { module: 'pacientes-page', action: 'fetch-initial-pacientes' });
     return { items: [], nextCursor: null, limit: 0 };
   }
 }

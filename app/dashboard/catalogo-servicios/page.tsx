@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import CatalogoServiciosClient from './CatalogoServiciosClient';
 import { deserializeCatalogoServicio, type SerializedCatalogoServicio } from '@/lib/utils/catalogoServicios';
 import { deserializeProfesionales, type ApiProfesional } from '@/lib/utils/profesionales';
+import { captureError } from '@/lib/utils/errorLogging';
 
 async function fetchCatalogoServicios(): Promise<SerializedCatalogoServicio[]> {
   const headerStore = await headers();
@@ -21,7 +22,7 @@ async function fetchCatalogoServicios(): Promise<SerializedCatalogoServicio[]> {
     const payload = await response.json();
     return Array.isArray(payload?.servicios) ? (payload.servicios as SerializedCatalogoServicio[]) : [];
   } catch (error) {
-    console.error('[catalogo-servicios] No se pudieron precargar datos', error);
+    captureError(error, { module: 'catalogo-servicios-page', action: 'fetch-catalogo-servicios' });
     return [];
   }
 }
@@ -42,7 +43,7 @@ async function fetchProfesionales(): Promise<ApiProfesional[]> {
     const payload = await response.json();
     return Array.isArray(payload?.items) ? (payload.items as ApiProfesional[]) : [];
   } catch (error) {
-    console.error('[catalogo-servicios] No se pudieron precargar profesionales', error);
+    captureError(error, { module: 'catalogo-servicios-page', action: 'fetch-profesionales' });
     return [];
   }
 }

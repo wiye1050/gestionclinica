@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth/server';
 import { redirect } from 'next/navigation';
 import { headers, cookies } from 'next/headers';
 import { type KPIResponse } from '@/lib/server/kpis';
+import { captureError } from '@/lib/utils/errorLogging';
 
 export default async function KPIsPage() {
   const user = await getCurrentUser();
@@ -23,15 +24,15 @@ export default async function KPIsPage() {
       });
       const payload = await response.json();
       if (!response.ok) {
-        console.error('[kpis-page] No se pudieron precargar KPIs', {
-          status: response.status,
-          error: payload?.error ?? 'sin-detalle',
-        });
+        captureError(
+          new Error(payload?.error ?? 'No se pudieron precargar KPIs'),
+          { module: 'kpis-page', action: 'fetch-kpis', metadata: { status: response.status } }
+        );
         return null;
       }
       return payload as KPIResponse;
     } catch (error) {
-      console.error('[kpis-page] Error inesperado obteniendo KPIs', error);
+      captureError(error, { module: 'kpis-page', action: 'fetch-kpis' });
       return null;
     }
   })();

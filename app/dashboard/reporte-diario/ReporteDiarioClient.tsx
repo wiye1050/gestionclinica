@@ -18,6 +18,7 @@ import {
 import { formatDateTime } from '@/lib/utils/helpers';
 import { sanitizeHTML } from '@/lib/utils/sanitize';
 import type { SerializedDailyReport } from '@/lib/server/reports';
+import { captureError } from '@/lib/utils/errorLogging';
 import { CompactFilters, type ActiveFilterChip } from '@/components/shared/CompactFilters';
 import { KPIGrid } from '@/components/shared/KPIGrid';
 import {
@@ -133,7 +134,7 @@ export default function ReporteDiarioClient({ initialReports }: Props) {
 
       setMostrarFormulario(false);
     } catch (error) {
-      console.error('Error al crear reporte:', error);
+      captureError(error, { module: 'reporte-diario-client', action: 'create-reporte' });
       alert(error instanceof Error ? error.message : 'Error al crear reporte');
     }
   };
@@ -143,7 +144,7 @@ export default function ReporteDiarioClient({ initialReports }: Props) {
     try {
       await updateReporteMutation.mutateAsync({ id: reporteId, changes: { estado: nuevoEstado } });
     } catch (error) {
-      console.error('Error al cambiar estado:', error);
+      captureError(error, { module: 'reporte-diario-client', action: 'toggle-estado', metadata: { id } });
       alert(error instanceof Error ? error.message : 'Error al cambiar estado');
     }
   };
@@ -158,7 +159,7 @@ export default function ReporteDiarioClient({ initialReports }: Props) {
     try {
       await deleteReporteMutation.mutateAsync(reporteId);
     } catch (error) {
-      console.error('Error al eliminar reporte:', error);
+      captureError(error, { module: 'reporte-diario-client', action: 'delete-reporte', metadata: { id } });
       alert(error instanceof Error ? error.message : 'Error al eliminar el reporte');
     }
   };
@@ -186,7 +187,7 @@ export default function ReporteDiarioClient({ initialReports }: Props) {
       setEditandoId(null);
       setReporteEditando(null);
     } catch (error) {
-      console.error('Error al actualizar reporte:', error);
+      captureError(error, { module: 'reporte-diario-client', action: 'update-reporte', metadata: { id: editandoId } });
       alert(error instanceof Error ? error.message : 'Error al actualizar el reporte');
     }
   };

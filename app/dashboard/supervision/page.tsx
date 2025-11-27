@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth/server';
 import { redirect } from 'next/navigation';
 import { deserializeSupervisionModule, type SerializedSupervisionModule } from '@/lib/utils/supervision';
 import { headers, cookies } from 'next/headers';
+import { captureError } from '@/lib/utils/errorLogging';
 
 async function fetchSupervisionModule(): Promise<SerializedSupervisionModule | null> {
   const headerStore = await headers();
@@ -21,7 +22,7 @@ async function fetchSupervisionModule(): Promise<SerializedSupervisionModule | n
     }
     return (await response.json()) as SerializedSupervisionModule;
   } catch (error) {
-    console.error('[supervision] No se pudo precargar el módulo', error);
+    captureError(error, { module: 'supervision-page', action: 'fetch-supervision-module' });
     return null;
   }
 }

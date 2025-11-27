@@ -6,6 +6,7 @@ import type { TratamientosModule, Tratamiento } from '@/lib/utils/tratamientos';
 import { useTratamientosModule, useInvalidateTratamientosModule } from '@/lib/hooks/useTratamientosModule';
 import { Plus, Edit2, Trash2, Save, X, List, Clock } from 'lucide-react';
 import { sanitizeHTML, sanitizeInput } from '@/lib/utils/sanitize';
+import { captureError } from '@/lib/utils/errorLogging';
 
 interface Props {
   initialModule: TratamientosModule;
@@ -90,7 +91,7 @@ export default function TratamientosClient({ initialModule }: Props) {
       resetForm();
       invalidateModule();
     } catch (error) {
-      console.error('Error al guardar tratamiento:', error);
+      captureError(error, { module: 'tratamientos-client', action: 'save-tratamiento', metadata: { editandoId } });
       alert(error instanceof Error ? error.message : 'Error al guardar tratamiento');
     }
   };
@@ -120,7 +121,7 @@ export default function TratamientosClient({ initialModule }: Props) {
       }
       invalidateModule();
     } catch (error) {
-      console.error('Error al eliminar:', error);
+      captureError(error, { module: 'tratamientos-client', action: 'delete-tratamiento', metadata: { id } });
       alert(error instanceof Error ? error.message : 'Error al eliminar tratamiento');
     }
   };
@@ -194,7 +195,7 @@ export default function TratamientosClient({ initialModule }: Props) {
       }
       invalidateModule();
     } catch (error) {
-      console.error('Error al cambiar estado:', error);
+      captureError(error, { module: 'tratamientos-client', action: 'toggle-estado', metadata: { id } });
       alert(error instanceof Error ? error.message : 'No se pudo cambiar el estado');
     }
   };

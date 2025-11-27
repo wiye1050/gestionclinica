@@ -8,6 +8,7 @@ import { useProfesionalesManager } from '@/lib/hooks/useProfesionalesManager';
 import { usePaciente } from '@/lib/hooks/usePatientDetailData';
 import { PacienteForm, PacienteFormValues } from '@/components/pacientes/PacienteForm';
 import { toast } from 'sonner';
+import { captureError } from '@/lib/utils/errorLogging';
 
 export default function EditarPacientePage() {
   const params = useParams();
@@ -68,7 +69,7 @@ export default function EditarPacientePage() {
       toast.success('Paciente actualizado correctamente');
       router.push(`/dashboard/pacientes/${pacienteId}`);
     } catch (err) {
-      console.error('Error al actualizar paciente:', err);
+      captureError(err, { module: 'editar-paciente-page', action: 'update-paciente', metadata: { pacienteId } });
       const mensaje = err instanceof Error ? err.message : 'No se pudo actualizar el paciente.';
       setSubmitError(mensaje);
       toast.error('No se pudo actualizar el paciente');
