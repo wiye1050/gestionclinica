@@ -1,4 +1,3 @@
-/* eslint-disable react/no-unescaped-entities */
 'use client';
 
 import { Suspense, lazy, useState, useMemo } from 'react';

@@ -5,11 +5,14 @@ import { Proyecto, EstadoProyecto } from '@/types/proyectos';
 import { GripVertical, Plus, Calendar, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { toast } from 'sonner';
+import { captureError } from '@/lib/utils/errorLogging';
 
 interface KanbanViewProps {
   proyectos: Proyecto[];
   onProyectoClick: (proyecto: Proyecto) => void;
   onNuevoProyecto: () => void;
+  onEstadoChange?: (proyectoId: string, nuevoEstado: EstadoProyecto) => Promise<void>;
 }
 
 const COLUMNAS: { estado: EstadoProyecto; titulo: string; color: string }[] = [
@@ -28,8 +31,9 @@ const COLORES_PRIORIDAD = {
   baja: 'border-l-4 border-l-gray-400',
 };
 
-export default function KanbanView({ proyectos, onProyectoClick, onNuevoProyecto }: KanbanViewProps) {
+export default function KanbanView({ proyectos, onProyectoClick, onNuevoProyecto, onEstadoChange }: KanbanViewProps) {
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [targetEstado, setTargetEstado] = useState<EstadoProyecto | null>(null);
 
   const proyectosPorColumna = (estado: EstadoProyecto) =>
     proyectos.filter((p) => p.estado === estado);
@@ -44,25 +48,49 @@ export default function KanbanView({ proyectos, onProyectoClick, onNuevoProyecto
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent, nuevoEstado: EstadoProyecto) => {
     e.preventDefault();
-    if (draggedId) {
-      // TODO: Implementar actualización de estado vía hook
-      setDraggedId(null);
+    if (draggedId && nuevoEstado !== targetEstado) {
+      try {
+        if (onEstadoChange) {
+          await onEstadoChange(draggedId, nuevoEstado);
+          toast.success(`Proyecto movido a ${nuevoEstado}`);
+        } else {
+          toast.warning('Drag & drop no configurado. Añade prop onEstadoChange.');
+        }
+      } catch (error) {
+        captureError(error, { module: 'kanban-view', action: 'drop-proyecto', metadata: { draggedId, nuevoEstado } });
+        toast.error('No se pudo mover el proyecto');
+      }
     }
+    setDraggedId(null);
+    setTargetEstado(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, estado: EstadoProyecto) => {
+    e.preventDefault();
+    setTargetEstado(estado);
+  };
+
+  const handleDragLeave = () => {
+    setTargetEstado(null);
   };
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-250px)]">
       {COLUMNAS.map((columna) => {
         const proyectosColumna = proyectosPorColumna(columna.estado);
-        
+        const isDropTarget = targetEstado === columna.estado;
+
         return (
           <div
             key={columna.estado}
-            className="flex-shrink-0 w-80 flex flex-col"
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
+            className={`flex-shrink-0 w-80 flex flex-col transition-all ${
+              isDropTarget ? 'ring-4 ring-blue-400 scale-105' : ''
+            }`}
+            onDragOver={(e) => handleDragOver(e, columna.estado)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, columna.estado)}
           >
             {/* Header de columna */}
             <div className={`p-3 rounded-t-lg border-2 ${columna.color}`}>
