@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth/server';
 import { createProfesional, getSerializedProfesionales } from '@/lib/server/profesionales';
 
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const result = await createProfesional(body, { userId: user.uid, userEmail: user.email ?? undefined });
+    revalidateTag('profesionales');
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error inesperado';

@@ -1,6 +1,13 @@
 import { adminDb } from '@/lib/firebaseAdmin';
 import { cached } from '@/lib/server/cache';
 
+const assertAdminDb = () => {
+  if (!adminDb) {
+    throw new Error('Firebase Admin no configurado');
+  }
+  return adminDb;
+};
+
 type InventarioItem = {
   id: string;
   nombre: string;
@@ -23,10 +30,12 @@ export async function getInventarioSnapshot(): Promise<InventarioSnapshot> {
     return { productos: [], stockBajo: 0, total: 0 };
   }
 
+  const db = assertAdminDb();
+
   return cached(
     ['inventario', 'snapshot'],
     async () => {
-      const snapshot = await adminDb
+      const snapshot = await db
         .collection('inventario-productos')
         .orderBy('nombre')
         .limit(200)

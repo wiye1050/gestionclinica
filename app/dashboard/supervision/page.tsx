@@ -5,11 +5,11 @@ import { deserializeSupervisionModule, type SerializedSupervisionModule } from '
 import { headers, cookies } from 'next/headers';
 
 async function fetchSupervisionModule(): Promise<SerializedSupervisionModule | null> {
-  const headerStore = headers();
+  const headerStore = await headers();
   const host = headerStore.get('host');
   const protocol = headerStore.get('x-forwarded-proto') ?? 'http';
   const baseUrl = host ? `${protocol}://${host}` : 'http://localhost:3000';
-  const cookieHeader = cookies().toString();
+  const cookieHeader = (await cookies()).toString();
 
   try {
     const response = await fetch(`${baseUrl}/api/supervision`, {

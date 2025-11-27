@@ -5,6 +5,19 @@ import { createServicioAsignado, getServiciosModuleSerialized } from '@/lib/serv
 const ALLOWED_ROLES = new Set(['admin', 'coordinador']);
 const VIEW_ROLES = new Set(['admin', 'coordinador', 'profesional']);
 
+type CreateServicioInput = {
+  catalogoServicioId: string;
+  grupoId: string;
+  tiquet?: string;
+  profesionalPrincipalId: string;
+  profesionalSegundaOpcionId?: string;
+  profesionalTerceraOpcionId?: string;
+  requiereApoyo?: boolean;
+  sala?: string;
+  supervision?: boolean;
+  esActual?: boolean;
+};
+
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) {

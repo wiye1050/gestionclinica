@@ -5,11 +5,11 @@ import { getCurrentUser } from '@/lib/auth/server';
 import { redirect } from 'next/navigation';
 
 async function fetchServiciosModule(): Promise<SerializedServiciosModule | null> {
-  const headerStore = headers();
+  const headerStore = await headers();
   const host = headerStore.get('host');
   const protocol = headerStore.get('x-forwarded-proto') ?? 'http';
   const baseUrl = host ? `${protocol}://${host}` : 'http://localhost:3000';
-  const cookieHeader = cookies().toString();
+  const cookieHeader = (await cookies()).toString();
 
   try {
     const response = await fetch(`${baseUrl}/api/servicios`, {

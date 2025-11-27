@@ -3,6 +3,13 @@ import { cached } from '@/lib/server/cache';
 import type { DailyReport } from '@/types';
 import { sanitizeHTML, sanitizeInput } from '@/lib/utils/sanitize';
 
+const assertAdminDb = () => {
+  if (!adminDb) {
+    throw new Error('Firebase Admin no configurado');
+  }
+  return adminDb;
+};
+
 const stripUndefined = <T extends Record<string, unknown>>(data: T): T =>
   Object.fromEntries(
     Object.entries(data).filter(([, value]) => value !== undefined)
@@ -71,11 +78,12 @@ export async function getSerializedDailyReports(limit = 200): Promise<Serialized
     return [];
   }
 
+  const db = assertAdminDb();
   const cappedLimit = Math.min(Math.max(limit, 1), 400);
   return cached(
     ['reports', 'daily', cappedLimit],
     async () => {
-      const snapshot = await adminDb
+      const snapshot = await db
         .collection('reportes-diarios')
         .orderBy('createdAt', 'desc')
         .limit(cappedLimit)

@@ -1,6 +1,13 @@
 import { adminDb } from '@/lib/firebaseAdmin';
 import { cached } from '@/lib/server/cache';
 
+const assertAdminDb = () => {
+  if (!adminDb) {
+    throw new Error('Firebase Admin no está configurado. Define FIREBASE_SERVICE_ACCOUNT_KEY o las variables FIREBASE_ADMIN_*');
+  }
+  return adminDb;
+};
+
 type ProfessionalSummary = {
   nombre: string;
   especialidad?: string;
@@ -51,11 +58,7 @@ const average = (...values: Array<number | undefined>): number => {
 };
 
 export async function getMonthlyReportData(year: number, month: number): Promise<MonthlyReportData> {
-  if (!adminDb) {
-    throw new Error(
-      'Firebase Admin no está configurado. Define FIREBASE_SERVICE_ACCOUNT_KEY o las variables FIREBASE_ADMIN_*'
-    );
-  }
+  const db = assertAdminDb();
 
   return cached(
     ['monthly-report', year, month],
@@ -71,22 +74,22 @@ export async function getMonthlyReportData(year: number, month: number): Promise
         reportesSnap,
         inventarioSnap,
       ] = await Promise.all([
-        adminDb.collection('profesionales').limit(500).get(),
-        adminDb.collection('servicios-asignados').limit(500).get(),
-        adminDb
+        db.collection('profesionales').limit(500).get(),
+        db.collection('servicios-asignados').limit(500).get(),
+        db
           .collection('evaluaciones-sesion')
           .where('fecha', '>=', inicioMes)
           .where('fecha', '<=', finMes)
           .limit(750)
           .get(),
-        adminDb.collection('proyectos').limit(200).get(),
-        adminDb
+        db.collection('proyectos').limit(200).get(),
+        db
           .collection('daily-reports')
           .where('fecha', '>=', inicioMes)
           .where('fecha', '<=', finMes)
           .limit(500)
           .get(),
-        adminDb.collection('inventario-productos').limit(500).get(),
+        db.collection('inventario-productos').limit(500).get(),
       ]);
 
       const profesionalesActivos = profesionalesSnap.docs.filter((doc) => doc.data()?.activo).length;

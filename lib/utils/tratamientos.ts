@@ -33,7 +33,7 @@ export type SerializedTratamientosModule = {
   catalogo: SerializedCatalogoServicio[];
 };
 
-export type Tratamiento = SerializedTratamiento & {
+export type Tratamiento = Omit<SerializedTratamiento, 'createdAt' | 'updatedAt'> & {
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -55,11 +55,16 @@ export const deserializeCatalogoItem = (item: SerializedCatalogoServicio): Catal
   id: item.id,
   nombre: item.nombre,
   categoria: item.categoria as CatalogoServicio['categoria'],
+  color: '#3B82F6', // Color por defecto (azul)
   descripcion: item.descripcion,
   tiempoEstimado: item.tiempoEstimado ?? 0,
+  requiereSala: false,
+  requiereSupervision: false,
+  requiereApoyo: false,
+  profesionalesHabilitados: [],
   activo: item.activo,
-  createdAt: parseDate(item.createdAt) ?? new Date(),
-  updatedAt: parseDate(item.updatedAt) ?? new Date(),
+  createdAt: parseDate(item.createdAt),
+  updatedAt: parseDate(item.updatedAt),
 });
 
 export function deserializeTratamientosModule(data: SerializedTratamientosModule): TratamientosModule {

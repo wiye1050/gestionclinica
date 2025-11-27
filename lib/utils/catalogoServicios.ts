@@ -24,6 +24,7 @@ export const deserializeCatalogoServicio = (item: SerializedCatalogoServicio): C
   id: item.id,
   nombre: item.nombre,
   categoria: item.categoria,
+  color: '#3B82F6', // Color por defecto (azul)
   descripcion: item.descripcion,
   tiempoEstimado: item.tiempoEstimado,
   requiereSala: item.requiereSala,

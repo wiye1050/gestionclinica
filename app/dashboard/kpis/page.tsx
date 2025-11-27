@@ -9,11 +9,11 @@ export default async function KPIsPage() {
   if (!user) {
     redirect('/');
   }
-  const headerStore = headers();
+  const headerStore = await headers();
   const host = headerStore.get('host');
   const protocol = headerStore.get('x-forwarded-proto') ?? 'http';
   const baseUrl = host ? `${protocol}://${host}` : 'http://localhost:3000';
-  const cookieHeader = cookies().toString();
+  const cookieHeader = (await cookies()).toString();
 
   const initialData = await (async () => {
     try {

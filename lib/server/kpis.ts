@@ -3,6 +3,13 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { startOfWeek, addDays } from 'date-fns';
 import { cached } from '@/lib/server/cache';
 
+const assertAdminDb = () => {
+  if (!adminDb) {
+    throw new Error('Firebase Admin no configurado para KPIs.');
+  }
+  return adminDb;
+};
+
 export type KPIResponse = {
   serviciosActivos: number;
   serviciosProgramados: number;
@@ -28,9 +35,7 @@ const countDocs = async (collectionPath: string, whereClauses: Array<[string, Fi
 };
 
 export async function getServerKPIs(): Promise<KPIResponse> {
-  if (!adminDb) {
-    throw new Error('Firebase Admin no configurado para KPIs.');
-  }
+  const db = assertAdminDb();
 
   const semanaInicio = startOfWeek(new Date(), { weekStartsOn: 1 });
   const semanaFin = addDays(semanaInicio, 7);
@@ -72,7 +77,7 @@ export async function getServerKPIs(): Promise<KPIResponse> {
         ]),
       ]);
 
-      const eventosSnapshot = await adminDb
+      const eventosSnapshot = await db
         .collection('agenda-eventos')
         .where('fechaInicio', '>=', semanaInicioTs)
         .where('fechaInicio', '<', semanaFinTs)

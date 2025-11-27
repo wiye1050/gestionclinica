@@ -53,7 +53,7 @@ export async function GET(request: Request) {
     const userDocSnap = await adminDb.collection('users').doc(user.uid).get();
     const userDoc = userDocSnap.exists ? userDocSnap.data() ?? {} : {};
 
-    const userRoles = (user.roles ?? userDoc.roles ?? []) as string[];
+    const userRoles = (user.roles ?? userDoc.roles ?? []) as AppRole[];
     const esAdmin = userRoles.some((role) => ADMIN_ROLES.has(role));
     const esClinico = userRoles.some((role) => CLINICAL_ROLES.has(role));
     const professionalId = userDoc.profesionalId ?? null;

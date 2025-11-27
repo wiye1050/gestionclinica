@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth/server';
 import { updateProfesional, deleteProfesional } from '@/lib/server/profesionales';
 
@@ -25,6 +26,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   try {
     const body = await request.json();
     await updateProfesional(id, body, { userId: user.uid, userEmail: user.email ?? undefined });
+    revalidateTag('profesionales');
     return NextResponse.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error inesperado';
@@ -41,6 +43,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
   try {
     await deleteProfesional(id, { userId: user.uid, userEmail: user.email ?? undefined });
+    revalidateTag('profesionales');
     return NextResponse.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error inesperado';

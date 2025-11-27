@@ -7,6 +7,13 @@ import type {
   GrupoPaciente,
 } from '@/types';
 
+const assertAdminDb = () => {
+  if (!adminDb) {
+    throw new Error('Firebase Admin no configurado');
+  }
+  return adminDb;
+};
+
 const dateToISO = (value: unknown): string | undefined => {
   if (value instanceof Date) return value.toISOString();
   if (typeof value === 'object' && value !== null && 'toDate' in value) {
@@ -54,10 +61,11 @@ const serializeDocs = <T extends { id: string }>(
 
 export async function getSerializedEvaluaciones(): Promise<SerializedEvaluacion[]> {
   if (!adminDb) return [];
+  const db = assertAdminDb();
   return cached(
     ['supervision', 'evaluaciones'],
     async () => {
-      const snapshot = await adminDb
+      const snapshot = await db
         .collection('evaluaciones-sesion')
         .orderBy('fecha', 'desc')
         .limit(500)
@@ -99,10 +107,11 @@ export async function getSerializedEvaluaciones(): Promise<SerializedEvaluacion[
 
 export async function getSerializedServiciosActuales(): Promise<SerializedServicio[]> {
   if (!adminDb) return [];
+  const db = assertAdminDb();
   return cached(
     ['supervision', 'servicios-actuales'],
     async () => {
-      const snapshot = await adminDb
+      const snapshot = await db
         .collection('servicios-asignados')
         .where('esActual', '==', true)
         .limit(400)
@@ -121,10 +130,11 @@ export async function getSerializedServiciosActuales(): Promise<SerializedServic
 
 export async function getSerializedProfesionales(): Promise<SerializedProfesional[]> {
   if (!adminDb) return [];
+  const db = assertAdminDb();
   return cached(
     ['supervision', 'profesionales'],
     async () => {
-      const snapshot = await adminDb
+      const snapshot = await db
         .collection('profesionales')
         .where('activo', '==', true)
         .limit(400)
@@ -142,10 +152,11 @@ export async function getSerializedProfesionales(): Promise<SerializedProfesiona
 
 export async function getSerializedGrupos(): Promise<SerializedGrupo[]> {
   if (!adminDb) return [];
+  const db = assertAdminDb();
   return cached(
     ['supervision', 'grupos'],
     async () => {
-      const snapshot = await adminDb
+      const snapshot = await db
         .collection('grupos-pacientes')
         .where('activo', '==', true)
         .limit(300)

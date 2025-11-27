@@ -142,10 +142,10 @@ export interface CatalogoServicio {
   
   // Profesionales que pueden realizar este servicio
   profesionalesHabilitados: string[];
-  
+
   activo: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 // Servicios Asignados (instancias reales del catálogo)
