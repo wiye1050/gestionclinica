@@ -3,9 +3,14 @@
 import { useState } from 'react';
 import { Play, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 
+type MigrationResult = {
+  profesionales: { updated: number; skipped: number; errors: number };
+  servicios: { updated: number; skipped: number; errors: number };
+};
+
 export default function MigrateColorsPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<MigrationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const executeMigration = async () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import KPICard from '@/components/dashboard/KPICard';
 import { GraficoLinea, GraficoPie } from '@/components/dashboard/Graficos';
 import {
@@ -15,16 +15,20 @@ import {
   XCircle,
 } from 'lucide-react';
 import type { KPIResponse } from '@/lib/server/kpis';
+import { useServerKPIs } from '@/lib/hooks/useServerKPIs';
 
 interface KPIsPageClientProps {
-  initialData: KPIResponse;
+  initialData: KPIResponse | null;
 }
 
 export default function KPIsPageClient({ initialData }: KPIsPageClientProps) {
-  const [data] = useState(initialData);
+  const { data } = useServerKPIs({ initialData: initialData ?? undefined });
+  const cards = useMemo(() => {
+    if (!data) {
+      return [];
+    }
 
-  const cards = useMemo(
-    () => [
+    return [
       {
         title: 'Servicios activos',
         value: data.serviciosActivos.toString(),
@@ -81,9 +85,16 @@ export default function KPIsPageClient({ initialData }: KPIsPageClientProps) {
         icon: <XCircle className="h-5 w-5" />,
         color: 'red' as const,
       },
-    ],
-    [data]
-  );
+    ];
+  }, [data]);
+
+  if (!data) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-6 text-center text-sm text-text-muted">
+        No se pudieron cargar los KPIs.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

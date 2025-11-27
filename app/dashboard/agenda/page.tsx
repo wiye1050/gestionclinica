@@ -1,6 +1,8 @@
 import { startOfWeek } from 'date-fns';
 import { AgendaClientWrapper, type VistaAgenda } from './AgendaClient';
 import { getSerializedAgendaEvents } from '@/lib/server/agenda';
+import { getCurrentUser } from '@/lib/auth/server';
+import { redirect } from 'next/navigation';
 
 type AgendaSearchParams = {
   newEvent?: string;
@@ -24,6 +26,10 @@ const isVistaAgenda = (value?: string): value is VistaAgenda =>
   value === 'paciente';
 
 export default async function AgendaPage({ searchParams }: AgendaPageProps) {
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect('/');
+  }
   const resolvedSearchParams = (await searchParams) ?? {};
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const initialEvents = await getSerializedAgendaEvents(weekStart);

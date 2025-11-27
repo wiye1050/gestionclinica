@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth/server';
 import { createEvaluacion } from '@/lib/server/supervisionAdmin';
 
@@ -18,6 +19,9 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const result = await createEvaluacion(body, { userId: user.uid, email: user.email });
+    revalidateTag('supervision');
+    revalidateTag('supervision-evaluaciones');
+    revalidateTag('supervision-servicios');
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error inesperado';

@@ -8,11 +8,11 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useEventosAgenda,
-  useProfesionales,
   useSalas,
   usePacientes,
   useCatalogoServicios,
 } from '@/lib/hooks/useQueries';
+import { useProfesionalesManager } from '@/lib/hooks/useProfesionalesManager';
 import SkeletonLoader from '@/components/shared/SkeletonLoader';
 import CrossModuleAlert from '@/components/shared/CrossModuleAlert';
 import AgendaDayView from '@/components/agenda/v2/AgendaDayView';
@@ -24,17 +24,12 @@ import MiniCalendar from '@/components/agenda/v2/MiniCalendar';
 import CollapsibleToolbar from '@/components/agenda/v2/CollapsibleToolbar';
 import PrimaryTabs from '@/components/shared/PrimaryTabs';
 import { AgendaEvent } from '@/components/agenda/v2/agendaHelpers';
-import {
-  CalendarDays,
-  List,
-  LayoutGrid,
-  Boxes,
-  Plus,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+import { CalendarDays, List, LayoutGrid, Boxes, ChevronRight } from 'lucide-react';
 import type { SerializedAgendaEvent } from '@/lib/server/agenda';
 import type { Paciente } from '@/types';
+import { CompactFilters, type ActiveFilterChip } from '@/components/shared/CompactFilters';
+import { KPIGrid } from '@/components/shared/KPIGrid';
+import { deserializeAgendaEvents } from '@/lib/utils/agendaEvents';
 
 export type VistaAgenda = 'diaria' | 'semanal' | 'multi' | 'boxes' | 'paciente';
 type AgendaResource = { id: string; nombre: string; tipo: 'profesional' | 'sala' };
@@ -79,17 +74,6 @@ const VIEW_TABS: Array<{ id: VistaAgenda; label: string; helper: string; icon: R
   { id: 'boxes', label: 'Boxes', helper: 'Flujo por salas', icon: <Boxes className="h-4 w-4" /> },
 ];
 
-function deserializeEvents(serialized: SerializedAgendaEvent[]): AgendaEvent[] {
-  return serialized.map((event) => ({
-    ...event,
-    fechaInicio: new Date(event.fechaInicio),
-    fechaFin: new Date(event.fechaFin),
-    estado: (event.estado as AgendaEvent['estado']) ?? 'programada',
-    tipo: (event.tipo as AgendaEvent['tipo']) ?? 'consulta',
-    prioridad: event.prioridad ? (event.prioridad as AgendaEvent['prioridad']) : undefined,
-  }));
-}
-
 interface AgendaClientProps {
   initialWeekStart: string;
   initialEvents: SerializedAgendaEvent[];
@@ -109,7 +93,7 @@ export default function AgendaClient({
   initialEvents,
   prefillRequest,
 }: AgendaClientProps) {
-  const prefetchedEvents = useMemo(() => deserializeEvents(initialEvents), [initialEvents]);
+  const prefetchedEvents = useMemo(() => deserializeAgendaEvents(initialEvents), [initialEvents]);
   const initialWeekStartDate = useMemo(() => new Date(initialWeekStart), [initialWeekStart]);
 
   const [vista, setVista] = useState<VistaAgenda>('multi');
@@ -118,6 +102,7 @@ export default function AgendaClient({
   const [selectedSala, setSelectedSala] = useState<string>('todas');
   const [estadoFilter, setEstadoFilter] = useState<AgendaEvent['estado'] | 'todos'>('todos');
   const [tipoFilter, setTipoFilter] = useState<AgendaEvent['tipo'] | 'todos'>('todos');
+  const [busquedaEvento, setBusquedaEvento] = useState('');
   const [resourcePreset, setResourcePreset] =
     useState<'todos' | 'medicina' | 'fisioterapia' | 'enfermeria'>('todos');
   const [filtersLoaded, setFiltersLoaded] = useState(false);
@@ -243,7 +228,7 @@ export default function AgendaClient({
   } = useEventosAgenda(weekStart, {
     initialData: prefetchedEvents.length > 0 ? prefetchedEvents : undefined,
   });
-  const { data: profesionales = [], isLoading: loadingProfesionales } = useProfesionales();
+  const { data: profesionales = [], isLoading: loadingProfesionales } = useProfesionalesManager();
   const { data: salas = [], isLoading: loadingSalas } = useSalas();
   const { data: pacientes = [], isLoading: loadingPacientes } = usePacientes();
   const { data: catalogoServicios = [] } = useCatalogoServicios();
@@ -293,6 +278,8 @@ export default function AgendaClient({
     [highRiskPacientes]
   );
 
+  const normalizedEventSearch = busquedaEvento.trim().toLowerCase();
+
   const eventosFiltrados = useMemo(() => {
     return eventos.filter((evento) => {
       const matchProfesional =
@@ -301,9 +288,74 @@ export default function AgendaClient({
       const matchSala = selectedSala === 'todas' || evento.salaId === selectedSala;
       const matchEstado = estadoFilter === 'todos' || evento.estado === estadoFilter;
       const matchTipo = tipoFilter === 'todos' || evento.tipo === tipoFilter;
-      return matchProfesional && matchSala && matchEstado && matchTipo;
+      const searchablePaciente =
+        evento.pacienteNombre ||
+        (evento.pacienteId ? pacienteMap.get(evento.pacienteId)?.nombre ?? '' : '');
+      const searchableProfesional = evento.profesionalNombre ?? '';
+      const searchableTitulo = evento.titulo ?? '';
+      const combinedText = `${searchableTitulo} ${searchablePaciente} ${searchableProfesional}`.toLowerCase();
+      const matchBusqueda = normalizedEventSearch.length === 0 || combinedText.includes(normalizedEventSearch);
+      return matchProfesional && matchSala && matchEstado && matchTipo && matchBusqueda;
     });
-  }, [eventos, selectedProfesionales, selectedSala, estadoFilter, tipoFilter]);
+  }, [
+    eventos,
+    selectedProfesionales,
+    selectedSala,
+    estadoFilter,
+    tipoFilter,
+    normalizedEventSearch,
+    pacienteMap,
+  ]);
+
+  const agendaStats = useMemo(() => {
+    const total = eventosFiltrados.length;
+    const confirmadas = eventosFiltrados.filter((evento) => evento.estado === 'confirmada').length;
+    const programadas = eventosFiltrados.filter((evento) => evento.estado === 'programada').length;
+    const canceladas = eventosFiltrados.filter((evento) => evento.estado === 'cancelada').length;
+    const realizadas = eventosFiltrados.filter((evento) => evento.estado === 'realizada').length;
+    return { total, confirmadas, programadas, canceladas, realizadas };
+  }, [eventosFiltrados]);
+
+  const agendaKpis = useMemo(
+    () => [
+      {
+        id: 'total',
+        label: 'Eventos visibles',
+        value: agendaStats.total,
+        helper: 'Según filtros aplicados',
+        accent: 'brand' as const,
+      },
+      {
+        id: 'programadas',
+        label: 'Programadas',
+        value: agendaStats.programadas,
+        helper: 'Pendientes por confirmar',
+        accent: 'blue' as const,
+      },
+      {
+        id: 'confirmadas',
+        label: 'Confirmadas',
+        value: agendaStats.confirmadas,
+        helper: 'Listas para ejecutar',
+        accent: 'green' as const,
+      },
+      {
+        id: 'canceladas',
+        label: 'Canceladas',
+        value: agendaStats.canceladas,
+        helper: 'Requieren seguimiento',
+        accent: 'red' as const,
+      },
+      {
+        id: 'realizadas',
+        label: 'Realizadas',
+        value: agendaStats.realizadas,
+        helper: 'Completadas esta vista',
+        accent: 'purple' as const,
+      },
+    ],
+    [agendaStats]
+  );
 
   const isResourceGridMode = vista === 'multi' || (vista === 'diaria' && dayViewMode === 'multi');
   const resourceColumnLimit = Math.max(isResourceGridMode ? 6 : 4, 1);
@@ -723,6 +775,56 @@ export default function AgendaClient({
     return ESTADO_FILTERS.find((e) => e.id === estadoFilter)?.label;
   }, [estadoFilter]);
 
+  const agendaFilterChips: ActiveFilterChip[] = [];
+  if (busquedaEvento.trim()) {
+    agendaFilterChips.push({
+      id: 'busqueda',
+      label: 'Búsqueda',
+      value: busquedaEvento,
+      onRemove: () => setBusquedaEvento(''),
+    });
+  }
+  if (profesionalesLabel) {
+    agendaFilterChips.push({
+      id: 'profesionales',
+      label: 'Profesionales',
+      value: profesionalesLabel,
+      onRemove: () => setSelectedProfesionales([]),
+    });
+  }
+  if (salaLabel) {
+    agendaFilterChips.push({
+      id: 'sala',
+      label: 'Sala',
+      value: salaLabel,
+      onRemove: () => setSelectedSala('todas'),
+    });
+  }
+  if (tipoLabel) {
+    agendaFilterChips.push({
+      id: 'tipo',
+      label: 'Tipo',
+      value: tipoLabel,
+      onRemove: () => setTipoFilter('todos'),
+    });
+  }
+  if (estadoLabel) {
+    agendaFilterChips.push({
+      id: 'estado',
+      label: 'Estado',
+      value: estadoLabel,
+      onRemove: () => setEstadoFilter('todos'),
+    });
+  }
+
+  const clearAgendaFilters = () => {
+    setBusquedaEvento('');
+    setSelectedProfesionales([]);
+    setSelectedSala('todas');
+    setTipoFilter('todos');
+    setEstadoFilter('todos');
+  };
+
   const renderPlaceholder = (title: string, description: string) => (
     <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
       <p className="text-lg font-semibold text-text">{title}</p>
@@ -735,7 +837,45 @@ export default function AgendaClient({
   }
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-4">
+      <KPIGrid items={agendaKpis} />
+
+      <CompactFilters
+        search={{
+          value: busquedaEvento,
+          onChange: setBusquedaEvento,
+          placeholder: 'Buscar por paciente, profesional o servicio',
+        }}
+        selects={[
+          {
+            id: 'estado',
+            label: 'Estado',
+            value: estadoFilter,
+            onChange: (value) => setEstadoFilter(value as typeof estadoFilter),
+            options: ESTADO_FILTERS.map((option) => ({ value: option.id, label: option.label })),
+          },
+          {
+            id: 'tipo',
+            label: 'Tipo',
+            value: tipoFilter,
+            onChange: (value) => setTipoFilter(value as typeof tipoFilter),
+            options: TIPO_FILTERS.map((option) => ({ value: option.id, label: option.label })),
+          },
+          {
+            id: 'sala',
+            label: 'Sala',
+            value: selectedSala,
+            onChange: setSelectedSala,
+            options: [
+              { value: 'todas', label: 'Todas las salas' },
+              ...salas.map((sala) => ({ value: sala.id, label: sala.nombre })),
+            ],
+          },
+        ]}
+        activeFilters={agendaFilterChips}
+        onClear={agendaFilterChips.length ? clearAgendaFilters : undefined}
+      />
+
       <CollapsibleToolbar
         dateLabel={dateLabel}
         onPrev={handlePrev}

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, Plus, X, SlidersHorizontal } from 'lucide-react';
-import type { AgendaEvent } from './agendaHelpers';
 
 interface CollapsibleToolbarProps {
   // Navigation

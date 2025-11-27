@@ -1,8 +1,19 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getMonthlyReportData } from '@/lib/server/informes';
+import { getCurrentUser } from '@/lib/auth/server';
 
 export async function POST(request: NextRequest) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+    }
+    const allowedRoles = new Set(['admin', 'coordinador']);
+    const hasAccess = (currentUser.roles ?? []).some((role) => allowedRoles.has(role));
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    }
+
     const body = await request.json().catch(() => ({}));
     const { year, month } = body ?? {};
 

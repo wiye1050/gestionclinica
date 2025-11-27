@@ -75,10 +75,7 @@ export default function AgendaEventCard({
   const initialMouseY = useRef(0);
 
   // Obtener color dinámico del evento (servicio > evento > tipo) - memoizado para performance
-  const eventColor = useMemo(
-    () => getEventColor(event, catalogoServicios),
-    [event.servicioId, event.color, event.tipo, catalogoServicios]
-  );
+  const eventColor = useMemo(() => getEventColor(event, catalogoServicios), [event, catalogoServicios]);
   const stateStyle = EVENT_STATE_STYLES[event.estado];
   const stateBadge = EVENT_STATE_BADGES[event.estado];
   const typeBadgeClass = EVENT_TYPE_BADGES[event.tipo] ?? 'bg-gray-200 text-gray-700';

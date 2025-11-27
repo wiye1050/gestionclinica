@@ -1,73 +1,35 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { db } from '@/lib/firebase';
-import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
-import { EvaluacionSesion, ServicioAsignado, Profesional, GrupoPaciente } from '@/types';
-import { Plus, Star, Clock, TrendingUp, Award, AlertCircle, BarChart3, User } from 'lucide-react';
+import type { EvaluacionSesion, ServicioAsignado, Profesional, GrupoPaciente } from '@/types';
+import { Plus, Star, AlertCircle, User } from 'lucide-react';
+import { CompactFilters, type ActiveFilterChip } from '@/components/shared/CompactFilters';
+import { KPIGrid } from '@/components/shared/KPIGrid';
 import { sanitizeHTML, sanitizeInput } from '@/lib/utils/sanitize';
-import type {
-  SerializedEvaluacion,
-  SerializedServicio,
-  SerializedProfesional,
-  SerializedGrupo,
-} from '@/lib/server/supervision';
+import { useSupervisionModule, useCreateEvaluacion } from '@/lib/hooks/useSupervisionModule';
 
 interface SupervisionClientProps {
-  initialEvaluaciones: SerializedEvaluacion[];
-  initialServicios: SerializedServicio[];
-  initialProfesionales: SerializedProfesional[];
-  initialGrupos: SerializedGrupo[];
+  evaluaciones: EvaluacionSesion[];
+  servicios: ServicioAsignado[];
+  profesionales: Profesional[];
+  grupos: GrupoPaciente[];
 }
 
-const ensureDate = (value?: string) => (value ? new Date(value) : new Date());
-
-const deserializeEvaluacion = (evaluacion: SerializedEvaluacion): EvaluacionSesion => ({
-  ...evaluacion,
-  fecha: ensureDate(evaluacion.fecha),
-  createdAt: ensureDate(evaluacion.createdAt),
-  updatedAt: ensureDate(evaluacion.updatedAt),
-});
-
-const deserializeServicio = (servicio: SerializedServicio): ServicioAsignado => ({
-  ...servicio,
-  createdAt: ensureDate(servicio.createdAt),
-  updatedAt: ensureDate(servicio.updatedAt),
-  fechaProgramada: servicio.fechaProgramada ? new Date(servicio.fechaProgramada) : undefined,
-});
-
-const deserializeProfesional = (profesional: SerializedProfesional): Profesional => ({
-  ...profesional,
-  createdAt: ensureDate(profesional.createdAt),
-  updatedAt: ensureDate(profesional.updatedAt),
-});
-
-const deserializeGrupo = (grupo: SerializedGrupo): GrupoPaciente => ({
-  ...grupo,
-  createdAt: ensureDate(grupo.createdAt),
-  updatedAt: ensureDate(grupo.updatedAt),
-});
-
-export default function SupervisionClient({
-  initialEvaluaciones,
-  initialServicios,
-  initialProfesionales,
-  initialGrupos,
-}: SupervisionClientProps) {
+export default function SupervisionClient(initialData: SupervisionClientProps) {
   const { user } = useAuth();
-  const [evaluaciones, setEvaluaciones] = useState<EvaluacionSesion[]>(
-    initialEvaluaciones.map(deserializeEvaluacion)
-  );
-  const [servicios, setServicios] = useState<ServicioAsignado[]>(
-    initialServicios.map(deserializeServicio)
-  );
-  const [profesionales, setProfesionales] = useState<Profesional[]>(
-    initialProfesionales.map(deserializeProfesional)
-  );
-  const [grupos, setGrupos] = useState<GrupoPaciente[]>(initialGrupos.map(deserializeGrupo));
+  const initialModule = useMemo(() => initialData, [initialData]);
+  const { data: moduleData = initialModule } = useSupervisionModule({ initialData: initialModule });
+  const createEvaluacion = useCreateEvaluacion();
+
+  const evaluaciones = moduleData.evaluaciones;
+  const servicios = moduleData.servicios;
+  const profesionales = moduleData.profesionales;
+  const grupos = moduleData.grupos;
   const [vistaActual, setVistaActual] = useState<'nueva' | 'dashboard' | 'profesional'>('dashboard');
   const [profesionalSeleccionado, setProfesionalSeleccionado] = useState<string | null>(null);
+  const [busquedaProfesional, setBusquedaProfesional] = useState('');
+  const [filtroEspecialidad, setFiltroEspecialidad] = useState<'todos' | Profesional['especialidad']>('todos');
 
   const [formData, setFormData] = useState({
     servicioId: '',
@@ -91,65 +53,6 @@ export default function SupervisionClient({
     mejorasSugeridas: '',
     fortalezasObservadas: '',
   });
-
-  // Cargar datos
-  useEffect(() => {
-    // Evaluaciones
-    const qEvaluaciones = query(collection(db, 'evaluaciones-sesion'), orderBy('fecha', 'desc'));
-    const unsubEvaluaciones = onSnapshot(qEvaluaciones, (snapshot) => {
-      const evaluacionesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        fecha: doc.data().fecha?.toDate(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-      })) as EvaluacionSesion[];
-      setEvaluaciones(evaluacionesData);
-    });
-
-    // Servicios
-    const qServicios = query(collection(db, 'servicios-asignados'), where('esActual', '==', true));
-    const unsubServicios = onSnapshot(qServicios, (snapshot) => {
-      const serviciosData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-      })) as ServicioAsignado[];
-      setServicios(serviciosData);
-    });
-
-    // Profesionales
-    const qProfesionales = query(collection(db, 'profesionales'), where('activo', '==', true));
-    const unsubProfesionales = onSnapshot(qProfesionales, (snapshot) => {
-      const profesionalesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-      })) as Profesional[];
-      setProfesionales(profesionalesData);
-    });
-
-    // Grupos
-    const qGrupos = query(collection(db, 'grupos-pacientes'), where('activo', '==', true));
-    const unsubGrupos = onSnapshot(qGrupos, (snapshot) => {
-      const gruposData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-      })) as GrupoPaciente[];
-      setGrupos(gruposData);
-    });
-
-    return () => {
-      unsubEvaluaciones();
-      unsubServicios();
-      unsubProfesionales();
-      unsubGrupos();
-    };
-  }, []);
 
   // Crear evaluación
   const handleSubmit = async (e: React.FormEvent) => {
@@ -176,40 +79,31 @@ export default function SupervisionClient({
           : '',
       };
 
-      const response = await fetch('/api/supervision/evaluaciones', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          servicioId: servicio.id,
-          servicioNombre: servicio.catalogoServicioNombre,
-          grupoId: grupo.id,
-          grupoNombre: grupo.nombre,
-          paciente: sanitizedForm.paciente,
-          profesionalId: profesional.id,
-          profesionalNombre: `${profesional.nombre} ${profesional.apellidos}`,
-          fecha: sanitizedForm.fecha,
-          horaInicio: sanitizedForm.horaInicio,
-          horaFin: sanitizedForm.horaFin,
-          tiempoEstimado: sanitizedForm.tiempoEstimado,
-          tiempoReal: sanitizedForm.tiempoReal,
-          aplicacionProtocolo: sanitizedForm.aplicacionProtocolo,
-          manejoPaciente: sanitizedForm.manejoPaciente,
-          usoEquipamiento: sanitizedForm.usoEquipamiento,
-          comunicacion: sanitizedForm.comunicacion,
-          dolorPostTratamiento: sanitizedForm.dolorPostTratamiento,
-          confortDuranteSesion: sanitizedForm.confortDuranteSesion,
-          resultadoPercibido: sanitizedForm.resultadoPercibido,
-          protocoloSeguido: sanitizedForm.protocoloSeguido,
-          observaciones: sanitizedForm.observaciones,
-          mejorasSugeridas: sanitizedForm.mejorasSugeridas,
-          fortalezasObservadas: sanitizedForm.fortalezasObservadas,
-        }),
+      await createEvaluacion.mutateAsync({
+        servicioId: servicio.id,
+        servicioNombre: servicio.catalogoServicioNombre,
+        grupoId: grupo.id,
+        grupoNombre: grupo.nombre,
+        paciente: sanitizedForm.paciente,
+        profesionalId: profesional.id,
+        profesionalNombre: `${profesional.nombre} ${profesional.apellidos}`,
+        fecha: sanitizedForm.fecha,
+        horaInicio: sanitizedForm.horaInicio,
+        horaFin: sanitizedForm.horaFin,
+        tiempoEstimado: sanitizedForm.tiempoEstimado,
+        tiempoReal: sanitizedForm.tiempoReal,
+        aplicacionProtocolo: sanitizedForm.aplicacionProtocolo,
+        manejoPaciente: sanitizedForm.manejoPaciente,
+        usoEquipamiento: sanitizedForm.usoEquipamiento,
+        comunicacion: sanitizedForm.comunicacion,
+        dolorPostTratamiento: sanitizedForm.dolorPostTratamiento,
+        confortDuranteSesion: sanitizedForm.confortDuranteSesion,
+        resultadoPercibido: sanitizedForm.resultadoPercibido,
+        protocoloSeguido: sanitizedForm.protocoloSeguido,
+        observaciones: sanitizedForm.observaciones,
+        mejorasSugeridas: sanitizedForm.mejorasSugeridas,
+        fortalezasObservadas: sanitizedForm.fortalezasObservadas,
       });
-
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload?.error || 'No se pudo guardar la evaluación');
-      }
 
       // Reset
       setFormData({
@@ -294,19 +188,89 @@ export default function SupervisionClient({
   };
 
   // Métricas globales
-  const metricas = {
+  const metricas = useMemo(() => ({
     totalEvaluaciones: evaluaciones.length,
-    cumplimientoProtocolos: evaluaciones.length > 0 
-      ? ((evaluaciones.filter(e => e.protocoloSeguido).length / evaluaciones.length) * 100).toFixed(1)
+    cumplimientoProtocolos: evaluaciones.length > 0
+      ? ((evaluaciones.filter((e) => e.protocoloSeguido).length / evaluaciones.length) * 100).toFixed(1)
       : 0,
     satisfaccionPromedio: evaluaciones.length > 0
       ? (evaluaciones.reduce((acc, e) => acc + e.resultadoPercibido, 0) / evaluaciones.length).toFixed(1)
       : 0,
     puntualidadPromedio: evaluaciones.length > 0
-      ? ((evaluaciones.filter(e => e.tiempoReal <= e.tiempoEstimado + 10).length / evaluaciones.length) * 100).toFixed(1)
+      ? ((evaluaciones.filter((e) => e.tiempoReal <= e.tiempoEstimado + 10).length / evaluaciones.length) * 100).toFixed(1)
       : 0,
-    alertasTiempoExcedido: evaluaciones.filter(e => e.tiempoReal > e.tiempoEstimado + 15).length,
-    alertasSatisfaccionBaja: evaluaciones.filter(e => e.resultadoPercibido < 3).length,
+    alertasTiempoExcedido: evaluaciones.filter((e) => e.tiempoReal > e.tiempoEstimado + 15).length,
+    alertasSatisfaccionBaja: evaluaciones.filter((e) => e.resultadoPercibido < 3).length,
+  }), [evaluaciones]);
+
+  const supervisionKpis = useMemo(
+    () => [
+      {
+        id: 'total',
+        label: 'Evaluaciones',
+        value: metricas.totalEvaluaciones,
+        helper: 'Registradas',
+        accent: 'brand' as const,
+      },
+      {
+        id: 'protocolos',
+        label: 'Cumplimiento protocolos',
+        value: `${metricas.cumplimientoProtocolos}%`,
+        helper: 'Sesiones alineadas',
+        accent: 'green' as const,
+      },
+      {
+        id: 'satisfaccion',
+        label: 'Satisfacción',
+        value: `${metricas.satisfaccionPromedio}/5`,
+        helper: 'Promedio pacientes',
+        accent: 'purple' as const,
+      },
+      {
+        id: 'puntualidad',
+        label: 'Puntualidad',
+        value: `${metricas.puntualidadPromedio}%`,
+        helper: 'Sesiones a tiempo',
+        accent: 'blue' as const,
+      },
+    ],
+    [metricas]
+  );
+
+  const profesionalesFiltrados = useMemo(() => {
+    return profesionales.filter((prof) => {
+      const matchesEspecialidad = filtroEspecialidad === 'todos' || prof.especialidad === filtroEspecialidad;
+      const search = busquedaProfesional.trim().toLowerCase();
+      const matchesSearch =
+        search.length === 0 ||
+        prof.nombre.toLowerCase().includes(search) ||
+        prof.apellidos.toLowerCase().includes(search) ||
+        (prof.email ?? '').toLowerCase().includes(search);
+      return matchesEspecialidad && matchesSearch;
+    });
+  }, [profesionales, filtroEspecialidad, busquedaProfesional]);
+
+  const supervisionFilters: ActiveFilterChip[] = [];
+  if (busquedaProfesional.trim()) {
+    supervisionFilters.push({
+      id: 'busqueda',
+      label: 'Búsqueda',
+      value: busquedaProfesional,
+      onRemove: () => setBusquedaProfesional(''),
+    });
+  }
+  if (filtroEspecialidad !== 'todos') {
+    supervisionFilters.push({
+      id: 'especialidad',
+      label: 'Especialidad',
+      value: filtroEspecialidad,
+      onRemove: () => setFiltroEspecialidad('todos'),
+    });
+  }
+
+  const resetSupervisionFilters = () => {
+    setBusquedaProfesional('');
+    setFiltroEspecialidad('todos');
   };
 
   // Renderizar estrellas
@@ -572,47 +536,7 @@ export default function SupervisionClient({
       {vistaActual === 'dashboard' && (
         <div className="space-y-6">
           {/* Métricas clave */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Cumplimiento Protocolos</p>
-                  <p className="text-3xl font-bold text-blue-600">{metricas.cumplimientoProtocolos}%</p>
-                </div>
-                <BarChart3 className="w-10 h-10 text-blue-500" />
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Satisfacción Promedio</p>
-                  <p className="text-3xl font-bold text-green-600">{metricas.satisfaccionPromedio}/5</p>
-                </div>
-                <Award className="w-10 h-10 text-green-500" />
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow border-l-4 border-yellow-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Puntualidad</p>
-                  <p className="text-3xl font-bold text-yellow-600">{metricas.puntualidadPromedio}%</p>
-                </div>
-                <Clock className="w-10 h-10 text-yellow-500" />
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Total Evaluaciones</p>
-                  <p className="text-3xl font-bold text-purple-600">{metricas.totalEvaluaciones}</p>
-                </div>
-                <TrendingUp className="w-10 h-10 text-purple-500" />
-              </div>
-            </div>
-          </div>
+          <KPIGrid items={supervisionKpis} />
 
           {/* Alertas */}
           {(metricas.alertasTiempoExcedido > 0 || metricas.alertasSatisfaccionBaja > 0) && (
@@ -634,11 +558,35 @@ export default function SupervisionClient({
             </div>
           )}
 
+          <CompactFilters
+            search={{
+              value: busquedaProfesional,
+              onChange: setBusquedaProfesional,
+              placeholder: 'Buscar profesional o correo',
+            }}
+            selects={[
+              {
+                id: 'especialidad',
+                label: 'Especialidad',
+                value: filtroEspecialidad,
+                onChange: (value) => setFiltroEspecialidad(value as typeof filtroEspecialidad),
+                options: [
+                  { value: 'todos', label: 'Todas las especialidades' },
+                  { value: 'medicina', label: 'Medicina' },
+                  { value: 'fisioterapia', label: 'Fisioterapia' },
+                  { value: 'enfermeria', label: 'Enfermería' },
+                ],
+              },
+            ]}
+            activeFilters={supervisionFilters}
+            onClear={supervisionFilters.length ? resetSupervisionFilters : undefined}
+          />
+
           {/* Rendimiento por profesional */}
           <div className="bg-white p-6 rounded-lg shadow">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">👥 Rendimiento por Profesional</h2>
             <div className="space-y-4">
-              {profesionales.map((prof) => {
+              {profesionalesFiltrados.map((prof) => {
                 const stats = calcularEstadisticasProfesional(prof.id);
                 
                 return (

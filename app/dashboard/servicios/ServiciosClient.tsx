@@ -3,17 +3,14 @@
 
 import { Suspense, lazy, useState, useMemo } from 'react';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { 
-  useServicios, 
-  useProfesionales, 
-  useGruposPacientes, 
-  useCatalogoServicios 
-} from '@/lib/hooks/useQueries';
-import { Plus, Filter, Users, UserCheck, CheckSquare, Square, Trash2 } from 'lucide-react';
+import { useServiciosModule } from '@/lib/hooks/useServiciosModule';
+import { Plus, CheckSquare, Square, Trash2 } from 'lucide-react';
 import { LoadingTable } from '@/components/ui/Loading';
 import type { ServicioAsignado, Profesional, GrupoPaciente, CatalogoServicio } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { sanitizeInput } from '@/lib/utils/sanitize';
+import { CompactFilters, type ActiveFilterChip } from '@/components/shared/CompactFilters';
+import { KPIGrid } from '@/components/shared/KPIGrid';
 
 // Lazy loading del componente de exportación
 const ExportButton = lazy(() => import('@/components/ui/ExportButton').then(m => ({ default: m.ExportButton })));
@@ -49,21 +46,27 @@ export default function ServiciosClient({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   
-  // React Query hooks - caché automático
-  const { data: servicios = [], isLoading: loadingServicios } = useServicios({
-    initialData: initialServicios,
+  const initialModule = useMemo(
+    () => ({
+      servicios: initialServicios,
+      profesionales: initialProfesionales,
+      grupos: initialGrupos,
+      catalogo: initialCatalogo,
+    }),
+    [initialServicios, initialProfesionales, initialGrupos, initialCatalogo]
+  );
+
+  const { data: moduleData = initialModule, isLoading: loadingModule } = useServiciosModule({
+    initialData: initialModule,
   });
-  const { data: profesionales = [], isLoading: loadingProfesionales } = useProfesionales({
-    initialData: initialProfesionales,
-  });
-  const { data: grupos = [], isLoading: loadingGrupos } = useGruposPacientes({
-    initialData: initialGrupos,
-  });
-  const { data: catalogoServicios = [], isLoading: loadingCatalogo } = useCatalogoServicios({
-    initialData: initialCatalogo,
-  });
+
+  const servicios = moduleData.servicios;
+  const profesionales = moduleData.profesionales;
+  const grupos = moduleData.grupos;
+  const catalogoServicios = moduleData.catalogo;
+
   const invalidateServicios = () =>
-    queryClient.invalidateQueries({ queryKey: ['servicios-asignados'] });
+    queryClient.invalidateQueries({ queryKey: ['servicios-module'] });
 
   const sanitizeId = (value: string) => sanitizeInput(value);
 
@@ -110,6 +113,8 @@ export default function ServiciosClient({
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [filtroGrupo, setFiltroGrupo] = useState<string>('todos');
   const [filtroEstado, setFiltroEstado] = useState<string>('todos');
+  const [busqueda, setBusqueda] = useState('');
+  const [soloActuales, setSoloActuales] = useState(false);
 
   // Estado del formulario
   const [nuevoServicio, setNuevoServicio] = useState<NuevoServicioForm>({
@@ -124,7 +129,7 @@ export default function ServiciosClient({
     supervision: false,
     esActual: false});
 
-  const loading = loadingServicios || loadingProfesionales || loadingGrupos || loadingCatalogo;
+  const loading = loadingModule;
 
   // Crear servicio
   const handleCrearServicio = async (e: React.FormEvent) => {
@@ -248,13 +253,59 @@ export default function ServiciosClient({
   };
 
   // Filtrar servicios (memoizado para rendimiento)
+  const normalizedSearch = busqueda.trim().toLowerCase();
+
   const serviciosFiltrados = useMemo(() => {
-    return servicios.filter(servicio => {
+    return servicios.filter((servicio) => {
       const cumpleGrupo = filtroGrupo === 'todos' || servicio.grupoId === filtroGrupo;
       const cumpleEstado = filtroEstado === 'todos' || servicio.tiquet === filtroEstado;
-      return cumpleGrupo && cumpleEstado;
+      const cumpleActual = !soloActuales || servicio.esActual;
+      const coincideBusqueda =
+        normalizedSearch.length === 0 ||
+        servicio.catalogoServicioNombre.toLowerCase().includes(normalizedSearch) ||
+        servicio.grupoNombre.toLowerCase().includes(normalizedSearch) ||
+        servicio.profesionalPrincipalNombre.toLowerCase().includes(normalizedSearch);
+      return cumpleGrupo && cumpleEstado && cumpleActual && coincideBusqueda;
     });
-  }, [servicios, filtroGrupo, filtroEstado]);
+  }, [servicios, filtroGrupo, filtroEstado, soloActuales, normalizedSearch]);
+
+  const stats = {
+    total: servicios.length,
+    actuales: servicios.filter((s) => s.esActual).length,
+    conApoyo: servicios.filter((s) => s.requiereApoyo).length,
+    conSupervision: servicios.filter((s) => s.supervision).length,
+    tiquetSi: servicios.filter((s) => s.tiquet === 'SI').length,
+  };
+
+  const kpiItems = [
+    { id: 'total', label: 'Servicios asignados', value: stats.total, helper: 'Totales', accent: 'brand' as const },
+    { id: 'actuales', label: 'Actuales', value: stats.actuales, helper: 'Vigentes', accent: 'green' as const },
+    { id: 'apoyo', label: 'Con apoyo', value: stats.conApoyo, helper: 'Requieren apoyo', accent: 'purple' as const },
+    { id: 'supervision', label: 'Con supervisión', value: stats.conSupervision, helper: 'Vigilados', accent: 'blue' as const },
+    { id: 'tiquet', label: 'Ticket SI', value: stats.tiquetSi, helper: 'Con ticket activo', accent: 'green' as const },
+  ];
+
+  const activeFilters: ActiveFilterChip[] = [];
+  if (busqueda.trim()) {
+    activeFilters.push({ id: 'busqueda', label: 'Búsqueda', value: busqueda, onRemove: () => setBusqueda('') });
+  }
+  if (filtroGrupo !== 'todos') {
+    const groupLabel = grupos.find((g) => g.id === filtroGrupo)?.nombre ?? filtroGrupo;
+    activeFilters.push({ id: 'grupo', label: 'Grupo', value: groupLabel, onRemove: () => setFiltroGrupo('todos') });
+  }
+  if (filtroEstado !== 'todos') {
+    activeFilters.push({ id: 'tiquet', label: 'Ticket', value: filtroEstado, onRemove: () => setFiltroEstado('todos') });
+  }
+  if (soloActuales) {
+    activeFilters.push({ id: 'actuales', label: 'Estado', value: 'Solo actuales', onRemove: () => setSoloActuales(false) });
+  }
+
+  const clearFilters = () => {
+    setBusqueda('');
+    setFiltroGrupo('todos');
+    setFiltroEstado('todos');
+    setSoloActuales(false);
+  };
 
   // Obtener color del tiquet
   const getColorTiquet = (tiquet: string) => {
@@ -329,39 +380,7 @@ export default function ServiciosClient({
         </div>
       </div>
 
-      {/* Estadísticas */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <div className="glass-panel p-5">
-          <div className="flex items-center gap-2">
-            <CheckSquare className="w-5 h-5 text-brand" />
-            <p className="text-sm text-text-muted">Total servicios</p>
-          </div>
-          <p className="mt-2 text-2xl font-semibold text-text">{loading ? '—' : servicios.length}</p>
-        </div>
-        <div className="glass-panel p-5">
-          <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-brand" />
-            <p className="text-sm text-text-muted">Grupos activos</p>
-          </div>
-          <p className="mt-2 text-2xl font-semibold text-text">{loading ? '—' : grupos.length}</p>
-        </div>
-        <div className="glass-panel p-5">
-          <div className="flex items-center gap-2">
-            <UserCheck className="w-5 h-5 text-success" />
-            <p className="text-sm text-text-muted">Profesionales</p>
-          </div>
-          <p className="mt-2 text-2xl font-semibold text-text">{loading ? '—' : profesionales.length}</p>
-        </div>
-        <div className="glass-panel p-5">
-          <div className="flex items-center gap-2">
-            <CheckSquare className="w-5 h-5 text-warn" />
-            <p className="text-sm text-text-muted">Actuales</p>
-          </div>
-          <p className="mt-2 text-2xl font-semibold text-text">
-            {loading ? '—' : servicios.filter(s => s.esActual).length}
-          </p>
-        </div>
-      </div>
+      <KPIGrid items={kpiItems} />
 
       {/* Aviso si faltan datos */}
       {!loading && (catalogoServicios.length === 0 || grupos.length === 0 || profesionales.length === 0) && (
@@ -530,38 +549,46 @@ export default function ServiciosClient({
         </div>
       )}
 
-      {/* Filtros */}
-      <div className="panel-block p-4 shadow-sm">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-text-muted" />
-            <span className="text-sm font-medium text-text">Filtros:</span>
-          </div>
-          
-          <select
-            value={filtroGrupo}
-            onChange={(e) => setFiltroGrupo(e.target.value)}
-            className="rounded-pill border border-border bg-card px-3 py-1 text-sm text-text focus-visible:focus-ring"
-          >
-            <option value="todos">Todos los grupos</option>
-            {grupos.map(grupo => (
-              <option key={grupo.id} value={grupo.id}>{grupo.nombre}</option>
-            ))}
-          </select>
-
-          <select
-            value={filtroEstado}
-            onChange={(e) => setFiltroEstado(e.target.value)}
-            className="rounded-pill border border-border bg-card px-3 py-1 text-sm text-text focus-visible:focus-ring"
-          >
-            <option value="todos">Todos los tickets</option>
-            <option value="SI">SI</option>
-            <option value="NO">NO</option>
-            <option value="CORD">CORD</option>
-            <option value="ESPACH">ESPACH</option>
-          </select>
-        </div>
-      </div>
+      <CompactFilters
+        search={{ value: busqueda, onChange: setBusqueda, placeholder: 'Buscar por servicio o grupo' }}
+        selects={[
+          {
+            id: 'grupo',
+            label: 'Grupo',
+            value: filtroGrupo,
+            onChange: setFiltroGrupo,
+            options: [
+              { value: 'todos', label: 'Todos los grupos' },
+              ...grupos.map((grupo) => ({ value: grupo.id, label: grupo.nombre })),
+            ],
+          },
+          {
+            id: 'tiquet',
+            label: 'Ticket',
+            value: filtroEstado,
+            onChange: setFiltroEstado,
+            options: [
+              { value: 'todos', label: 'Todos' },
+              { value: 'SI', label: 'SI' },
+              { value: 'NO', label: 'NO' },
+              { value: 'CORD', label: 'CORD' },
+              { value: 'ESPACH', label: 'ESPACH' },
+            ],
+          },
+        ]}
+        activeFilters={activeFilters}
+        onClear={activeFilters.length ? clearFilters : undefined}
+      >
+        <button
+          type="button"
+          onClick={() => setSoloActuales((prev) => !prev)}
+          className={`rounded-pill border px-4 py-2 text-xs font-semibold transition-colors focus-visible:focus-ring ${
+            soloActuales ? 'border-brand bg-brand-subtle text-brand' : 'border-border bg-card text-text'
+          }`}
+        >
+          {soloActuales ? 'Mostrando actuales' : 'Incluir históricos'}
+        </button>
+      </CompactFilters>
 
       {/* Tabla de Servicios */}
       {loading ? (

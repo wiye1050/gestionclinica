@@ -8,13 +8,13 @@ import ViewSelector from '@/components/shared/ViewSelector';
 import KanbanView from '@/components/proyectos/KanbanView';
 import ListView from '@/components/proyectos/ListView';
 import GanttView from '@/components/proyectos/GanttView';
-import FiltrosProyectos from '@/components/proyectos/FiltrosProyectos';
-import KPIsProyectos from '@/components/proyectos/KPIsProyectos';
 import ProyectoDetalle from '@/components/proyectos/ProyectoDetalle';
 import ProyectoForm from '@/components/proyectos/ProyectoForm';
 import { LoadingSpinner } from '@/components/ui/Loading';
 import { useProyectos } from '@/lib/hooks/useProyectos';
-import { useProfesionales } from '@/lib/hooks/useQueries';
+import { useProfesionalesManager } from '@/lib/hooks/useProfesionalesManager';
+import { CompactFilters, type ActiveFilterChip } from '@/components/shared/CompactFilters';
+import { KPIGrid } from '@/components/shared/KPIGrid';
 import type {
   Proyecto,
   EstadoProyecto,
@@ -50,7 +50,7 @@ export default function ProyectosClient({ initialProyectos }: ProyectosClientPro
     actualizarProyecto,
     eliminarProyecto,
   } = useProyectos({ initialData: initialProyectos });
-  const { data: profesionalesData = [] } = useProfesionales();
+  const { data: profesionalesData = [] } = useProfesionalesManager();
 
   const [vista, setVista] = useState<VistaProyecto>('kanban');
   const [mostrarKPIs, setMostrarKPIs] = useState(true);
@@ -72,6 +72,14 @@ export default function ProyectosClient({ initialProyectos }: ProyectosClientPro
         nombre: `${p.nombre} ${p.apellidos}`,
       })),
     [profesionalesData]
+  );
+
+  const responsableOptions = useMemo(
+    () => [
+      { value: 'todos', label: 'Todos los responsables' },
+      ...responsables.map((resp) => ({ value: resp.uid, label: resp.nombre })),
+    ],
+    [responsables]
   );
 
   const proyectosFiltrados = useMemo(() => {
@@ -104,6 +112,100 @@ export default function ProyectosClient({ initialProyectos }: ProyectosClientPro
       return true;
     });
   }, [proyectos, filtros]);
+
+  const activeFilters: ActiveFilterChip[] = [];
+  if (filtros.busqueda.trim()) {
+    activeFilters.push({
+      id: 'busqueda',
+      label: 'Búsqueda',
+      value: filtros.busqueda,
+      onRemove: () => setFiltros((prev) => ({ ...prev, busqueda: '' })),
+    });
+  }
+  if (filtros.estado !== 'todos') {
+    activeFilters.push({
+      id: 'estado',
+      label: 'Estado',
+      value: filtros.estado,
+      onRemove: () => setFiltros((prev) => ({ ...prev, estado: 'todos' })),
+    });
+  }
+  if (filtros.tipo !== 'todos') {
+    activeFilters.push({
+      id: 'tipo',
+      label: 'Tipo',
+      value: filtros.tipo,
+      onRemove: () => setFiltros((prev) => ({ ...prev, tipo: 'todos' })),
+    });
+  }
+  if (filtros.prioridad !== 'todos') {
+    activeFilters.push({
+      id: 'prioridad',
+      label: 'Prioridad',
+      value: filtros.prioridad,
+      onRemove: () => setFiltros((prev) => ({ ...prev, prioridad: 'todos' })),
+    });
+  }
+  if (filtros.responsable !== 'todos') {
+    const respLabel = responsableOptions.find((opt) => opt.value === filtros.responsable)?.label;
+    activeFilters.push({
+      id: 'responsable',
+      label: 'Responsable',
+      value: respLabel ?? 'Responsable',
+      onRemove: () => setFiltros((prev) => ({ ...prev, responsable: 'todos' })),
+    });
+  }
+
+  const clearFiltros = () =>
+    setFiltros({ busqueda: '', estado: 'todos', tipo: 'todos', prioridad: 'todos', responsable: 'todos' });
+
+  const kpiItems = useMemo(
+    () => [
+      {
+        id: 'total',
+        label: 'Total proyectos',
+        value: estadisticas.totalProyectos,
+        helper: 'Registrados',
+        accent: 'brand' as const,
+      },
+      {
+        id: 'encurso',
+        label: 'En curso',
+        value: estadisticas.porEstado['en-curso'],
+        helper: 'Activos',
+        accent: 'blue' as const,
+      },
+      {
+        id: 'completados',
+        label: 'Completados',
+        value: estadisticas.porEstado.completado,
+        helper: 'Finalizados',
+        accent: 'green' as const,
+      },
+      {
+        id: 'riesgo',
+        label: 'En riesgo',
+        value: estadisticas.proyectosEnRiesgo,
+        helper: 'Prioridad alta',
+        accent: 'purple' as const,
+      },
+      {
+        id: 'atrasados',
+        label: 'Atrasados',
+        value: estadisticas.proyectosAtrasados,
+        helper: 'Fuera de plazo',
+        accent: 'red' as const,
+      },
+      {
+        id: 'progreso',
+        label: 'Progreso medio',
+        value: `${estadisticas.progresoPromedio}%`,
+        helper: 'Promedio global',
+        accent: 'gray' as const,
+      },
+    ],
+    [estadisticas]
+  );
 
   const handleExportar = async () => {
     try {
@@ -219,12 +321,68 @@ export default function ProyectosClient({ initialProyectos }: ProyectosClientPro
         }
       />
 
-      {mostrarKPIs && <KPIsProyectos estadisticas={estadisticas} />}
+      {mostrarKPIs && <KPIGrid items={kpiItems} />}
 
-      <FiltrosProyectos
-        filtros={filtros}
-        onFiltroChange={setFiltros}
-        responsables={responsables}
+      <CompactFilters
+        search={{
+          value: filtros.busqueda,
+          onChange: (value) => setFiltros((prev) => ({ ...prev, busqueda: value })),
+          placeholder: 'Buscar por nombre, descripción o tag',
+        }}
+        selects={[
+          {
+            id: 'estado',
+            label: 'Estado',
+            value: filtros.estado,
+            onChange: (value) => setFiltros((prev) => ({ ...prev, estado: value as EstadoFiltro })),
+            options: [
+              { value: 'todos', label: 'Todos los estados' },
+              { value: 'propuesta', label: 'Propuesta' },
+              { value: 'planificacion', label: 'Planificación' },
+              { value: 'en-curso', label: 'En curso' },
+              { value: 'pausado', label: 'Pausado' },
+              { value: 'completado', label: 'Completado' },
+              { value: 'cancelado', label: 'Cancelado' },
+            ],
+          },
+          {
+            id: 'tipo',
+            label: 'Tipo',
+            value: filtros.tipo,
+            onChange: (value) => setFiltros((prev) => ({ ...prev, tipo: value as TipoFiltro })),
+            options: [
+              { value: 'todos', label: 'Todos los tipos' },
+              { value: 'desarrollo', label: 'Desarrollo' },
+              { value: 'operacional', label: 'Operacional' },
+              { value: 'investigacion', label: 'Investigación' },
+              { value: 'marketing', label: 'Marketing' },
+              { value: 'mejora', label: 'Mejora' },
+              { value: 'infraestructura', label: 'Infraestructura' },
+            ],
+          },
+          {
+            id: 'prioridad',
+            label: 'Prioridad',
+            value: filtros.prioridad,
+            onChange: (value) => setFiltros((prev) => ({ ...prev, prioridad: value as PrioridadFiltro })),
+            options: [
+              { value: 'todos', label: 'Todas' },
+              { value: 'critica', label: 'Crítica' },
+              { value: 'alta', label: 'Alta' },
+              { value: 'media', label: 'Media' },
+              { value: 'baja', label: 'Baja' },
+            ],
+          },
+          {
+            id: 'responsable',
+            label: 'Responsable',
+            value: filtros.responsable,
+            onChange: (value) => setFiltros((prev) => ({ ...prev, responsable: value })),
+            options: responsableOptions,
+          },
+        ]}
+        activeFilters={activeFilters}
+        onClear={activeFilters.length ? clearFiltros : undefined}
       />
 
       <ViewSelector

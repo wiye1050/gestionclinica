@@ -5,13 +5,14 @@
 ### Todos los Módulos Core
 1. ✅ **Dashboard** - useKPIs (2 min)
 2. ✅ **Pacientes** - usePacientes (3 min)  
-3. ✅ **Servicios** - 4 hooks (3-10 min)
+3. ✅ **Servicios** - useServiciosModule + auxiliares (3-10 min)
 4. ✅ **Inventario** - useInventario (5 min)
 5. ✅ **Mejoras** - useMejoras (3 min)
 6. ✅ **Protocolos** - useProtocolos (10 min)
-7. ✅ **Reporte Diario** - useReportes (2 min)
-8. ✅ **Agenda** - useEventosAgenda, useBloquesAgenda, useSalas (3-10 min)
-9. ⚠️ **KPIs Detallado** - Ya usa useKPIs del dashboard
+7. ✅ **Reporte Diario** - useReportesDiarios (2 min)
+8. ✅ **Supervisión** - useSupervisionModule (3-5 min)
+9. ✅ **Agenda** - useEventosAgenda, useBloquesAgenda, useSalas (3-10 min)
+10. ⚠️ **KPIs Detallado** - Ya usa useKPIs del dashboard
 
 ## 🚀 TODOS LOS HOOKS DISPONIBLES
 
@@ -27,8 +28,8 @@ useUpdatePaciente()
 useDeletePaciente()
 
 // ========== SERVICIOS ==========
-useServicios() // 3 min
-useProfesionales() // 5 min
+useServiciosModule() // 3 min
+useProfesionalesManager() // 5 min
 useGruposPacientes() // 5 min
 useCatalogoServicios() // 10 min
 
@@ -44,7 +45,10 @@ useMejoras(filters?) // 3 min
 useProtocolos() // 10 min
 
 // ========== REPORTES DIARIOS ==========
-useReportes() // 2 min
+useReportesDiarios() // 2 min
+
+// ========== SUPERVISIÓN ==========
+useSupervisionModule() // 5 min
 
 // ========== AGENDA ==========
 useEventosAgenda(weekStart: Date) // 3 min (por semana)

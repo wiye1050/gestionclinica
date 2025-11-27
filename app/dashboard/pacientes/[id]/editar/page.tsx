@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { useProfesionales } from '@/lib/hooks/useQueries';
+import { useProfesionalesManager } from '@/lib/hooks/useProfesionalesManager';
 import { usePaciente } from '@/lib/hooks/usePatientDetailData';
 import { PacienteForm, PacienteFormValues } from '@/components/pacientes/PacienteForm';
 import { toast } from 'sonner';
@@ -21,7 +21,7 @@ export default function EditarPacientePage() {
     error: pacienteError,
   } = usePaciente(pacienteId);
 
-  const { data: profesionales = [], isLoading: loadingProfesionales } = useProfesionales();
+  const { data: profesionales = [], isLoading: loadingProfesionales } = useProfesionalesManager();
 
   const [submitError, setSubmitError] = useState<string | null>(null);
 

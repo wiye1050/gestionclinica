@@ -203,7 +203,7 @@ export default function AgendaResourceView({
 
                 <div className="flex-1 overflow-x-auto">
                   <div className="flex min-h-full min-w-full">
-                    {resources.map((resource, index) => {
+                    {resources.map((resource) => {
                       const resourceEvents = eventsByResource.get(resource.id) || [];
                       const stats = resourceStats.get(resource.id);
                       const occupancyLabel = Math.round(stats?.occupancy ?? 0);

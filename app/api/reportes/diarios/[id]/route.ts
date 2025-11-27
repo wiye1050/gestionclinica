@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth/server';
 import { deleteDailyReport, updateDailyReport } from '@/lib/server/reports';
 
@@ -29,6 +30,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
 
     await updateDailyReport(id, body, { userId: user.uid, userEmail: user.email ?? undefined });
+    revalidateTag('reports');
+    revalidateTag('reports-daily');
     return NextResponse.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error inesperado';
@@ -45,6 +48,8 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
   try {
     await deleteDailyReport(id, { userId: user.uid, userEmail: user.email ?? undefined });
+    revalidateTag('reports');
+    revalidateTag('reports-daily');
     return NextResponse.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error inesperado';

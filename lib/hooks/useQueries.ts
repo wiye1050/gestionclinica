@@ -1,11 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, query, where, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { startOfWeek, addDays } from 'date-fns';
 import type {
   Paciente,
   ServicioAsignado,
-  Profesional,
   GrupoPaciente,
   CatalogoServicio,
   Mejora,
@@ -14,53 +12,14 @@ import type {
 } from '@/types';
 import type { AgendaEvent } from '@/components/agenda/v2/agendaHelpers';
 import {
-  transformProfesional,
   transformPaciente,
   transformServicioAsignado,
   transformGrupoPaciente,
-  transformCatalogoServicio,
   transformSala,
 } from '@/lib/utils/firestoreTransformers';
-
-// Hook para KPIs con caché agresivo (datos que no cambian tanto)
-export function useKPIs() {
-  return useQuery({
-    queryKey: ['kpis'],
-    queryFn: async () => {
-      const semanaInicio = startOfWeek(new Date(), { weekStartsOn: 1 });
-      const semanaFin = addDays(semanaInicio, 7);
-
-      // Todas las queries en paralelo
-      const [
-        serviciosActivos,
-        profesionalesActivos,
-        reportesPendientes,
-        eventosSemanales,
-      ] = await Promise.all([
-        getDocs(query(collection(db, 'servicios-asignados'), where('estado', '==', 'activo'))),
-        getDocs(query(collection(db, 'profesionales'), where('activo', '==', true))),
-        getDocs(query(collection(db, 'reportes-diarios'), where('estado', 'in', ['pendiente', 'en-proceso']))),
-        getDocs(
-          query(
-            collection(db, 'agenda-eventos'),
-            where('fechaInicio', '>=', Timestamp.fromDate(semanaInicio)),
-            where('fechaInicio', '<', Timestamp.fromDate(semanaFin))
-          )
-        ),
-      ]);
-
-      return {
-        serviciosActivos: serviciosActivos.size,
-        profesionalesActivos: profesionalesActivos.size,
-        reportesPendientes: reportesPendientes.size,
-        eventosSemana: eventosSemanales.size,
-        timestamp: new Date(),
-      };
-    },
-    staleTime: 2 * 60 * 1000, // 2 minutos - KPIs pueden ser un poco desactualizados
-    gcTime: 5 * 60 * 1000, // Mantener en caché 5 minutos
-  });
-}
+import { deserializeCatalogoServicio, type SerializedCatalogoServicio } from '@/lib/utils/catalogoServicios';
+import { deserializeAgendaEvents } from '@/lib/utils/agendaEvents';
+import type { SerializedAgendaEvent } from '@/lib/server/agenda';
 
 // Hook para inventario con alertas de stock
 type InventarioItem = {
@@ -208,30 +167,6 @@ export function useServicios(options?: { initialData?: ServicioAsignado[] }) {
   });
 }
 
-// Hook para profesionales
-export function useProfesionales(options?: {
-  initialData?: Profesional[];
-  includeInactive?: boolean;
-}) {
-  return useQuery<Profesional[]>({
-    queryKey: ['profesionales', { includeInactive: options?.includeInactive }],
-    queryFn: async () => {
-      const snapshot = await getDocs(
-        query(collection(db, 'profesionales'), orderBy('apellidos'), limit(200))
-      );
-
-      const profesionales = snapshot.docs.map(transformProfesional);
-
-      return options?.includeInactive
-        ? profesionales
-        : profesionales.filter(p => p.activo);
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutos - profesionales no cambian frecuentemente
-    initialData: options?.initialData,
-    initialDataUpdatedAt: options?.initialData ? Date.now() : undefined,
-  });
-}
-
 // Hook para grupos de pacientes
 export function useGruposPacientes(options?: { initialData?: GrupoPaciente[] }) {
   return useQuery<GrupoPaciente[]>({
@@ -255,12 +190,16 @@ export function useCatalogoServicios(options?: { initialData?: CatalogoServicio[
   return useQuery<CatalogoServicio[]>({
     queryKey: ['catalogo-servicios'],
     queryFn: async () => {
-      const snapshot = await getDocs(
-        query(collection(db, 'catalogo-servicios'), orderBy('nombre'), limit(200))
-      );
-
-      const servicios = snapshot.docs.map(transformCatalogoServicio);
-      return servicios.filter(s => s.activo);
+      const response = await fetch('/api/catalogo-servicios');
+      const payload = await response.json();
+      if (!response.ok) {
+        const message = typeof payload?.error === 'string' ? payload.error : 'No se pudo cargar el catálogo';
+        throw new Error(message);
+      }
+      const servicios = Array.isArray(payload?.servicios)
+        ? (payload.servicios as SerializedCatalogoServicio[])
+        : [];
+      return servicios.map(deserializeCatalogoServicio);
     },
     staleTime: 10 * 60 * 1000, // 10 minutos - catálogo es bastante estático
     initialData: options?.initialData,
@@ -296,44 +235,21 @@ export function useEventosAgenda(
     initialData?: AgendaEvent[];
   }
 ) {
-  const weekEnd = addDays(weekStart, 7);
-
   return useQuery<AgendaEvent[]>({
     queryKey: ['agenda-eventos', weekStart.toISOString()],
     queryFn: async () => {
-      const snapshot = await getDocs(
-        query(
-          collection(db, 'agenda-eventos'),
-          where('fechaInicio', '>=', Timestamp.fromDate(weekStart)),
-          where('fechaInicio', '<', Timestamp.fromDate(weekEnd)),
-          orderBy('fechaInicio', 'asc'),
-          limit(500)
-        )
+      const response = await fetch(
+        `/api/agenda/events?weekStart=${encodeURIComponent(weekStart.toISOString())}`
       );
-
-      return snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() ?? {};
-        const fechaInicio = data.fechaInicio?.toDate?.() ?? new Date();
-        const fechaFin = data.fechaFin?.toDate?.() ?? new Date();
-
-        return {
-          id: docSnap.id,
-          titulo: data.titulo ?? 'Sin título',
-          fechaInicio,
-          fechaFin,
-          estado: data.estado ?? 'programada',
-          tipo: data.tipo ?? 'consulta',
-          pacienteId: data.pacienteId,
-          pacienteNombre: data.pacienteNombre,
-          profesionalId: data.profesionalId,
-          profesionalNombre: data.profesionalNombre,
-          salaId: data.salaId,
-          salaNombre: data.salaNombre,
-          prioridad: data.prioridad ?? 'media',
-          notas: data.notas ?? '',
-          color: data.color,
-        } satisfies AgendaEvent;
-      });
+      const payload = await response.json();
+      if (!response.ok) {
+        const message = typeof payload?.error === 'string' ? payload.error : 'No se pudieron cargar los eventos';
+        throw new Error(message);
+      }
+      const events = Array.isArray(payload?.events)
+        ? (payload.events as SerializedAgendaEvent[])
+        : [];
+      return deserializeAgendaEvents(events);
     },
     staleTime: 3 * 60 * 1000, // 3 minutos
     initialData: options?.initialData,

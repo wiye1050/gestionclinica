@@ -13,7 +13,7 @@
 - Reducción: 70% queries
 
 ### 3. Servicios (/dashboard/servicios) ✅
-- Hooks: `useServicios()`, `useProfesionales()`, `useGruposPacientes()`, `useCatalogoServicios()`
+- Hooks: `useServiciosModule()`, `useProfesionalesManager()`, `useGruposPacientes()`, `useCatalogoServicios()`
 - Caché: 3-10 min según tipo
 - Lazy: ExportButton
 - Reducción: 75% queries
@@ -82,7 +82,7 @@ useDeletePaciente()
 useServicios()
 
 // Profesionales (5 min)
-useProfesionales()
+useProfesionalesManager()
 
 // Grupos (5 min)
 useGruposPacientes()

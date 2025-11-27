@@ -1,5 +1,6 @@
 import { adminDb } from '@/lib/firebaseAdmin';
 import { sanitizeHTML, sanitizeStringArray, sanitizeText } from '@/lib/utils/sanitize';
+import type { SerializedCatalogoServicio } from '@/lib/utils/catalogoServicios';
 
 export type CatalogoServicioInput = {
   nombre: string;
@@ -55,6 +56,39 @@ export async function createCatalogoServicio(
   });
 
   return { id: docRef.id };
+}
+
+export async function getSerializedCatalogoServicios(): Promise<SerializedCatalogoServicio[]> {
+  if (!adminDb) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[catalogo-servicios] Firebase Admin no configurado');
+    }
+    return [];
+  }
+
+  const snapshot = await adminDb.collection('catalogo-servicios').orderBy('nombre').get();
+  return snapshot.docs.map((docSnap) => {
+    const data = docSnap.data() ?? {};
+    return {
+      id: docSnap.id,
+      nombre: data.nombre ?? 'Sin nombre',
+      categoria: data.categoria ?? 'medicina',
+      descripcion: data.descripcion ?? '',
+      tiempoEstimado: Number(data.tiempoEstimado ?? 0),
+      requiereSala: Boolean(data.requiereSala),
+      salaPredeterminada: data.salaPredeterminada ?? '',
+      requiereSupervision: Boolean(data.requiereSupervision),
+      requiereApoyo: Boolean(data.requiereApoyo),
+      frecuenciaMensual: Number(data.frecuenciaMensual ?? 0),
+      cargaMensualEstimada: data.cargaMensualEstimada ?? '',
+      profesionalesHabilitados: Array.isArray(data.profesionalesHabilitados)
+        ? sanitizeStringArray(data.profesionalesHabilitados)
+        : [],
+      activo: Boolean(data.activo ?? true),
+      createdAt: data.createdAt instanceof Date ? data.createdAt.toISOString() : undefined,
+      updatedAt: data.updatedAt instanceof Date ? data.updatedAt.toISOString() : undefined,
+    } satisfies SerializedCatalogoServicio;
+  });
 }
 
 export async function updateCatalogoServicio(

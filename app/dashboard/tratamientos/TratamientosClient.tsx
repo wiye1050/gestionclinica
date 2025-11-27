@@ -1,48 +1,22 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { db } from '@/lib/firebase';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import type { CatalogoServicio } from '@/types';
-import type { SerializedTratamiento } from '@/lib/server/tratamientos';
+import type { TratamientosModule, Tratamiento } from '@/lib/utils/tratamientos';
+import { useTratamientosModule, useInvalidateTratamientosModule } from '@/lib/hooks/useTratamientosModule';
 import { Plus, Edit2, Trash2, Save, X, List, Clock } from 'lucide-react';
 import { sanitizeHTML, sanitizeInput } from '@/lib/utils/sanitize';
 
-interface Tratamiento {
-  id: string;
-  nombre: string;
-  descripcion?: string;
-  categoria: 'medicina' | 'fisioterapia' | 'enfermeria' | 'mixto';
-  serviciosIncluidos: {
-    servicioId: string;
-    servicioNombre: string;
-    orden: number;
-    opcional: boolean;
-  }[];
-  tiempoTotalEstimado: number;
-  activo: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-const deserializeTratamiento = (item: SerializedTratamiento): Tratamiento => ({
-  ...item,
-  createdAt: item.createdAt ? new Date(item.createdAt) : undefined,
-  updatedAt: item.updatedAt ? new Date(item.updatedAt) : undefined,
-});
-
 interface Props {
-  initialTratamientos: SerializedTratamiento[];
-  catalogoInicial: CatalogoServicio[];
+  initialModule: TratamientosModule;
 }
 
-export default function TratamientosClient({ initialTratamientos, catalogoInicial }: Props) {
+export default function TratamientosClient({ initialModule }: Props) {
   const { user } = useAuth();
-  const [tratamientos, setTratamientos] = useState<Tratamiento[]>(
-    initialTratamientos.map(deserializeTratamiento)
-  );
-  const [catalogoServicios, setCatalogoServicios] = useState<CatalogoServicio[]>(catalogoInicial);
+  const { data: moduleData = initialModule } = useTratamientosModule({ initialData: initialModule });
+  const invalidateModule = useInvalidateTratamientosModule();
+  const tratamientos = moduleData.tratamientos;
+  const catalogoServicios = moduleData.catalogo;
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [filtroCategoria, setFiltroCategoria] = useState<string>('todos');
@@ -58,41 +32,6 @@ export default function TratamientosClient({ initialTratamientos, catalogoInicia
     }[],
     activo: true,
   });
-
-  useEffect(() => {
-    const qTratamientos = query(collection(db, 'tratamientos'), orderBy('nombre'));
-    const unsubTratamientos = onSnapshot(qTratamientos, (snapshot) => {
-      const data = snapshot.docs.map((docSnap) => {
-        const docData = docSnap.data();
-        return {
-          id: docSnap.id,
-          ...docData,
-          createdAt: docData.createdAt?.toDate?.(),
-          updatedAt: docData.updatedAt?.toDate?.(),
-        } as Tratamiento;
-      });
-      setTratamientos(data);
-    });
-
-    const qServicios = query(collection(db, 'catalogo-servicios'), orderBy('nombre'));
-    const unsubServicios = onSnapshot(qServicios, (snapshot) => {
-      const data = snapshot.docs.map((docSnap) => {
-        const docData = docSnap.data() ?? {};
-        return {
-          id: docSnap.id,
-          ...docData,
-          createdAt: docData.createdAt?.toDate?.(),
-          updatedAt: docData.updatedAt?.toDate?.(),
-        } as CatalogoServicio;
-      });
-      setCatalogoServicios(data.filter((servicio) => servicio.activo));
-    });
-
-    return () => {
-      unsubTratamientos();
-      unsubServicios();
-    };
-  }, []);
 
   const resetForm = () => {
     setFormData({
@@ -149,6 +88,7 @@ export default function TratamientosClient({ initialTratamientos, catalogoInicia
         throw new Error(result?.error || 'No se pudo guardar el tratamiento');
       }
       resetForm();
+      invalidateModule();
     } catch (error) {
       console.error('Error al guardar tratamiento:', error);
       alert(error instanceof Error ? error.message : 'Error al guardar tratamiento');
@@ -178,6 +118,7 @@ export default function TratamientosClient({ initialTratamientos, catalogoInicia
       if (!response.ok) {
         throw new Error(payload?.error || 'No se pudo eliminar');
       }
+      invalidateModule();
     } catch (error) {
       console.error('Error al eliminar:', error);
       alert(error instanceof Error ? error.message : 'Error al eliminar tratamiento');
@@ -251,6 +192,7 @@ export default function TratamientosClient({ initialTratamientos, catalogoInicia
       if (!response.ok) {
         throw new Error(payload?.error || 'No se pudo actualizar el estado');
       }
+      invalidateModule();
     } catch (error) {
       console.error('Error al cambiar estado:', error);
       alert(error instanceof Error ? error.message : 'No se pudo cambiar el estado');

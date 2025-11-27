@@ -1,23 +1,6 @@
 import { adminDb } from '@/lib/firebaseAdmin';
-import type { CatalogoServicio } from '@/types';
 import { sanitizeHTML, sanitizeInput } from '@/lib/utils/sanitize';
-
-export type SerializedTratamiento = {
-  id: string;
-  nombre: string;
-  descripcion?: string;
-  categoria: 'medicina' | 'fisioterapia' | 'enfermeria' | 'mixto';
-  serviciosIncluidos: Array<{
-    servicioId: string;
-    servicioNombre: string;
-    orden: number;
-    opcional: boolean;
-  }>;
-  tiempoTotalEstimado: number;
-  activo: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-};
+import type { SerializedTratamiento, SerializedCatalogoServicio } from '@/lib/utils/tratamientos';
 
 type ServicioIncluidoInput = {
   servicioId: string;
@@ -81,7 +64,7 @@ export async function getSerializedTratamientos(): Promise<SerializedTratamiento
   });
 }
 
-export async function getSerializedCatalogoServicios(): Promise<CatalogoServicio[]> {
+export async function getSerializedCatalogoServicios(): Promise<SerializedCatalogoServicio[]> {
   if (!adminDb) {
     return [];
   }
@@ -97,9 +80,9 @@ export async function getSerializedCatalogoServicios(): Promise<CatalogoServicio
         categoria: data.categoria ?? 'medicina',
         tiempoEstimado: Number(data.tiempoEstimado ?? 0),
         activo: Boolean(data.activo),
-        createdAt: data.createdAt?.toDate?.(),
-        updatedAt: data.updatedAt?.toDate?.(),
-      } as CatalogoServicio;
+        createdAt: toISO(data.createdAt),
+        updatedAt: toISO(data.updatedAt),
+      } satisfies SerializedCatalogoServicio;
     })
     .filter((servicio) => servicio.activo);
 }

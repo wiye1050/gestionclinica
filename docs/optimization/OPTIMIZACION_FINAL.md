@@ -9,7 +9,7 @@
 4. ✅ **Inventario** - useInventario (5 min)
 5. ✅ **Mejoras** - useMejoras (3 min)
 6. ✅ **Protocolos** - useProtocolos (10 min)
-7. ✅ **Reporte Diario** - useReportes (2 min) ⭐ NEW
+7. ✅ **Reporte Diario** - useReportesDiarios (2 min) ⭐ NEW
 
 ### Pendientes
 8. ⏳ **Agenda** - Requiere optimización especial (calendario)
@@ -45,10 +45,10 @@ useUpdatePaciente()
 useDeletePaciente()
 
 // Servicios (3 min)
-useServicios()
+useServiciosModule()
 
 // Profesionales (5 min)
-useProfesionales()
+useProfesionalesManager()
 
 // Grupos Pacientes (5 min)
 useGruposPacientes()
@@ -66,7 +66,10 @@ useMejoras(filters?)
 useProtocolos()
 
 // Reportes Diarios (2 min)
-useReportes()
+useReportesDiarios()
+
+// Supervisión (5 min)
+useSupervisionModule()
 ```
 
 ## 💎 CARACTERÍSTICAS IMPLEMENTADAS

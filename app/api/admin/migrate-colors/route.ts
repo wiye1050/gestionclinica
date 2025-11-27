@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { getCurrentUser } from '@/lib/auth/server';
 
 /**
  * POST /api/admin/migrate-colors
@@ -25,15 +26,17 @@ const SERVICIO_COLORS_BY_CATEGORIA: Record<string, string> = {
   enfermeria: '#F59E0B',   // Naranja
 };
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    console.log('🚀 Iniciando migración de colores...\n');
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+    }
+    if (!(currentUser.roles ?? []).includes('admin')) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    }
 
-    // TODO: Agregar verificación de rol admin aquí
-    // const session = await getServerSession();
-    // if (!session || session.user.role !== 'admin') {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+    console.log('🚀 Iniciando migración de colores...\n');
 
     // Verificar que adminDb esté disponible
     if (!adminDb) {

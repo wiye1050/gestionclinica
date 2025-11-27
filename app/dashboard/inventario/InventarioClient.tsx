@@ -1,12 +1,13 @@
 'use client';
 
-import { Suspense, lazy, useMemo } from 'react';
+import { Suspense, lazy, useMemo, useState } from 'react';
 import Card from '@/components/ui/Card';
-import Stat from '@/components/ui/Stat';
 import { Badge } from '@/components/ui/Badge';
 import { useInventario } from '@/lib/hooks/useQueries';
 import type { InventarioSnapshot } from '@/lib/server/inventario';
 import { LoadingTable } from '@/components/ui/Loading';
+import { CompactFilters, type ActiveFilterChip } from '@/components/shared/CompactFilters';
+import { KPIGrid } from '@/components/shared/KPIGrid';
 
 const ExportButton = lazy(() =>
   import('@/components/ui/ExportButton').then((m) => ({ default: m.ExportButton }))
@@ -21,8 +22,11 @@ export default function InventarioClient({ initialData }: Props) {
   const { data, isLoading, error } = useInventario({
     initialData: { productos, stockBajo, total },
   });
-  const items = data?.productos ?? [];
-  const stockBajoActual = data?.stockBajo ?? 0;
+  const items = data?.productos ?? productos;
+  const stockBajoActual = data?.stockBajo ?? stockBajo;
+  const [busqueda, setBusqueda] = useState('');
+  const [categoriaFiltro, setCategoriaFiltro] = useState('todos');
+  const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'bajo' | 'normal'>('todos');
 
   const exportColumns = useMemo(
     () => [
@@ -36,6 +40,48 @@ export default function InventarioClient({ initialData }: Props) {
     []
   );
 
+  const normalizedSearch = busqueda.trim().toLowerCase();
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        item.nombre.toLowerCase().includes(normalizedSearch) ||
+        (item.proveedor?.toLowerCase().includes(normalizedSearch) ?? false);
+      const matchesCategoria = categoriaFiltro === 'todos' || item.categoria === categoriaFiltro;
+      const matchesEstado =
+        estadoFiltro === 'todos' ||
+        (estadoFiltro === 'bajo' && item.alertaStockBajo) ||
+        (estadoFiltro === 'normal' && !item.alertaStockBajo);
+      return matchesSearch && matchesCategoria && matchesEstado;
+    });
+  }, [items, normalizedSearch, categoriaFiltro, estadoFiltro]);
+
+  const stats = [
+    { label: 'Total productos', value: isLoading ? '—' : items.length },
+    { label: 'Stock bajo', value: isLoading ? '—' : stockBajoActual },
+    {
+      label: 'Stock normal',
+      value: isLoading ? '—' : Math.max(items.length - stockBajoActual, 0),
+    },
+  ];
+
+  const kpiItems = [
+    { id: 'total', label: 'Total productos', value: stats[0].value, helper: 'Registrados', accent: 'brand' as const },
+    { id: 'bajo', label: 'Stock bajo', value: stats[1].value, helper: 'Con alerta', accent: 'red' as const },
+    { id: 'normal', label: 'Stock normal', value: stats[2].value, helper: 'Sin alertas', accent: 'green' as const },
+  ];
+
+  const activeFilters: ActiveFilterChip[] = [];
+  if (busqueda.trim()) {
+    activeFilters.push({ id: 'search', label: 'Búsqueda', value: busqueda, onRemove: () => setBusqueda('') });
+  }
+  if (categoriaFiltro !== 'todos') {
+    activeFilters.push({ id: 'categoria', label: 'Categoría', value: categoriaFiltro, onRemove: () => setCategoriaFiltro('todos') });
+  }
+  if (estadoFiltro !== 'todos') {
+    activeFilters.push({ id: 'estado', label: 'Estado', value: estadoFiltro === 'bajo' ? 'Stock bajo' : 'Normal', onRemove: () => setEstadoFiltro('todos') });
+  }
+
   if (error) {
     return (
       <Card title="Inventario" subtitle="Control de productos y stock">
@@ -45,12 +91,6 @@ export default function InventarioClient({ initialData }: Props) {
       </Card>
     );
   }
-
-  const stats = [
-    { label: 'Total productos', value: isLoading ? '—' : items.length },
-    { label: 'Stock bajo', value: isLoading ? '—' : stockBajoActual },
-    { label: 'Stock normal', value: isLoading ? '—' : Math.max(items.length - stockBajoActual, 0) },
-  ];
 
   return (
     <div className="space-y-6">
@@ -74,15 +114,47 @@ export default function InventarioClient({ initialData }: Props) {
         </p>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {stats.map((stat) => (
-          <Stat key={stat.label} label={stat.label} value={stat.value} />
-        ))}
-      </div>
+      <KPIGrid items={kpiItems} />
+
+      <CompactFilters
+        search={{ value: busqueda, onChange: setBusqueda, placeholder: 'Buscar por nombre o proveedor' }}
+        selects={[
+          {
+            id: 'categoria',
+            label: 'Categoría',
+            value: categoriaFiltro,
+            onChange: setCategoriaFiltro,
+            options: [
+              { value: 'todos', label: 'Todas' },
+              ...Array.from(new Set(items.map((item) => item.categoria ?? 'sin-categoria'))).map((categoria) => ({
+                value: categoria,
+                label: categoria === 'sin-categoria' ? 'Sin categoría' : categoria,
+              })),
+            ],
+          },
+          {
+            id: 'estado',
+            label: 'Stock',
+            value: estadoFiltro,
+            onChange: (val) => setEstadoFiltro(val as typeof estadoFiltro),
+            options: [
+              { value: 'todos', label: 'Todos' },
+              { value: 'bajo', label: 'Stock bajo' },
+              { value: 'normal', label: 'Stock normal' },
+            ],
+          },
+        ]}
+        activeFilters={activeFilters}
+        onClear={activeFilters.length ? () => {
+          setBusqueda('');
+          setCategoriaFiltro('todos');
+          setEstadoFiltro('todos');
+        } : undefined}
+      />
 
       {isLoading ? (
         <LoadingTable rows={10} />
-      ) : items.length === 0 ? (
+      ) : filteredItems.length === 0 ? (
         <Card>
           <div className="py-8 text-center text-text-muted">
             No hay productos registrados en el inventario.
@@ -118,7 +190,7 @@ export default function InventarioClient({ initialData }: Props) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {items.map((item) => (
+                {filteredItems.map((item) => (
                   <tr key={item.id} className="hover:bg-cardHover">
                     <td className="px-4 py-3 text-sm font-semibold text-text">{item.nombre}</td>
                     <td className="px-4 py-3 text-sm text-text-muted">{item.categoria ?? '—'}</td>

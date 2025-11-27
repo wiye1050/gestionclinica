@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { useProfesionales } from '@/lib/hooks/useQueries';
+import { useProfesionalesManager } from '@/lib/hooks/useProfesionalesManager';
 import { PacienteForm, PacienteFormValues } from '@/components/pacientes/PacienteForm';
 import { toast } from 'sonner';
 
@@ -12,7 +12,7 @@ export default function NuevoPacientePage() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const { data: profesionales = [], isLoading: loadingProfesionales } = useProfesionales();
+  const { data: profesionales = [], isLoading: loadingProfesionales } = useProfesionalesManager();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

@@ -5,10 +5,11 @@ import { createPaciente } from '@/lib/server/pacientesAdmin';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { validateRequest } from '@/lib/utils/apiValidation';
 import type { Query } from 'firebase-admin/firestore';
+import type { AppRole } from '@/lib/auth/roles';
 
-const CREATE_UPDATE_ROLES = new Set(['admin', 'coordinador']);
-const ADMIN_ROLES = new Set(['admin', 'coordinador']);
-const CLINICAL_ROLES = new Set(['doctor', 'terapeuta']);
+const CREATE_UPDATE_ROLES = new Set<AppRole>(['admin', 'coordinador']);
+const ADMIN_ROLES = new Set<AppRole>(['admin', 'coordinador']);
+const CLINICAL_ROLES = new Set<AppRole>(['profesional']);
 
 // Schema de validación para crear paciente
 const createPacienteSchema = z.object({

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { bucket } from '@/lib/storage/client';
+import { getCurrentUser } from '@/lib/auth/server';
+import type { AppRole } from '@/lib/auth/roles';
 
 // Configuración de seguridad para uploads
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -14,11 +16,22 @@ const ALLOWED_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 ];
 
+const ALLOWED_ROLES: AppRole[] = ['admin', 'coordinador', 'profesional', 'recepcion'];
+
 export async function POST(request: NextRequest) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+    }
+    const hasAccess = (currentUser.roles ?? []).some((role) => ALLOWED_ROLES.includes(role));
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    const folder = formData.get('folder') as string || 'general';
+    const targetFolder = (formData.get('folder') as string) || 'general';
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -40,11 +53,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Sanitizar nombre de archivo (remover caracteres peligrosos)
+    // Sanitizar carpeta/nombre de archivo
+    const sanitizedFolder = /^[a-z0-9/_-]+$/i.test(targetFolder)
+      ? targetFolder
+      : 'general';
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
 
     const timestamp = Date.now();
-    const fileName = `${folder}/${timestamp}-${sanitizedFileName}`;
+    const fileName = `${sanitizedFolder}/${timestamp}-${sanitizedFileName}`;
 
     const blob = bucket.file(fileName);
     const arrayBuffer = await file.arrayBuffer();

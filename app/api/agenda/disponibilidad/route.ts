@@ -4,6 +4,7 @@ import { addDays, startOfDay, setHours, setMinutes, isSameDay, max as dateMax } 
 import { adminDb } from '@/lib/firebaseAdmin';
 import { AGENDA_CONFIG } from '@/components/agenda/v2/agendaHelpers';
 import { validateSearchParams } from '@/lib/utils/apiValidation';
+import { getCurrentUser } from '@/lib/auth/server';
 
 // Schema de validación para query params
 const disponibilidadSchema = z.object({
@@ -13,6 +14,16 @@ const disponibilidadSchema = z.object({
 
 export async function GET(request: Request) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+    }
+    const allowedRoles = new Set(['admin', 'coordinador', 'profesional', 'recepcion']);
+    const hasAccess = (currentUser.roles ?? []).some((role) => allowedRoles.has(role));
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
 
     // Validar parámetros con Zod
@@ -101,4 +112,3 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'No se pudo obtener disponibilidad' }, { status: 500 });
   }
 }
-

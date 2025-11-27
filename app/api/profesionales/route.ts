@@ -1,8 +1,33 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
-import { createProfesional } from '@/lib/server/profesionales';
+import { createProfesional, getSerializedProfesionales } from '@/lib/server/profesionales';
 
 const ALLOWED_ROLES = new Set(['admin', 'coordinador']);
+const VIEW_ROLES = new Set(['admin', 'coordinador', 'profesional']);
+
+export async function GET(request: Request) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+  }
+
+  const canView = (user.roles ?? []).some((role) => VIEW_ROLES.has(role));
+  if (!canView) {
+    return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const limitParam = Number(searchParams.get('limit'));
+  const limit = Number.isFinite(limitParam) ? limitParam : 400;
+
+  try {
+    const items = await getSerializedProfesionales(limit);
+    return NextResponse.json({ items, count: items.length, limit });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Error inesperado';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();

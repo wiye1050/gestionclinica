@@ -1,11 +1,6 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { Paciente } from '@/types';
-
-type ApiPaciente = Omit<Paciente, 'fechaNacimiento' | 'createdAt' | 'updatedAt'> & {
-  fechaNacimiento?: string | null;
-  createdAt?: string | null;
-  updatedAt?: string | null;
-};
+import { deserializePaciente, type ApiPaciente } from '@/lib/utils/pacientes';
 
 type FetchFilters = {
   estado?: string;
@@ -13,18 +8,11 @@ type FetchFilters = {
   cursor?: string | null;
 };
 
-type PacientesResult = {
+export type PacientesResult = {
   items: Paciente[];
   nextCursor: string | null;
   limit: number;
 };
-
-const deserializePaciente = (raw: ApiPaciente): Paciente => ({
-  ...raw,
-  fechaNacimiento: raw.fechaNacimiento ? new Date(raw.fechaNacimiento) : new Date('1970-01-01'),
-  createdAt: raw.createdAt ? new Date(raw.createdAt) : new Date(),
-  updatedAt: raw.updatedAt ? new Date(raw.updatedAt) : new Date(),
-});
 
 async function fetchPacientes(filters?: FetchFilters): Promise<PacientesResult> {
   const params = new URLSearchParams();
@@ -76,13 +64,19 @@ export function usePacientes(
   });
 }
 
-export function useInfinitePacientes(filters?: { estado?: string; busqueda?: string }) {
+export function useInfinitePacientes(
+  filters?: { estado?: string; busqueda?: string },
+  options?: { initialPage?: PacientesResult }
+) {
   return useInfiniteQuery<PacientesResult>({
     queryKey: ['pacientes-infinite', filters],
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam }) =>
       fetchPacientes({ ...filters, cursor: (pageParam as string | undefined) ?? undefined }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    initialData: options?.initialPage
+      ? { pages: [options.initialPage], pageParams: [undefined] }
+      : undefined,
   });
 }
 

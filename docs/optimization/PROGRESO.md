@@ -23,7 +23,7 @@
 - **Reducción**: 70% menos queries
 
 #### 3. Servicios (/dashboard/servicios)  
-- ✅ Usa `useServicios()`, `useProfesionales()`, `useGruposPacientes()`, `useCatalogoServicios()`
+- ✅ Usa `useServiciosModule()`, `useProfesionalesManager()`, `useGruposPacientes()`, `useCatalogoServicios()`
 - ✅ 4 hooks con caché (3-10 min según tipo)
 - ✅ Lazy loading de ExportButton
 - ✅ Filtrado memoizado con useMemo
@@ -37,7 +37,7 @@
 useServicios()
 
 // Profesionales (5 min caché) 
-useProfesionales()
+useProfesionalesManager()
 
 // Grupos Pacientes (5 min caché)
 useGruposPacientes()

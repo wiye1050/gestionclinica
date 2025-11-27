@@ -1,4 +1,5 @@
 import { adminDb } from '@/lib/firebaseAdmin';
+import { cached } from '@/lib/server/cache';
 import type {
   EvaluacionSesion,
   ServicioAsignado,
@@ -53,73 +54,109 @@ const serializeDocs = <T extends { id: string }>(
 
 export async function getSerializedEvaluaciones(): Promise<SerializedEvaluacion[]> {
   if (!adminDb) return [];
-
-  const snapshot = await adminDb.collection('evaluaciones-sesion').orderBy('fecha', 'desc').get();
-  return serializeDocs(snapshot, (data, id) => ({
-    id,
-    servicioId: data.servicioId,
-    servicioNombre: data.servicioNombre,
-    grupoId: data.grupoId,
-    grupoNombre: data.grupoNombre,
-    paciente: data.paciente,
-    profesionalId: data.profesionalId,
-    profesionalNombre: data.profesionalNombre,
-    fecha: dateToISO(data.fecha),
-    horaInicio: data.horaInicio,
-    horaFin: data.horaFin,
-    tiempoEstimado: data.tiempoEstimado,
-    tiempoReal: data.tiempoReal,
-    aplicacionProtocolo: data.aplicacionProtocolo,
-    manejoPaciente: data.manejoPaciente,
-    usoEquipamiento: data.usoEquipamiento,
-    comunicacion: data.comunicacion,
-    dolorPostTratamiento: data.dolorPostTratamiento,
-    confortDuranteSesion: data.confortDuranteSesion,
-    resultadoPercibido: data.resultadoPercibido,
-    protocoloSeguido: Boolean(data.protocoloSeguido),
-    observaciones: data.observaciones,
-    mejorasSugeridas: data.mejorasSugeridas,
-    fortalezasObservadas: data.fortalezasObservadas,
-    evaluadoPor: data.evaluadoPor,
-    evaluadoPorId: data.evaluadoPorId,
-    createdAt: dateToISO(data.createdAt),
-    updatedAt: dateToISO(data.updatedAt),
-  }));
+  return cached(
+    ['supervision', 'evaluaciones'],
+    async () => {
+      const snapshot = await adminDb
+        .collection('evaluaciones-sesion')
+        .orderBy('fecha', 'desc')
+        .limit(500)
+        .get();
+      return serializeDocs(snapshot, (data, id) => ({
+        id,
+        servicioId: data.servicioId,
+        servicioNombre: data.servicioNombre,
+        grupoId: data.grupoId,
+        grupoNombre: data.grupoNombre,
+        paciente: data.paciente,
+        profesionalId: data.profesionalId,
+        profesionalNombre: data.profesionalNombre,
+        fecha: dateToISO(data.fecha),
+        horaInicio: data.horaInicio,
+        horaFin: data.horaFin,
+        tiempoEstimado: data.tiempoEstimado,
+        tiempoReal: data.tiempoReal,
+        aplicacionProtocolo: data.aplicacionProtocolo,
+        manejoPaciente: data.manejoPaciente,
+        usoEquipamiento: data.usoEquipamiento,
+        comunicacion: data.comunicacion,
+        dolorPostTratamiento: data.dolorPostTratamiento,
+        confortDuranteSesion: data.confortDuranteSesion,
+        resultadoPercibido: data.resultadoPercibido,
+        protocoloSeguido: Boolean(data.protocoloSeguido),
+        observaciones: data.observaciones,
+        mejorasSugeridas: data.mejorasSugeridas,
+        fortalezasObservadas: data.fortalezasObservadas,
+        evaluadoPor: data.evaluadoPor,
+        evaluadoPorId: data.evaluadoPorId,
+        createdAt: dateToISO(data.createdAt),
+        updatedAt: dateToISO(data.updatedAt),
+      }));
+    },
+    { revalidate: 120, tags: ['supervision', 'supervision-evaluaciones'] }
+  );
 }
 
 export async function getSerializedServiciosActuales(): Promise<SerializedServicio[]> {
   if (!adminDb) return [];
-  const snapshot = await adminDb
-    .collection('servicios-asignados')
-    .where('esActual', '==', true)
-    .get();
-  return serializeDocs(snapshot, (data, id) => ({
-    id,
-    ...data,
-    createdAt: dateToISO(data.createdAt),
-    updatedAt: dateToISO(data.updatedAt),
-    fechaProgramada: dateToISO(data.fechaProgramada),
-  })) as SerializedServicio[];
+  return cached(
+    ['supervision', 'servicios-actuales'],
+    async () => {
+      const snapshot = await adminDb
+        .collection('servicios-asignados')
+        .where('esActual', '==', true)
+        .limit(400)
+        .get();
+      return serializeDocs(snapshot, (data, id) => ({
+        id,
+        ...data,
+        createdAt: dateToISO(data.createdAt),
+        updatedAt: dateToISO(data.updatedAt),
+        fechaProgramada: dateToISO(data.fechaProgramada),
+      })) as SerializedServicio[];
+    },
+    { revalidate: 180, tags: ['supervision', 'supervision-servicios'] }
+  );
 }
 
 export async function getSerializedProfesionales(): Promise<SerializedProfesional[]> {
   if (!adminDb) return [];
-  const snapshot = await adminDb.collection('profesionales').where('activo', '==', true).get();
-  return serializeDocs(snapshot, (data, id) => ({
-    id,
-    ...data,
-    createdAt: dateToISO(data.createdAt),
-    updatedAt: dateToISO(data.updatedAt),
-  })) as SerializedProfesional[];
+  return cached(
+    ['supervision', 'profesionales'],
+    async () => {
+      const snapshot = await adminDb
+        .collection('profesionales')
+        .where('activo', '==', true)
+        .limit(400)
+        .get();
+      return serializeDocs(snapshot, (data, id) => ({
+        id,
+        ...data,
+        createdAt: dateToISO(data.createdAt),
+        updatedAt: dateToISO(data.updatedAt),
+      })) as SerializedProfesional[];
+    },
+    { revalidate: 300, tags: ['supervision', 'supervision-profesionales'] }
+  );
 }
 
 export async function getSerializedGrupos(): Promise<SerializedGrupo[]> {
   if (!adminDb) return [];
-  const snapshot = await adminDb.collection('grupos-pacientes').where('activo', '==', true).get();
-  return serializeDocs(snapshot, (data, id) => ({
-    id,
-    ...data,
-    createdAt: dateToISO(data.createdAt),
-    updatedAt: dateToISO(data.updatedAt),
-  })) as SerializedGrupo[];
+  return cached(
+    ['supervision', 'grupos'],
+    async () => {
+      const snapshot = await adminDb
+        .collection('grupos-pacientes')
+        .where('activo', '==', true)
+        .limit(300)
+        .get();
+      return serializeDocs(snapshot, (data, id) => ({
+        id,
+        ...data,
+        createdAt: dateToISO(data.createdAt),
+        updatedAt: dateToISO(data.updatedAt),
+      })) as SerializedGrupo[];
+    },
+    { revalidate: 300, tags: ['supervision', 'supervision-grupos'] }
+  );
 }

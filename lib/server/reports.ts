@@ -1,4 +1,5 @@
 import { adminDb } from '@/lib/firebaseAdmin';
+import { cached } from '@/lib/server/cache';
 import type { DailyReport } from '@/types';
 import { sanitizeHTML, sanitizeInput } from '@/lib/utils/sanitize';
 
@@ -70,31 +71,38 @@ export async function getSerializedDailyReports(limit = 200): Promise<Serialized
     return [];
   }
 
-  const snapshot = await adminDb
-    .collection('reportes-diarios')
-    .orderBy('createdAt', 'desc')
-    .limit(limit)
-    .get();
+  const cappedLimit = Math.min(Math.max(limit, 1), 400);
+  return cached(
+    ['reports', 'daily', cappedLimit],
+    async () => {
+      const snapshot = await adminDb
+        .collection('reportes-diarios')
+        .orderBy('createdAt', 'desc')
+        .limit(cappedLimit)
+        .get();
 
-  return snapshot.docs.map((docSnap) => {
-    const data = docSnap.data() ?? {};
-    return {
-      id: docSnap.id,
-      tipo: data.tipo ?? 'incidencia',
-      categoria: data.categoria ?? 'personal',
-      prioridad: data.prioridad ?? 'media',
-      responsable: data.responsable ?? 'coordinacion',
-      descripcion: data.descripcion ?? '',
-      accionInmediata: data.accionInmediata ?? '',
-      requiereSeguimiento: Boolean(data.requiereSeguimiento),
-      estado: data.estado ?? 'pendiente',
-      reportadoPor: data.reportadoPor ?? 'sistema',
-      reportadoPorId: data.reportadoPorId ?? 'sistema',
-      createdAt: toISOString(data.createdAt),
-      updatedAt: toISOString(data.updatedAt),
-      fecha: toISOString(data.fecha),
-    };
-  });
+      return snapshot.docs.map((docSnap) => {
+        const data = docSnap.data() ?? {};
+        return {
+          id: docSnap.id,
+          tipo: data.tipo ?? 'incidencia',
+          categoria: data.categoria ?? 'personal',
+          prioridad: data.prioridad ?? 'media',
+          responsable: data.responsable ?? 'coordinacion',
+          descripcion: data.descripcion ?? '',
+          accionInmediata: data.accionInmediata ?? '',
+          requiereSeguimiento: Boolean(data.requiereSeguimiento),
+          estado: data.estado ?? 'pendiente',
+          reportadoPor: data.reportadoPor ?? 'sistema',
+          reportadoPorId: data.reportadoPorId ?? 'sistema',
+          createdAt: toISOString(data.createdAt),
+          updatedAt: toISOString(data.updatedAt),
+          fecha: toISOString(data.fecha),
+        };
+      });
+    },
+    { revalidate: 60, tags: ['reports', 'reports-daily'] }
+  );
 }
 
 export async function createDailyReport(input: CreateDailyReportInput) {
