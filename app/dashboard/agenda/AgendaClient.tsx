@@ -30,14 +30,11 @@ import type { Paciente } from '@/types';
 import { CompactFilters, type ActiveFilterChip } from '@/components/shared/CompactFilters';
 import { KPIGrid } from '@/components/shared/KPIGrid';
 import { deserializeAgendaEvents } from '@/lib/utils/agendaEvents';
-import { captureError, logWarning } from '@/lib/utils/errorLogging';
+import { useAgendaFilters } from '@/lib/hooks/useAgendaFilters';
+import { useAgendaActions } from '@/lib/hooks/useAgendaActions';
 
 export type VistaAgenda = 'diaria' | 'semanal' | 'multi' | 'boxes' | 'paciente';
 type AgendaResource = { id: string; nombre: string; tipo: 'profesional' | 'sala' };
-
-const AGENDA_STORAGE_KEY = 'agenda.filters.v1';
-const VIEW_STORAGE_KEY = 'agenda.view.v1';
-const DAY_MODE_STORAGE_KEY = 'agenda.dayMode.v1';
 
 const ESTADO_FILTERS: Array<{
   id: AgendaEvent['estado'] | 'todos';
@@ -97,16 +94,32 @@ export default function AgendaClient({
   const prefetchedEvents = useMemo(() => deserializeAgendaEvents(initialEvents), [initialEvents]);
   const initialWeekStartDate = useMemo(() => new Date(initialWeekStart), [initialWeekStart]);
 
-  const [vista, setVista] = useState<VistaAgenda>('multi');
+  // Filters and view state (extracted to hook)
+  const {
+    selectedProfesionales,
+    setSelectedProfesionales,
+    selectedSala,
+    setSelectedSala,
+    estadoFilter,
+    setEstadoFilter,
+    tipoFilter,
+    setTipoFilter,
+    busquedaEvento,
+    setBusquedaEvento,
+    resourcePreset,
+    setResourcePreset,
+    vista,
+    setVista,
+    viewDensity,
+    setViewDensity,
+    dayViewMode,
+    setDayViewMode,
+    filtersLoaded,
+    clearFilters: clearAgendaFilters,
+  } = useAgendaFilters();
+
+  // Modal and drawer state
   const [currentDate, setCurrentDate] = useState(() => initialWeekStartDate);
-  const [selectedProfesionales, setSelectedProfesionales] = useState<string[]>([]);
-  const [selectedSala, setSelectedSala] = useState<string>('todas');
-  const [estadoFilter, setEstadoFilter] = useState<AgendaEvent['estado'] | 'todos'>('todos');
-  const [tipoFilter, setTipoFilter] = useState<AgendaEvent['tipo'] | 'todos'>('todos');
-  const [busquedaEvento, setBusquedaEvento] = useState('');
-  const [resourcePreset, setResourcePreset] =
-    useState<'todos' | 'medicina' | 'fisioterapia' | 'enfermeria'>('todos');
-  const [filtersLoaded, setFiltersLoaded] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalInitialDate, setModalInitialDate] = useState<Date | undefined>();
   const [eventToEdit, setEventToEdit] = useState<AgendaEvent | null>(null);
@@ -114,41 +127,11 @@ export default function AgendaClient({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [modalPrefill, setModalPrefill] =
     useState<{ pacienteId?: string; profesionalId?: string } | null>(null);
-  const [viewDensity, setViewDensity] = useState<'comfort' | 'compact'>('comfort');
   const [prefillRequestKey, setPrefillRequestKey] = useState<string | null>(null);
-  const [dayViewMode, setDayViewMode] = useState<'single' | 'multi'>('single');
+
   const hourHeight = viewDensity === 'compact' ? 60 : 90;
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const storedView = window.localStorage.getItem(VIEW_STORAGE_KEY);
-    if (
-      storedView === 'diaria' ||
-      storedView === 'semanal' ||
-      storedView === 'multi' ||
-      storedView === 'boxes' ||
-      storedView === 'paciente'
-    ) {
-      setVista(storedView);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(VIEW_STORAGE_KEY, vista);
-  }, [vista]);
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const storedDayMode = window.localStorage.getItem(DAY_MODE_STORAGE_KEY);
-    if (storedDayMode === 'single' || storedDayMode === 'multi') {
-      setDayViewMode(storedDayMode);
-    }
-  }, []);
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(DAY_MODE_STORAGE_KEY, dayViewMode);
-  }, [dayViewMode]);
-
+  // Handle prefill request (from URL params)
   useEffect(() => {
     if (!prefillRequest) return;
     if (prefillRequest.forcedView) {
@@ -157,7 +140,8 @@ export default function AgendaClient({
     if (prefillRequest.presetProfesionales && prefillRequest.presetProfesionales.length > 0) {
       setSelectedProfesionales(prefillRequest.presetProfesionales);
     }
-  }, [prefillRequest]);
+  }, [prefillRequest, setVista, setSelectedProfesionales]);
+
   useEffect(() => {
     if (!prefillRequest?.targetDate) return;
     const parsed = new Date(prefillRequest.targetDate);
@@ -165,63 +149,27 @@ export default function AgendaClient({
       setCurrentDate(parsed);
     }
   }, [prefillRequest?.targetDate]);
+
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || filtersLoaded) return;
-    try {
-      const raw = window.localStorage.getItem(AGENDA_STORAGE_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw) as {
-        profesionales?: string[];
-        sala?: string;
-        estado?: AgendaEvent['estado'] | 'todos';
-        tipo?: AgendaEvent['tipo'] | 'todos';
-        preset?: 'todos' | 'medicina' | 'fisioterapia' | 'enfermeria';
-      };
-      if (Array.isArray(saved?.profesionales)) {
-        setSelectedProfesionales(saved.profesionales);
-      }
-      if (saved?.sala) {
-        setSelectedSala(saved.sala);
-      }
-      if (saved?.estado) {
-        setEstadoFilter(saved.estado);
-      }
-      if (saved?.tipo) {
-        setTipoFilter(saved.tipo);
-      }
-      if (saved?.preset) {
-        setResourcePreset(saved.preset);
-      }
-    } catch (error) {
-      captureError(error, { module: 'agenda', action: 'load-filters' }, 'warn');
-    } finally {
-      setFiltersLoaded(true);
-    }
-  }, [filtersLoaded]);
-
-  useEffect(() => {
-    if (!filtersLoaded || typeof window === 'undefined') return;
-    try {
-      const payload = JSON.stringify({
-        profesionales: selectedProfesionales,
-        sala: selectedSala,
-        estado: estadoFilter,
-        tipo: tipoFilter,
-        preset: resourcePreset,
-      });
-      window.localStorage.setItem(AGENDA_STORAGE_KEY, payload);
-    } catch (error) {
-      captureError(error, { module: 'agenda', action: 'save-filters' }, 'warn');
-    }
-  }, [selectedProfesionales, selectedSala, estadoFilter, tipoFilter, resourcePreset, filtersLoaded]);
 
   const weekStart = useMemo(
     () => startOfWeek(currentDate, { weekStartsOn: 1 }),
     [currentDate]
   );
-  const invalidateAgenda = () => queryClient.invalidateQueries({ queryKey: ['agenda-eventos'] });
+  const invalidateAgenda = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: ['agenda-eventos'] }),
+    [queryClient]
+  );
+
+  // CRUD actions (extracted to hook)
+  const {
+    handleEventMove,
+    handleEventResize,
+    handleReassignProfessional,
+    handleInlineUpdate,
+    handleQuickAction,
+    handleSaveEvent,
+  } = useAgendaActions(invalidateAgenda);
 
   const {
     data: eventosData = prefetchedEvents,
@@ -406,66 +354,7 @@ export default function AgendaClient({
     }));
   }, [profesionales, selectedProfesionales, resourcePreset, resourceColumnLimit]);
 
-  const requestAgenda = async (url: string, options: RequestInit) => {
-    const response = await fetch(url, {
-      headers: { 'Content-Type': 'application/json', ...(options.headers ?? {}) },
-      ...options,
-    });
-    let data: Record<string, unknown> = {};
-    try {
-      data = await response.json();
-    } catch {
-      data = {};
-    }
-    if (!response.ok) {
-      const message = typeof data.error === 'string' ? data.error : 'Operación de agenda no disponible.';
-      throw new Error(message);
-    }
-    return data;
-  };
-
-  type EventPayload = Partial<AgendaEvent> & {
-    servicioId?: string | null;
-    requiereSeguimiento?: boolean;
-  };
-  const serializeEventPayload = (data: EventPayload) => {
-    const payload: Record<string, unknown> = {};
-    if (data.titulo !== undefined) payload.titulo = data.titulo;
-    if (data.tipo !== undefined) payload.tipo = data.tipo;
-    if (data.estado !== undefined) payload.estado = data.estado;
-    if (data.prioridad !== undefined) payload.prioridad = data.prioridad;
-    if (data.notas !== undefined) payload.notas = data.notas;
-    if (data.requiereSeguimiento !== undefined) payload.requiereSeguimiento = data.requiereSeguimiento;
-    if (data.fechaInicio instanceof Date) payload.fechaInicio = data.fechaInicio.toISOString();
-    if (data.fechaFin instanceof Date) payload.fechaFin = data.fechaFin.toISOString();
-    if (data.profesionalId !== undefined) payload.profesionalId = data.profesionalId || null;
-    if (data.pacienteId !== undefined) payload.pacienteId = data.pacienteId || null;
-    if (data.salaId !== undefined) payload.salaId = data.salaId || null;
-    if (data.servicioId !== undefined) payload.servicioId = data.servicioId || null;
-    return payload;
-  };
-
-  const showUndoToast = useCallback(
-    (message: string, undoAction: () => Promise<void>) => {
-      toast.success(message, {
-        action: {
-          label: 'Deshacer',
-          onClick: () => {
-            undoAction()
-              .then(() => {
-                toast.success('Cambio revertido');
-              })
-              .catch((error) => {
-                captureError(error, { module: 'agenda', action: 'undo-change' });
-                toast.error('No se pudo deshacer el cambio');
-              });
-          },
-        },
-      });
-    },
-    []
-  );
-
+  // Navigation handlers
   const handlePrev = () => {
     if (vista === 'semanal') {
       setCurrentDate((prev) => addWeeks(prev, -1));
@@ -486,72 +375,7 @@ export default function AgendaClient({
     setCurrentDate(new Date());
   };
 
-  const handleEventMove = async (eventId: string, newStart: Date, newResourceId?: string) => {
-    try {
-      const evento = eventos.find((e) => e.id === eventId);
-      if (!evento) return;
-
-      const duration = evento.fechaFin.getTime() - evento.fechaInicio.getTime();
-      const newEnd = new Date(newStart.getTime() + duration);
-
-      const payload: Record<string, unknown> = {
-        fechaInicio: newStart.toISOString(),
-        fechaFin: newEnd.toISOString(),
-      };
-
-      if (newResourceId && newResourceId !== evento.profesionalId) {
-        payload.profesionalId = newResourceId;
-      }
-
-      await requestAgenda(`/api/agenda/eventos/${eventId}`, {
-        method: 'PATCH',
-        body: JSON.stringify(payload),
-      });
-      await invalidateAgenda();
-      const revertPayload: Record<string, unknown> = {
-        fechaInicio: evento.fechaInicio.toISOString(),
-        fechaFin: evento.fechaFin.toISOString(),
-      };
-      if (evento.profesionalId !== undefined) {
-        revertPayload.profesionalId = evento.profesionalId || null;
-      }
-      showUndoToast('Evento actualizado', async () => {
-        await requestAgenda(`/api/agenda/eventos/${eventId}`, {
-          method: 'PATCH',
-          body: JSON.stringify(revertPayload),
-        });
-        await invalidateAgenda();
-      });
-    } catch (error) {
-      captureError(error, { module: 'agenda', action: 'move-event', metadata: { eventId } });
-      toast.error(error instanceof Error ? error.message : 'Error al actualizar el evento');
-    }
-  };
-
-  const handleEventResize = async (eventId: string, newDurationMinutes: number) => {
-    try {
-      const evento = eventos.find((e) => e.id === eventId);
-      if (!evento) return;
-
-      const newEnd = new Date(evento.fechaInicio.getTime() + newDurationMinutes * 60000);
-      await requestAgenda(`/api/agenda/eventos/${eventId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ fechaFin: newEnd.toISOString() }),
-      });
-      await invalidateAgenda();
-      showUndoToast('Duración actualizada', async () => {
-        await requestAgenda(`/api/agenda/eventos/${eventId}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ fechaFin: evento.fechaFin.toISOString() }),
-        });
-        await invalidateAgenda();
-      });
-    } catch (error) {
-      captureError(error, { module: 'agenda', action: 'resize-event', metadata: { eventId } });
-      toast.error(error instanceof Error ? error.message : 'Error al actualizar duración');
-    }
-  };
-
+  // Focus agenda on specific event
   const focusAgendaOnEvent = (profesionalId?: string | null, fechaInicio?: Date) => {
     if (fechaInicio instanceof Date) {
       setCurrentDate(fechaInicio);
@@ -564,75 +388,6 @@ export default function AgendaClient({
       });
     }
     setVista('multi');
-  };
-
-  const handleReassignProfessional = async (evento: AgendaEvent, profesionalId: string) => {
-    try {
-      await requestAgenda(`/api/agenda/eventos/${evento.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ profesionalId: profesionalId || null }),
-      });
-      await invalidateAgenda();
-      toast.success('Profesional actualizado');
-    } catch (error) {
-      captureError(error, { module: 'agenda', action: 'reassign-professional', metadata: { eventId: evento.id, profesionalId } });
-      toast.error('No se pudo reasignar la cita');
-    }
-  };
-
-  const handleInlineUpdate = async (eventId: string, updates: Partial<AgendaEvent>) => {
-    try {
-      const payload = serializeEventPayload(updates as EventPayload);
-      await requestAgenda(`/api/agenda/eventos/${eventId}`, {
-        method: 'PATCH',
-        body: JSON.stringify(payload),
-      });
-      await invalidateAgenda();
-      toast.success('Cita actualizada');
-    } catch (error) {
-      captureError(error, { module: 'agenda', action: 'inline-update', metadata: { eventId } });
-      toast.error('No se pudo actualizar la cita');
-    }
-  };
-
-  const handleQuickAction = async (
-    evento: AgendaEvent,
-    action: 'confirm' | 'complete' | 'cancel'
-  ) => {
-    try {
-      const nuevoEstado =
-        action === 'confirm' ? 'confirmada' : action === 'complete' ? 'realizada' : 'cancelada';
-      const estadoAnterior = evento.estado;
-
-      await requestAgenda(`/api/agenda/eventos/${evento.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          estado: nuevoEstado,
-          __quickAction: action,
-          __eventoTitulo: evento.titulo,
-          __pacienteNombre: evento.pacienteNombre ?? null,
-          __profesionalNombre: evento.profesionalNombre ?? null,
-        }),
-      });
-      await invalidateAgenda();
-
-      const mensajes = {
-        confirm: 'Cita confirmada',
-        complete: 'Cita completada',
-        cancel: 'Cita cancelada',
-      } as const;
-
-      showUndoToast(mensajes[action], async () => {
-        await requestAgenda(`/api/agenda/eventos/${evento.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ estado: estadoAnterior }),
-        });
-        await invalidateAgenda();
-      });
-    } catch (error) {
-      captureError(error, { module: 'agenda', action: 'quick-action', metadata: { eventId: evento.id, action } });
-      toast.error(error instanceof Error ? error.message : 'Error al actualizar estado');
-    }
   };
 
   const openNewEventModal = useCallback(
@@ -672,58 +427,23 @@ export default function AgendaClient({
     setIsDrawerOpen(false);
   };
 
-  const handleSaveEvent = async (eventData: Partial<AgendaEvent>) => {
-    try {
-      if (!eventData.fechaInicio || !eventData.fechaFin) {
-        toast.error('Faltan datos de fecha para la cita');
-        return;
-      }
+  // Wrappers to pass eventos array to hook functions
+  const handleEventMoveWrapper = (eventId: string, newStart: Date, newResourceId?: string) => {
+    return handleEventMove(eventId, newStart, newResourceId, eventos);
+  };
 
-      const payload = serializeEventPayload(eventData as EventPayload);
+  const handleEventResizeWrapper = (eventId: string, newDurationMinutes: number) => {
+    return handleEventResize(eventId, newDurationMinutes, eventos);
+  };
 
-      const eventoFechaInicio =
-        eventData.fechaInicio instanceof Date ? eventData.fechaInicio : eventToEdit?.fechaInicio;
-      const eventoProfesionalId =
-        typeof eventData.profesionalId === 'string'
-          ? eventData.profesionalId
-          : eventToEdit?.profesionalId;
-
-      if (eventToEdit) {
-        await requestAgenda(`/api/agenda/eventos/${eventToEdit.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify(payload),
-        });
-        toast.success('Cita actualizada');
-      } else {
-        const titulo = payload.titulo as string | undefined;
-        const profesionalId = payload.profesionalId as string | undefined;
-        const fechaInicioIso = payload.fechaInicio as string | undefined;
-        const fechaFinIso = payload.fechaFin as string | undefined;
-
-        if (!titulo || !profesionalId || !fechaInicioIso || !fechaFinIso) {
-          toast.error('Completa título, profesional y horario de la cita.');
-          return;
-        }
-
-        payload.estado = (eventData.estado as AgendaEvent['estado']) ?? 'programada';
-
-        await requestAgenda('/api/agenda/eventos', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        });
-        toast.success('Cita creada');
-      }
-
-      await invalidateAgenda();
-      focusAgendaOnEvent(eventoProfesionalId, eventoFechaInicio);
+  // Wrapper for handleSaveEvent from hook with modal cleanup
+  const handleSaveEventWrapper = async (eventData: Partial<AgendaEvent>) => {
+    await handleSaveEvent(eventData, eventToEdit, (profesionalId, fechaInicio) => {
+      focusAgendaOnEvent(profesionalId, fechaInicio);
       setIsModalOpen(false);
       setEventToEdit(null);
       setModalInitialDate(undefined);
-    } catch (error) {
-      captureError(error, { module: 'agenda', action: 'save-event', metadata: { isEdit: !!eventToEdit } });
-      toast.error(error instanceof Error ? error.message : 'Error al guardar la cita');
-      throw error;
-    }
+    });
   };
 
   const dateLabel = useMemo(() => {
@@ -818,13 +538,6 @@ export default function AgendaClient({
     });
   }
 
-  const clearAgendaFilters = () => {
-    setBusquedaEvento('');
-    setSelectedProfesionales([]);
-    setSelectedSala('todas');
-    setTipoFilter('todos');
-    setEstadoFilter('todos');
-  };
 
   const renderPlaceholder = (title: string, description: string) => (
     <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
@@ -1078,8 +791,8 @@ export default function AgendaClient({
               <AgendaDayView
                 day={currentDate}
                 events={eventosFiltrados}
-                onEventMove={handleEventMove}
-                onEventResize={handleEventResize}
+                onEventMove={handleEventMoveWrapper}
+                onEventResize={handleEventResizeWrapper}
                 onEventClick={handleEventClick}
                 onQuickAction={handleQuickAction}
                 onCreateEvent={handleCreateEvent}
@@ -1091,8 +804,8 @@ export default function AgendaClient({
                 day={currentDate}
                 events={eventosFiltrados}
                 resources={recursos}
-                onEventMove={handleEventMove}
-                onEventResize={handleEventResize}
+                onEventMove={handleEventMoveWrapper}
+                onEventResize={handleEventResizeWrapper}
                 onEventClick={handleEventClick}
                 onQuickAction={handleQuickAction}
                 hourHeight={hourHeight}
@@ -1104,8 +817,8 @@ export default function AgendaClient({
             <AgendaWeekViewV2
               weekStart={weekStart}
               events={eventosFiltrados}
-              onEventMove={handleEventMove}
-              onEventResize={handleEventResize}
+              onEventMove={handleEventMoveWrapper}
+              onEventResize={handleEventResizeWrapper}
               onEventClick={handleEventClick}
               onQuickAction={handleQuickAction}
               hourHeight={hourHeight}
@@ -1118,8 +831,8 @@ export default function AgendaClient({
               day={currentDate}
               events={eventosFiltrados}
               resources={recursos}
-              onEventMove={handleEventMove}
-              onEventResize={handleEventResize}
+              onEventMove={handleEventMoveWrapper}
+              onEventResize={handleEventResizeWrapper}
               onEventClick={handleEventClick}
               onQuickAction={handleQuickAction}
               hourHeight={hourHeight}
@@ -1184,7 +897,7 @@ export default function AgendaClient({
           setModalInitialDate(undefined);
           setModalPrefill(null);
         }}
-        onSave={handleSaveEvent}
+        onSave={handleSaveEventWrapper}
         event={eventToEdit}
         initialDate={modalInitialDate}
         profesionales={profesionales}
