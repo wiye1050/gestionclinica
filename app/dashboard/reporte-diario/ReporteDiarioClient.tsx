@@ -144,7 +144,7 @@ export default function ReporteDiarioClient({ initialReports }: Props) {
     try {
       await updateReporteMutation.mutateAsync({ id: reporteId, changes: { estado: nuevoEstado } });
     } catch (error) {
-      captureError(error, { module: 'reporte-diario-client', action: 'toggle-estado', metadata: { id } });
+      captureError(error, { module: 'reporte-diario-client', action: 'toggle-estado', metadata: { reporteId, nuevoEstado } });
       alert(error instanceof Error ? error.message : 'Error al cambiar estado');
     }
   };
@@ -159,7 +159,7 @@ export default function ReporteDiarioClient({ initialReports }: Props) {
     try {
       await deleteReporteMutation.mutateAsync(reporteId);
     } catch (error) {
-      captureError(error, { module: 'reporte-diario-client', action: 'delete-reporte', metadata: { id } });
+      captureError(error, { module: 'reporte-diario-client', action: 'delete-reporte', metadata: { reporteId } });
       alert(error instanceof Error ? error.message : 'Error al eliminar el reporte');
     }
   };
