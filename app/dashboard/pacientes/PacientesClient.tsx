@@ -225,7 +225,7 @@ function PacientesContent({ initialPage }: PacientesClientProps) {
       
       toast.success('Pacientes exportados correctamente');
     } catch (error) {
-      console.error('Error al exportar:', error);
+      captureError(error, { module: 'pacientes-client', action: 'export-pacientes' });
       toast.error('Error al exportar pacientes');
     }
   };

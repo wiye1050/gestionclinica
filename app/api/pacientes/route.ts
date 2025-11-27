@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth/server';
 import { createPaciente } from '@/lib/server/pacientesAdmin';
+import { captureError } from '@/lib/utils/errorLogging';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { validateRequest } from '@/lib/utils/apiValidation';
 import type { Query } from 'firebase-admin/firestore';
@@ -138,7 +139,7 @@ export async function GET(request: Request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('[api/pacientes] Error al listar pacientes', error);
+    captureError(error, { module: 'api-pacientes', action: 'list-pacientes' });
     const message = error instanceof Error ? error.message : 'No se pudieron cargar los pacientes';
     return NextResponse.json({ error: message }, { status: 500 });
   }

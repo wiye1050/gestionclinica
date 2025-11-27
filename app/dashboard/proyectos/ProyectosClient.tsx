@@ -239,7 +239,7 @@ export default function ProyectosClient({ initialProyectos }: ProyectosClientPro
 
       toast.success('Proyectos exportados correctamente');
     } catch (error) {
-      console.error('Error al exportar:', error);
+      captureError(error, { module: 'proyectos-client', action: 'export-proyectos' });
       toast.error('Error al exportar proyectos');
     }
   };
@@ -256,7 +256,7 @@ export default function ProyectosClient({ initialProyectos }: ProyectosClientPro
       setMostrarForm(false);
       setProyectoEditar(null);
     } catch (error) {
-      console.error('Error al guardar proyecto:', error);
+      captureError(error, { module: 'proyectos-client', action: 'save-proyecto', metadata: { id: editandoId } });
       toast.error('Error al guardar el proyecto');
     }
   };
@@ -266,7 +266,7 @@ export default function ProyectosClient({ initialProyectos }: ProyectosClientPro
       await eliminarProyecto.mutateAsync(id);
       toast.success('Proyecto eliminado correctamente');
     } catch (error) {
-      console.error('Error al eliminar proyecto:', error);
+      captureError(error, { module: 'proyectos-client', action: 'delete-proyecto', metadata: { id } });
       toast.error('Error al eliminar el proyecto');
     }
   };

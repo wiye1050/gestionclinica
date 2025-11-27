@@ -96,7 +96,7 @@ export default function ProfesionalesClient({ initialProfesionales }: Profesiona
       resetForm();
       await invalidateProfesionales();
     } catch (error) {
-      console.error('Error al guardar profesional:', error);
+      captureError(error, { module: 'profesionales-client', action: 'save-profesional', metadata: { editandoId } });
       alert(error instanceof Error ? error.message : 'Error al guardar profesional');
     }
   };
@@ -132,7 +132,7 @@ export default function ProfesionalesClient({ initialProfesionales }: Profesiona
       }
       await invalidateProfesionales();
     } catch (error) {
-      console.error('Error al eliminar:', error);
+      captureError(error, { module: 'profesionales-client', action: 'delete-profesional', metadata: { id } });
       alert(error instanceof Error ? error.message : 'Error al eliminar profesional');
     }
   };
@@ -161,7 +161,7 @@ export default function ProfesionalesClient({ initialProfesionales }: Profesiona
       }
       await invalidateProfesionales();
     } catch (error) {
-      console.error('Error al cambiar estado:', error);
+      captureError(error, { module: 'profesionales-client', action: 'toggle-estado', metadata: { id } });
       alert(error instanceof Error ? error.message : 'Error al cambiar estado');
     }
   };
