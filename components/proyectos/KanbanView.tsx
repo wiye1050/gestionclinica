@@ -67,11 +67,6 @@ export default function KanbanView({ proyectos, onProyectoClick, onNuevoProyecto
     setTargetEstado(null);
   };
 
-  const handleDragOver = (e: React.DragEvent, estado: EstadoProyecto) => {
-    e.preventDefault();
-    setTargetEstado(estado);
-  };
-
   const handleDragLeave = () => {
     setTargetEstado(null);
   };
@@ -88,7 +83,8 @@ export default function KanbanView({ proyectos, onProyectoClick, onNuevoProyecto
             className={`flex-shrink-0 w-80 flex flex-col transition-all ${
               isDropTarget ? 'ring-4 ring-blue-400 scale-105' : ''
             }`}
-            onDragOver={(e) => handleDragOver(e, columna.estado)}
+            onDragOver={handleDragOver}
+            onDragEnter={() => setTargetEstado(columna.estado)}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, columna.estado)}
           >
