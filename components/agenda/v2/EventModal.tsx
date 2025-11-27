@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { X, Calendar, Clock, User, MapPin, AlertCircle } from 'lucide-react';
 import { AgendaEvent } from './agendaHelpers';
 import { sanitizeHTML, sanitizeInput } from '@/lib/utils/sanitize';
+import { captureError } from '@/lib/utils/errorLogging';
 
 interface EventModalProps {
   isOpen: boolean;
@@ -128,7 +129,7 @@ export default function EventModal({
       await onSave(eventData);
       onClose();
     } catch (error) {
-      console.error('Error al guardar:', error);
+      captureError(error, { module: 'event-modal', action: 'save-event', metadata: { isEdit: !!event } });
     } finally {
       setLoading(false);
     }

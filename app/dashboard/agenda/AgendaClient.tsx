@@ -30,6 +30,7 @@ import type { Paciente } from '@/types';
 import { CompactFilters, type ActiveFilterChip } from '@/components/shared/CompactFilters';
 import { KPIGrid } from '@/components/shared/KPIGrid';
 import { deserializeAgendaEvents } from '@/lib/utils/agendaEvents';
+import { captureError, logWarning } from '@/lib/utils/errorLogging';
 
 export type VistaAgenda = 'diaria' | 'semanal' | 'multi' | 'boxes' | 'paciente';
 type AgendaResource = { id: string; nombre: string; tipo: 'profesional' | 'sala' };
@@ -194,7 +195,7 @@ export default function AgendaClient({
         setResourcePreset(saved.preset);
       }
     } catch (error) {
-      console.warn('[agenda] No se pudieron cargar los filtros persistidos', error);
+      captureError(error, { module: 'agenda', action: 'load-filters' }, 'warn');
     } finally {
       setFiltersLoaded(true);
     }
@@ -212,7 +213,7 @@ export default function AgendaClient({
       });
       window.localStorage.setItem(AGENDA_STORAGE_KEY, payload);
     } catch (error) {
-      console.warn('[agenda] No se pudieron guardar los filtros', error);
+      captureError(error, { module: 'agenda', action: 'save-filters' }, 'warn');
     }
   }, [selectedProfesionales, selectedSala, estadoFilter, tipoFilter, resourcePreset, filtersLoaded]);
 
@@ -455,7 +456,7 @@ export default function AgendaClient({
                 toast.success('Cambio revertido');
               })
               .catch((error) => {
-                console.error('Error al deshacer cambio de agenda', error);
+                captureError(error, { module: 'agenda', action: 'undo-change' });
                 toast.error('No se pudo deshacer el cambio');
               });
           },
@@ -522,7 +523,7 @@ export default function AgendaClient({
         await invalidateAgenda();
       });
     } catch (error) {
-      console.error('Error al mover evento:', error);
+      captureError(error, { module: 'agenda', action: 'move-event', metadata: { eventId } });
       toast.error(error instanceof Error ? error.message : 'Error al actualizar el evento');
     }
   };
@@ -546,7 +547,7 @@ export default function AgendaClient({
         await invalidateAgenda();
       });
     } catch (error) {
-      console.error('Error al redimensionar:', error);
+      captureError(error, { module: 'agenda', action: 'resize-event', metadata: { eventId } });
       toast.error(error instanceof Error ? error.message : 'Error al actualizar duración');
     }
   };
@@ -574,7 +575,7 @@ export default function AgendaClient({
       await invalidateAgenda();
       toast.success('Profesional actualizado');
     } catch (error) {
-      console.error('Error al reasignar profesional', error);
+      captureError(error, { module: 'agenda', action: 'reassign-professional', metadata: { eventId: evento.id, profesionalId } });
       toast.error('No se pudo reasignar la cita');
     }
   };
@@ -589,7 +590,7 @@ export default function AgendaClient({
       await invalidateAgenda();
       toast.success('Cita actualizada');
     } catch (error) {
-      console.error('Error al actualizar cita', error);
+      captureError(error, { module: 'agenda', action: 'inline-update', metadata: { eventId } });
       toast.error('No se pudo actualizar la cita');
     }
   };
@@ -629,7 +630,7 @@ export default function AgendaClient({
         await invalidateAgenda();
       });
     } catch (error) {
-      console.error('Error en acción rápida:', error);
+      captureError(error, { module: 'agenda', action: 'quick-action', metadata: { eventId: evento.id, action } });
       toast.error(error instanceof Error ? error.message : 'Error al actualizar estado');
     }
   };
@@ -719,7 +720,7 @@ export default function AgendaClient({
       setEventToEdit(null);
       setModalInitialDate(undefined);
     } catch (error) {
-      console.error('Error al guardar:', error);
+      captureError(error, { module: 'agenda', action: 'save-event', metadata: { isEdit: !!eventToEdit } });
       toast.error(error instanceof Error ? error.message : 'Error al guardar la cita');
       throw error;
     }

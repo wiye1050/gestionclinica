@@ -3,6 +3,7 @@ import { AgendaClientWrapper, type VistaAgenda } from './AgendaClient';
 import { getSerializedAgendaEvents } from '@/lib/server/agenda';
 import { getCurrentUser } from '@/lib/auth/server';
 import { redirect } from 'next/navigation';
+import { ModuleErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 type AgendaSearchParams = {
   newEvent?: string;
@@ -71,10 +72,12 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
   };
 
   return (
-    <AgendaClientWrapper
-      initialWeekStart={weekStart.toISOString()}
-      initialEvents={initialEvents}
-      prefillRequest={prefillRequest}
-    />
+    <ModuleErrorBoundary moduleName="Agenda">
+      <AgendaClientWrapper
+        initialWeekStart={weekStart.toISOString()}
+        initialEvents={initialEvents}
+        prefillRequest={prefillRequest}
+      />
+    </ModuleErrorBoundary>
   );
 }

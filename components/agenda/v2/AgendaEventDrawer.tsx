@@ -18,6 +18,8 @@ import {
   User,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { captureError } from '@/lib/utils/errorLogging';
+
 interface AgendaEventDrawerProps {
   event: AgendaEvent | null;
   paciente: Paciente | null;
@@ -227,7 +229,7 @@ export default function AgendaEventDrawer({
                           fechaFin: newEnd,
                         });
                       } catch (error) {
-                        console.error('Inline update error', error);
+                        captureError(error, { module: 'agenda-drawer', action: 'inline-update', metadata: { eventId: event.id } });
                         setInlineError('No se pudo actualizar el horario. Intenta de nuevo.');
                         throw error;
                       } finally {
@@ -271,7 +273,7 @@ export default function AgendaEventDrawer({
                       setReassigning(true);
                       await onReassign(event, selectedProf);
                     } catch (error) {
-                      console.error('Reassign error', error);
+                      captureError(error, { module: 'agenda-drawer', action: 'reassign-professional', metadata: { eventId: event.id } });
                       toast.error('No se pudo reasignar la cita');
                       throw error;
                     } finally {

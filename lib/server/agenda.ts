@@ -10,15 +10,15 @@ export type SerializedAgendaEvent = {
   titulo: string;
   fechaInicio: string;
   fechaFin: string;
-  estado: string;
-  tipo: string;
+  estado: 'programada' | 'confirmada' | 'realizada' | 'cancelada';
+  tipo: 'consulta' | 'seguimiento' | 'revision' | 'tratamiento' | 'urgencia' | 'administrativo';
   pacienteId?: string;
   pacienteNombre?: string;
   profesionalId?: string;
   profesionalNombre?: string;
   salaId?: string;
   salaNombre?: string;
-  prioridad?: string;
+  prioridad?: 'alta' | 'media' | 'baja';
   notas?: string;
   color?: string;
 };
