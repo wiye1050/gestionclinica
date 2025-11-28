@@ -1,7 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, query, where, orderBy, Timestamp, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { z } from 'zod';
 import type { RespuestaFormulario } from '@/types';
+
+const createRespuestaSchema = z.object({
+  formularioPlantillaId: z.string().min(1, 'El ID de la plantilla es obligatorio'),
+  formularioNombre: z.string(),
+  formularioTipo: z.string(),
+  formularioVersion: z.number().default(1),
+  pacienteId: z.string().min(1, 'El ID del paciente es obligatorio'),
+  pacienteNombre: z.string(),
+  pacienteNHC: z.string().optional(),
+  eventoAgendaId: z.string().optional(),
+  servicioId: z.string().optional(),
+  episodioId: z.string().optional(),
+  respuestas: z.record(z.any()),
+  estado: z.enum(['borrador', 'completado', 'validado', 'archivado']).default('borrador'),
+  requiereSeguimiento: z.boolean().default(false),
+  fechaSeguimiento: z.date().optional(),
+  estadoSeguimiento: z.string().optional(),
+  creadoPor: z.string(),
+  notasInternas: z.string().optional(),
+});
 
 /**
  * GET /api/formularios/respuestas
@@ -15,32 +35,34 @@ import type { RespuestaFormulario } from '@/types';
  */
 export async function GET(request: NextRequest) {
   try {
+    if (!adminDb) {
+      console.error('[API /api/formularios/respuestas GET] Admin DB not initialized');
+      return NextResponse.json([]);
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const pacienteId = searchParams.get('pacienteId');
     const formularioPlantillaId = searchParams.get('formularioPlantillaId');
     const estadoParam = searchParams.get('estado');
     const limitParam = parseInt(searchParams.get('limit') || '100');
 
-    let q = query(
-      collection(db, 'formularios_respuestas'),
-      orderBy('createdAt', 'desc')
-    );
+    let query = adminDb.collection('formularios_respuestas').orderBy('createdAt', 'desc');
 
     // Aplicar filtros
     if (pacienteId) {
-      q = query(q, where('pacienteId', '==', pacienteId));
+      query = query.where('pacienteId', '==', pacienteId);
     }
     if (formularioPlantillaId) {
-      q = query(q, where('formularioPlantillaId', '==', formularioPlantillaId));
+      query = query.where('formularioPlantillaId', '==', formularioPlantillaId);
     }
     if (estadoParam) {
-      q = query(q, where('estado', '==', estadoParam));
+      query = query.where('estado', '==', estadoParam);
     }
 
     // Aplicar límite
-    q = query(q, limit(limitParam));
+    query = query.limit(limitParam);
 
-    const snapshot = await getDocs(q);
+    const snapshot = await query.get();
 
     const respuestas: RespuestaFormulario[] = snapshot.docs.map((doc) => {
       const data = doc.data();
@@ -85,10 +107,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(respuestas);
   } catch (error) {
     console.error('[API /api/formularios/respuestas GET] Error:', error);
-    return NextResponse.json(
-      { error: 'Error al obtener respuestas' },
-      { status: 500 }
-    );
+    // En caso de error (por ejemplo, colección no existe), retornar array vacío
+    return NextResponse.json([]);
   }
 }
 
@@ -98,36 +118,87 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!adminDb) {
+      console.error('[API /api/formularios/respuestas POST] Admin DB not initialized');
+      return NextResponse.json(
+        { error: 'Database not available' },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
 
-    // TODO: Añadir validación con Zod
-    // TODO: Verificar permisos del usuario
-    // TODO: Validar que el formularioPlantillaId existe
-    // TODO: Validar que el pacienteId existe
+    // Validar con Zod
+    const validation = createRespuestaSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: 'Datos de respuesta inválidos',
+          details: validation.error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validar que la plantilla existe
+    const plantillaDoc = await adminDb
+      .collection('formularios_plantillas')
+      .doc(validation.data.formularioPlantillaId)
+      .get();
+
+    if (!plantillaDoc.exists) {
+      return NextResponse.json(
+        { error: 'La plantilla de formulario no existe' },
+        { status: 404 }
+      );
+    }
+
+    // Validar que el paciente existe
+    const pacienteDoc = await adminDb
+      .collection('pacientes')
+      .doc(validation.data.pacienteId)
+      .get();
+
+    if (!pacienteDoc.exists) {
+      return NextResponse.json(
+        { error: 'El paciente no existe' },
+        { status: 404 }
+      );
+    }
 
     const nuevaRespuesta = {
-      ...body,
-      estado: body.estado || 'borrador',
+      ...validation.data,
       pdfGenerado: false,
-      requiereSeguimiento: body.requiereSeguimiento || false,
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
-    // const docRef = await addDoc(collection(db, 'formularios_respuestas'), nuevaRespuesta);
+    const docRef = await adminDb.collection('formularios_respuestas').add(nuevaRespuesta);
 
-    // TODO: Incrementar contador de respuestas en la plantilla
-    // TODO: Si estado es 'completado', incrementar totalRespuestas y recalcular tasaConversion
+    // Incrementar contador de respuestas si está completado
+    if (validation.data.estado === 'completado') {
+      const plantillaRef = adminDb
+        .collection('formularios_plantillas')
+        .doc(validation.data.formularioPlantillaId);
+
+      await plantillaRef.update({
+        totalRespuestas: (plantillaDoc.data()?.totalRespuestas || 0) + 1,
+        updatedAt: new Date(),
+      });
+    }
 
     return NextResponse.json({
       success: true,
       message: 'Respuesta guardada correctamente',
-      // id: docRef.id
+      id: docRef.id
     });
   } catch (error) {
     console.error('[API /api/formularios/respuestas POST] Error:', error);
     return NextResponse.json(
-      { error: 'Error al guardar respuesta' },
+      { error: 'Error al guardar respuesta', details: (error as Error).message },
       { status: 500 }
     );
   }

@@ -231,6 +231,20 @@ service cloud.firestore {
       allow delete: if isAuthenticated();
     }
 
+    // ========== FORMULARIOS - PLANTILLAS ==========
+    match /formularios_plantillas/{plantillaId} {
+      allow read: if isAuthenticated();
+      allow create: if hasAnyRole(['admin', 'coordinador']);
+      allow update: if hasAnyRole(['admin', 'coordinador']);
+      allow delete: if hasRole('admin');
+    }
+
+    // ========== FORMULARIOS - RESPUESTAS ==========
+    match /formularios_respuestas/{respuestaId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAnyRole(['admin', 'coordinador', 'profesional']);
+    }
+
     // ========== FACTURAS (collectionGroup) ==========
     match /{path=**}/facturas/{facturaId} {
       allow read: if hasAnyRole(['admin', 'coordinador']);
