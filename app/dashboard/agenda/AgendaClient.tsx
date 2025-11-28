@@ -32,6 +32,7 @@ import { KPIGrid } from '@/components/shared/KPIGrid';
 import { deserializeAgendaEvents } from '@/lib/utils/agendaEvents';
 import { useAgendaFilters } from '@/lib/hooks/useAgendaFilters';
 import { useAgendaActions } from '@/lib/hooks/useAgendaActions';
+import { useAgendaModals } from '@/lib/hooks/useAgendaModals';
 
 export type VistaAgenda = 'diaria' | 'semanal' | 'multi' | 'boxes' | 'paciente';
 type AgendaResource = { id: string; nombre: string; tipo: 'profesional' | 'sala' };
@@ -118,16 +119,22 @@ export default function AgendaClient({
     clearFilters: clearAgendaFilters,
   } = useAgendaFilters();
 
-  // Modal and drawer state
+  // Modal and drawer state (managed by useAgendaModals hook)
+  const {
+    isModalOpen,
+    modalInitialDate,
+    eventToEdit,
+    modalPrefill,
+    openModal,
+    openEditModal,
+    closeModal,
+    drawerEvent,
+    isDrawerOpen,
+    openDrawer,
+    closeDrawer,
+  } = useAgendaModals({ prefillRequest });
+
   const [currentDate, setCurrentDate] = useState(() => initialWeekStartDate);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalInitialDate, setModalInitialDate] = useState<Date | undefined>();
-  const [eventToEdit, setEventToEdit] = useState<AgendaEvent | null>(null);
-  const [drawerEvent, setDrawerEvent] = useState<AgendaEvent | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [modalPrefill, setModalPrefill] =
-    useState<{ pacienteId?: string; profesionalId?: string } | null>(null);
-  const [prefillRequestKey, setPrefillRequestKey] = useState<string | null>(null);
 
   const hourHeight = viewDensity === 'compact' ? 60 : 90;
 
@@ -390,41 +397,17 @@ export default function AgendaClient({
     setVista('multi');
   };
 
-  const openNewEventModal = useCallback(
-    (initialDate?: Date, prefill?: { pacienteId?: string; profesionalId?: string }) => {
-      setModalPrefill(prefill ?? null);
-      setModalInitialDate(initialDate ?? new Date());
-      setEventToEdit(null);
-      setIsModalOpen(true);
-    },
-    []
-  );
-
   const handleCreateEvent = async (start: Date) => {
-    openNewEventModal(start);
+    openModal(start);
   };
 
-  useEffect(() => {
-    if (!prefillRequest?.openModal) return;
-    const key = `${prefillRequest.pacienteId ?? ''}-${prefillRequest.profesionalId ?? ''}`;
-    if (prefillRequestKey === key) return;
-    setPrefillRequestKey(key);
-    openNewEventModal(new Date(), {
-      pacienteId: prefillRequest.pacienteId ?? undefined,
-      profesionalId: prefillRequest.profesionalId ?? undefined,
-    });
-  }, [prefillRequest, prefillRequestKey, openNewEventModal]);
-
   const handleEventClick = (evento: AgendaEvent) => {
-    setDrawerEvent(evento);
-    setIsDrawerOpen(true);
+    openDrawer(evento);
   };
 
   const handleEditFromDrawer = (evento: AgendaEvent) => {
-    setEventToEdit(evento);
-    setModalInitialDate(evento.fechaInicio);
-    setIsModalOpen(true);
-    setIsDrawerOpen(false);
+    openEditModal(evento);
+    closeDrawer();
   };
 
   // Wrappers to pass eventos array to hook functions
@@ -440,9 +423,7 @@ export default function AgendaClient({
   const handleSaveEventWrapper = async (eventData: Partial<AgendaEvent>) => {
     await handleSaveEvent(eventData, eventToEdit, (profesionalId, fechaInicio) => {
       focusAgendaOnEvent(profesionalId, fechaInicio);
-      setIsModalOpen(false);
-      setEventToEdit(null);
-      setModalInitialDate(undefined);
+      closeModal();
     });
   };
 
@@ -596,7 +577,7 @@ export default function AgendaClient({
         onNext={handleNext}
         onToday={handleToday}
         eventCount={eventosFiltrados.length}
-        onNewEvent={() => openNewEventModal(new Date())}
+        onNewEvent={() => openModal(new Date())}
         activeFilters={{
           profesionales: selectedProfesionales,
           sala: selectedSala,
@@ -891,12 +872,7 @@ export default function AgendaClient({
 
       <EventModal
         isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEventToEdit(null);
-          setModalInitialDate(undefined);
-          setModalPrefill(null);
-        }}
+        onClose={closeModal}
         onSave={handleSaveEventWrapper}
         event={eventToEdit}
         initialDate={modalInitialDate}
@@ -911,10 +887,7 @@ export default function AgendaClient({
         isOpen={isDrawerOpen && Boolean(drawerEvent)}
         event={drawerEvent}
         paciente={drawerPaciente ?? null}
-        onClose={() => {
-          setIsDrawerOpen(false);
-          setDrawerEvent(null);
-        }}
+        onClose={closeDrawer}
         onEdit={handleEditFromDrawer}
         onAction={handleQuickAction}
         profesionales={profesionales.map((prof) => ({
