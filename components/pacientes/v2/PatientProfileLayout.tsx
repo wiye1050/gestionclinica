@@ -12,7 +12,8 @@ import {
   FileText,
   DollarSign,
   MessageSquare,
-  Activity as ActivityIcon
+  Activity as ActivityIcon,
+  FileCheck2,
 } from 'lucide-react';
 
 export type PatientTab =
@@ -22,7 +23,8 @@ export type PatientTab =
   | 'tratamientos'
   | 'documentos'
   | 'facturacion'
-  | 'notas';
+  | 'notas'
+  | 'formularios';
 
 interface Tab {
   key: PatientTab;
@@ -63,6 +65,7 @@ export default function PatientProfileLayout({
     { key: 'historial-clinico', label: 'Historial Clínico', icon: <Heart className="w-4 h-4" /> },
     { key: 'citas', label: 'Citas', icon: <Calendar className="w-4 h-4" /> },
     { key: 'tratamientos', label: 'Tratamientos', icon: <ActivityIcon className="w-4 h-4" /> },
+    { key: 'formularios', label: 'Formularios', icon: <FileCheck2 className="w-4 h-4" /> },
     { key: 'documentos', label: 'Documentos', icon: <FileText className="w-4 h-4" /> },
     { key: 'facturacion', label: 'Facturación', icon: <DollarSign className="w-4 h-4" /> },
     { key: 'notas', label: 'Notas', icon: <MessageSquare className="w-4 h-4" /> },

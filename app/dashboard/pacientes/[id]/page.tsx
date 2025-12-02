@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, Suspense, lazy } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -15,8 +15,14 @@ import PatientCitasTab from '@/components/pacientes/v2/PatientCitasTab';
 import PatientDocumentosTab from '@/components/pacientes/v2/PatientDocumentosTab';
 import PatientFacturacionTab from '@/components/pacientes/v2/PatientFacturacionTab';
 import PatientNotasTab from '@/components/pacientes/v2/PatientNotasTab';
+import PatientFormulariosTab from '@/components/pacientes/v2/PatientFormulariosTab';
 import PatientAvailabilityCard from '@/components/pacientes/v2/PatientAvailabilityCard';
 import DetailPanel from '@/components/shared/DetailPanel';
+import { TabErrorBoundary } from '@/components/pacientes/TabErrorBoundary';
+import { TabLoadingFallback } from '@/components/pacientes/TabLoadingFallback';
+
+// Lazy load modal for better performance
+const CompletarFormularioModal = lazy(() => import('@/components/formularios/CompletarFormularioModal'));
 import { resolverSeguimientoAction } from '../actions';
 import { hasActiveFollowUpInHistory } from '@/lib/utils/followUps';
 import { toast } from 'sonner';
@@ -44,8 +50,10 @@ import {
   Folder,
   DollarSign,
   StickyNote,
+  FileCheck2,
 } from 'lucide-react';
-import type { PacienteFactura, PacientePresupuesto } from '@/types';
+import type { PacienteFactura, PacientePresupuesto, RespuestaFormulario } from '@/types';
+import { useEffect } from 'react';
 
 export default function PacienteDetallePage() {
   const params = useParams();
@@ -78,6 +86,9 @@ export default function PacienteDetallePage() {
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<PacienteFactura | null>(null);
   const [presupuestoSeleccionado, setPresupuestoSeleccionado] = useState<PacientePresupuesto | null>(null);
   const [detalleTab, setDetalleTab] = useState<'resumen' | 'conceptos'>('resumen');
+  const [mostrarModalFormulario, setMostrarModalFormulario] = useState(false);
+  const [respuestasFormularios, setRespuestasFormularios] = useState<RespuestaFormulario[]>([]);
+  const [loadingRespuestas, setLoadingRespuestas] = useState(false);
 
   // Datos derivados con memos
   const actividadesTimeline = useMemo(() => historialToActividades(historial), [historial]);
@@ -135,7 +146,29 @@ export default function PacienteDetallePage() {
     return 'otro';
   }, []);
 
-  // Handlers
+  // Cargar respuestas de formularios del paciente
+  useEffect(() => {
+    const cargarRespuestas = async () => {
+      if (!pacienteId) return;
+
+      setLoadingRespuestas(true);
+      try {
+        const response = await fetch(`/api/formularios/respuestas?pacienteId=${pacienteId}&limit=100`);
+        if (!response.ok) throw new Error('Error al cargar respuestas');
+        const data = await response.json();
+        setRespuestasFormularios(data);
+      } catch (error) {
+        console.error('Error cargando respuestas de formularios:', error);
+        setRespuestasFormularios([]);
+      } finally {
+        setLoadingRespuestas(false);
+      }
+    };
+
+    cargarRespuestas();
+  }, [pacienteId]);
+
+  // Handlers with optimistic UI feedback
   const handleResumenQuickAction = useCallback(
     async (eventId: string, action: 'confirm' | 'complete' | 'cancel') => {
       const estadoMap = {
@@ -143,24 +176,41 @@ export default function PacienteDetallePage() {
         complete: 'realizada',
         cancel: 'cancelada',
       } as const;
-      const response = await fetch(`/api/agenda/eventos/${eventId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado: estadoMap[action] }),
-      });
-      if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as { error?: string };
-        toast.error(data.error ?? 'No se pudo actualizar la cita');
-        throw new Error(data.error ?? 'Error quick action');
+
+      const loadingMessages = {
+        confirm: 'Confirmando cita...',
+        complete: 'Completando cita...',
+        cancel: 'Cancelando cita...',
+      };
+
+      const successMessages = {
+        confirm: 'Cita confirmada',
+        complete: 'Cita completada',
+        cancel: 'Cita cancelada',
+      };
+
+      // Show immediate optimistic feedback
+      const toastId = toast.loading(loadingMessages[action]);
+
+      try {
+        const response = await fetch(`/api/agenda/eventos/${eventId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ estado: estadoMap[action] }),
+        });
+
+        if (!response.ok) {
+          const data = (await response.json().catch(() => ({}))) as { error?: string };
+          toast.error(data.error ?? 'No se pudo actualizar la cita', { id: toastId });
+          throw new Error(data.error ?? 'Error quick action');
+        }
+
+        toast.success(successMessages[action], { id: toastId });
+        await refreshHistorial();
+      } catch (error) {
+        // Toast already updated in error handling above
+        throw error;
       }
-      toast.success(
-        action === 'confirm'
-          ? 'Cita confirmada'
-          : action === 'complete'
-          ? 'Cita completada'
-          : 'Cita cancelada'
-      );
-      await refreshHistorial();
     },
     [refreshHistorial]
   );
@@ -312,6 +362,10 @@ export default function PacienteDetallePage() {
         toast.error('Paciente no válido para subir documentos.');
         return;
       }
+
+      const fileCount = files.length;
+      const toastId = toast.loading(`Subiendo ${fileCount} documento${fileCount > 1 ? 's' : ''}...`);
+
       try {
         await Promise.all(
           Array.from(files).map(async (file) => {
@@ -333,11 +387,11 @@ export default function PacienteDetallePage() {
             });
           })
         );
-        toast.success('Documentos subidos correctamente.');
+        toast.success(`${fileCount} documento${fileCount > 1 ? 's subidos' : ' subido'} correctamente`, { id: toastId });
         await refreshDocumentos();
       } catch (error) {
         console.error('Error subiendo documentos', error);
-        toast.error('No se pudieron subir los documentos.');
+        toast.error('No se pudieron subir los documentos', { id: toastId });
       }
     },
     [inferirTipoDocumento, pacienteId, refreshDocumentos, user?.displayName, user?.email]
@@ -351,17 +405,21 @@ export default function PacienteDetallePage() {
         toast.error('Este documento es de solo lectura.');
         return;
       }
+
+      // Show immediate optimistic feedback
+      const toastId = toast.loading('Eliminando documento...');
+
       try {
         const docRef = doc(db, 'pacientes', pacienteId, 'documentos', id);
         await deleteDoc(docRef);
         if (documento.storagePath) {
           await deleteObject(ref(storage, documento.storagePath));
         }
-        toast.success('Documento eliminado.');
+        toast.success('Documento eliminado', { id: toastId });
         await refreshDocumentos();
       } catch (error) {
         console.error('Error eliminando documento', error);
-        toast.error('No se pudo eliminar el documento.');
+        toast.error('No se pudo eliminar el documento', { id: toastId });
       }
     },
     [documentosFirestoreMap, pacienteId, refreshDocumentos]
@@ -615,8 +673,9 @@ export default function PacienteDetallePage() {
 
   // Tab renderers
   const renderResumenTab = () => (
-    <div className="space-y-4">
-      <PatientResumenTab
+    <TabErrorBoundary tabName="Resumen" onRetry={() => window.location.reload()}>
+      <div className="space-y-4">
+        <PatientResumenTab
         paciente={paciente}
         profesionalReferente={profesionalReferente}
         proximasCitas={proximasCitas}
@@ -750,12 +809,14 @@ export default function PacienteDetallePage() {
           {relacionesError}
         </div>
       )}
-    </div>
+      </div>
+    </TabErrorBoundary>
   );
 
   const renderHistorialTab = () => (
-    <div className="space-y-4">
-      <PatientHistorialClinicoTab
+    <TabErrorBoundary tabName="Historial Clínico" onRetry={() => window.location.reload()}>
+      <div className="space-y-4">
+        <PatientHistorialClinicoTab
         alergias={alergiasData}
         medicamentos={[]}
         antecedentes={antecedentesData}
@@ -867,22 +928,26 @@ export default function PacienteDetallePage() {
           </div>
         )}
       </section>
-    </div>
+      </div>
+    </TabErrorBoundary>
   );
 
   const renderCitasTab = () => (
-    <PatientCitasTab
+    <TabErrorBoundary tabName="Citas" onRetry={refreshHistorial}>
+      <PatientCitasTab
       citas={citas}
       paciente={paciente ?? undefined}
       profesionales={profesionalesOptions}
       buildAgendaLink={agendaLinkBuilder}
       onNuevaCita={paciente ? handleNuevaCitaDesdePaciente : undefined}
       onRequestRefresh={refreshHistorial}
-    />
+      />
+    </TabErrorBoundary>
   );
 
   const renderDocumentosTab = () => (
-    <PatientDocumentosTab
+    <TabErrorBoundary tabName="Documentos" onRetry={refreshDocumentos}>
+      <PatientDocumentosTab
       documentos={documentos}
       onUpload={handleUploadDocumentos}
       onDelete={handleDeleteDocumento}
@@ -890,26 +955,49 @@ export default function PacienteDetallePage() {
       onDownload={handleDownloadDocumento}
       onView={handleViewDocumento}
       readOnlyIds={readOnlyDocumentoIds}
-    />
+      />
+    </TabErrorBoundary>
   );
 
   const renderFacturacionTab = () => (
-    <PatientFacturacionTab
+    <TabErrorBoundary tabName="Facturación" onRetry={refreshFacturacion}>
+      <PatientFacturacionTab
       facturas={facturas}
       presupuestos={presupuestos}
       onVerFactura={handleVerDocumento}
       onDescargarPDF={handleDescargarFactura}
       onEnviarFactura={handleEnviarFactura}
       onRegistrarPago={handleRegistrarPago}
-    />
+      />
+    </TabErrorBoundary>
   );
 
-  const renderNotasTab = () => <PatientNotasTab notas={notas} />;
+  const renderNotasTab = () => (
+    <TabErrorBoundary tabName="Notas" onRetry={() => window.location.reload()}>
+      <PatientNotasTab notas={notas} />
+    </TabErrorBoundary>
+  );
+
+  const renderFormulariosTab = () => (
+    <TabErrorBoundary tabName="Formularios" onRetry={() => window.location.reload()}>
+      {loadingRespuestas ? (
+        <TabLoadingFallback message="Cargando formularios del paciente..." />
+      ) : (
+        <PatientFormulariosTab
+        pacienteId={pacienteId}
+        respuestas={respuestasFormularios}
+        onNuevoFormulario={() => setMostrarModalFormulario(true)}
+        />
+      )}
+    </TabErrorBoundary>
+  );
 
   const renderTratamientosTab = () => (
-    <div className="panel-block p-6 text-sm text-text-muted">
-      Aún no hay un módulo de tratamientos detallado. Puedes gestionarlos desde servicios asignados.
-    </div>
+    <TabErrorBoundary tabName="Tratamientos" onRetry={() => window.location.reload()}>
+      <div className="panel-block p-6 text-sm text-text-muted">
+        Aún no hay un módulo de tratamientos detallado. Puedes gestionarlos desde servicios asignados.
+      </div>
+    </TabErrorBoundary>
   );
 
   const renderTabContent = () => {
@@ -926,6 +1014,8 @@ export default function PacienteDetallePage() {
         return renderFacturacionTab();
       case 'notas':
         return renderNotasTab();
+      case 'formularios':
+        return renderFormulariosTab();
       case 'tratamientos':
         return renderTratamientosTab();
       default:
@@ -946,6 +1036,7 @@ export default function PacienteDetallePage() {
       label: 'Tratamientos',
       icon: <ActivityIcon className="h-4 w-4" />,
     },
+    { key: 'formularios' as PatientTab, label: 'Formularios', icon: <FileCheck2 className="h-4 w-4" /> },
     { key: 'documentos' as PatientTab, label: 'Documentos', icon: <Folder className="h-4 w-4" /> },
     {
       key: 'facturacion' as PatientTab,
@@ -1106,6 +1197,18 @@ export default function PacienteDetallePage() {
           )
         }
       />
+
+      {/* Modal para completar formulario */}
+      {paciente && user && mostrarModalFormulario && (
+        <Suspense fallback={<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"><TabLoadingFallback message="Cargando formulario..." /></div>}>
+          <CompletarFormularioModal
+            isOpen={mostrarModalFormulario}
+            onClose={() => setMostrarModalFormulario(false)}
+            paciente={paciente}
+            userId={user.uid}
+          />
+        </Suspense>
+      )}
     </>
   );
 }

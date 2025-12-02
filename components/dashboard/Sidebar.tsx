@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   Settings,
   UsersRound,
+  FileCheck2,
   type LucideIcon
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -94,7 +95,7 @@ export default function Sidebar() {
   useEffect(() => {
     const operacionesRoutes = ['/dashboard/reporte-diario', '/dashboard/protocolos', '/dashboard/inventario'];
     const coordinacionRoutes = ['/dashboard/supervision', '/dashboard/kpis', '/dashboard/mejoras', '/dashboard/proyectos', '/dashboard/informes'];
-    const configuracionRoutes = ['/dashboard/profesionales', '/dashboard/catalogo-servicios', '/dashboard/tratamientos', '/dashboard/servicios', '/dashboard/auditoria'];
+    const configuracionRoutes = ['/dashboard/profesionales', '/dashboard/catalogo-servicios', '/dashboard/tratamientos', '/dashboard/servicios', '/dashboard/formularios', '/dashboard/auditoria'];
 
     if (operacionesRoutes.some(route => pathname.startsWith(route))) {
       setSectionStates(prev => ({ ...prev, operaciones: true }));
@@ -225,6 +226,7 @@ export default function Sidebar() {
         { name: 'Catálogo Servicios', href: '/dashboard/catalogo-servicios', icon: List, roles: ['admin'] },
         { name: 'Tratamientos', href: '/dashboard/tratamientos', icon: Layers, roles: ['admin'] },
         { name: 'Servicios Asignados', href: '/dashboard/servicios', icon: ClipboardList, roles: ['admin', 'coordinador'] },
+        { name: 'Formularios', href: '/dashboard/formularios', icon: FileCheck2, roles: ['admin', 'coordinador'] },
         { name: 'Auditoría', href: '/dashboard/auditoria', icon: ShieldCheck, roles: ['admin'] },
       ],
     },

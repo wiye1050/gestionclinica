@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react';
 import { FileText, Upload, Download, Trash2, Share2, Eye, Search, Grid, List, Folder, Image, FileSpreadsheet, File, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useDebounce } from '@/lib/hooks/useDebounce';
 
 interface Documento {
   id: string;
@@ -45,6 +46,7 @@ export default function PatientDocumentosTab({
   readOnlyIds = [],
 }: Props) {
   const [busqueda, setBusqueda] = useState('');
+  const busquedaDebounced = useDebounce(busqueda, 300); // Debounce search for better performance
   const [tipoFiltro, setTipoFiltro] = useState<string>('todos');
   const [vistaGrid, setVistaGrid] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
@@ -52,12 +54,12 @@ export default function PatientDocumentosTab({
 
   const documentosFiltrados = useMemo(() => {
     return documentos.filter(doc => {
-      const matchBusqueda = doc.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-        doc.etiquetas.some(tag => tag.toLowerCase().includes(busqueda.toLowerCase()));
+      const matchBusqueda = doc.nombre.toLowerCase().includes(busquedaDebounced.toLowerCase()) ||
+        doc.etiquetas.some(tag => tag.toLowerCase().includes(busquedaDebounced.toLowerCase()));
       const matchTipo = tipoFiltro === 'todos' || doc.tipo === tipoFiltro;
       return matchBusqueda && matchTipo;
     });
-  }, [documentos, busqueda, tipoFiltro]);
+  }, [documentos, busquedaDebounced, tipoFiltro]);
 
   const documentosPorTipo = useMemo(() => {
     const grupos = TIPOS_DOCUMENTOS.map(tipo => ({

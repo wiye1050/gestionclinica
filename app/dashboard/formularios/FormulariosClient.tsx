@@ -12,6 +12,10 @@ import {
   Copy,
   Trash2,
   CheckCircle,
+  Calendar,
+  User,
+  Clock,
+  Download,
 } from 'lucide-react';
 import type { FormularioPlantilla, RespuestaFormulario, TipoFormulario, EstadoFormularioPlantilla } from '@/types';
 import { Badge } from '@/components/ui/Badge';
@@ -19,6 +23,7 @@ import Card from '@/components/ui/Card';
 import { Button } from '@/components/ui';
 import PrimaryTabs from '@/components/shared/PrimaryTabs';
 import { KPIGrid } from '@/components/shared/KPIGrid';
+import { formatDate } from '@/lib/utils/helpers';
 
 interface FormulariosClientProps {
   initialPlantillas: FormularioPlantilla[];
@@ -61,6 +66,10 @@ export default function FormulariosClient({
   const [tipoFilter, setTipoFilter] = useState<TipoFormulario | 'todos'>('todos');
   const [estadoFilter, setEstadoFilter] = useState<EstadoFormularioPlantilla | 'todos'>('todos');
 
+  // Filtros para respuestas
+  const [busquedaRespuesta, setBusquedaRespuesta] = useState('');
+  const [estadoRespuestaFilter, setEstadoRespuestaFilter] = useState<'todos' | 'borrador' | 'completado' | 'validado' | 'archivado'>('todos');
+
   // Filtrar plantillas
   const plantillasFiltradas = useMemo(() => {
     return initialPlantillas.filter((plantilla) => {
@@ -72,6 +81,18 @@ export default function FormulariosClient({
       return matchBusqueda && matchTipo && matchEstado;
     });
   }, [initialPlantillas, busqueda, tipoFilter, estadoFilter]);
+
+  // Filtrar respuestas
+  const respuestasFiltradas = useMemo(() => {
+    return initialRespuestas.filter((respuesta) => {
+      const matchBusqueda = respuesta.pacienteNombre.toLowerCase().includes(busquedaRespuesta.toLowerCase()) ||
+        respuesta.formularioNombre.toLowerCase().includes(busquedaRespuesta.toLowerCase()) ||
+        respuesta.pacienteNHC?.toLowerCase().includes(busquedaRespuesta.toLowerCase());
+      const matchEstado = estadoRespuestaFilter === 'todos' || respuesta.estado === estadoRespuestaFilter;
+
+      return matchBusqueda && matchEstado;
+    });
+  }, [initialRespuestas, busquedaRespuesta, estadoRespuestaFilter]);
 
   // KPIs
   const totalPlantillas = initialPlantillas.length;
@@ -293,17 +314,144 @@ export default function FormulariosClient({
 
       {/* Vista de Respuestas */}
       {vista === 'respuestas' && (
-        <Card>
-          <div className="text-center py-12">
-            <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">
-              Vista de respuestas en desarrollo
-            </p>
-            <p className="text-sm text-gray-400 mt-2">
-              Aquí se mostrarán todas las respuestas completadas de los formularios
-            </p>
-          </div>
-        </Card>
+        <div className="space-y-4">
+          {/* Filtros */}
+          <Card>
+            <div className="flex flex-wrap gap-4 items-end">
+              {/* Búsqueda */}
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Buscar
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={busquedaRespuesta}
+                    onChange={(e) => setBusquedaRespuesta(e.target.value)}
+                    placeholder="Buscar paciente, NHC o formulario..."
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Filtro por estado */}
+              <div className="min-w-[200px]">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Estado
+                </label>
+                <select
+                  value={estadoRespuestaFilter}
+                  onChange={(e) => setEstadoRespuestaFilter(e.target.value as typeof estadoRespuestaFilter)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
+                >
+                  <option value="todos">Todos</option>
+                  <option value="borrador">Borrador</option>
+                  <option value="completado">Completado</option>
+                  <option value="validado">Validado</option>
+                  <option value="archivado">Archivado</option>
+                </select>
+              </div>
+            </div>
+          </Card>
+
+          {/* Lista de Respuestas */}
+          {respuestasFiltradas.length === 0 ? (
+            <Card>
+              <div className="text-center py-12">
+                <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">
+                  {busquedaRespuesta || estadoRespuestaFilter !== 'todos'
+                    ? 'No se encontraron respuestas con los filtros aplicados'
+                    : 'No hay respuestas de formularios. Las respuestas aparecerán aquí.'}
+                </p>
+              </div>
+            </Card>
+          ) : (
+            <div className="grid gap-3">
+              {respuestasFiltradas.map((respuesta) => {
+                const estadoBadge = {
+                  borrador: { label: 'Borrador', tone: 'warn' as const },
+                  completado: { label: 'Completado', tone: 'success' as const },
+                  validado: { label: 'Validado', tone: 'success' as const },
+                  archivado: { label: 'Archivado', tone: 'muted' as const },
+                }[respuesta.estado] || { label: 'Borrador', tone: 'warn' as const };
+
+                return (
+                  <Card key={respuesta.id} className="hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <User className="w-4 h-4 text-gray-400" />
+                          <span className="font-semibold text-gray-900">{respuesta.pacienteNombre}</span>
+                          {respuesta.pacienteNHC && (
+                            <Badge tone="muted">NHC: {respuesta.pacienteNHC}</Badge>
+                          )}
+                          <Badge tone={estadoBadge.tone}>{estadoBadge.label}</Badge>
+                        </div>
+
+                        <div className="mb-2">
+                          <p className="text-sm text-gray-600">
+                            <FileText className="w-4 h-4 inline mr-1" />
+                            {respuesta.formularioNombre}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            <span>{formatDate(respuesta.createdAt)}</span>
+                          </div>
+                          {respuesta.tiempoCompletado && (
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              <span>{Math.round(respuesta.tiempoCompletado)} min</span>
+                            </div>
+                          )}
+                          {respuesta.pdfGenerado && (
+                            <div className="flex items-center gap-1 text-brand">
+                              <FileText className="w-4 h-4" />
+                              <span>PDF generado</span>
+                            </div>
+                          )}
+                          {respuesta.validadoPor && (
+                            <div className="flex items-center gap-1 text-green-600">
+                              <CheckCircle className="w-4 h-4" />
+                              <span>Validado por {respuesta.validadoPorNombre}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Acciones */}
+                      <div className="flex gap-2 ml-4">
+                        <Link href={`/dashboard/formularios/respuestas/${respuesta.id}`}>
+                          <Button variant="outline">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </Link>
+                        {respuesta.pdfUrl && (
+                          <a href={respuesta.pdfUrl} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline">
+                              <Download className="w-4 h-4" />
+                            </Button>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Contador */}
+          {respuestasFiltradas.length > 0 && (
+            <div className="text-center text-sm text-gray-500">
+              Mostrando {respuestasFiltradas.length} de {initialRespuestas.length} respuestas
+            </div>
+          )}
+        </div>
       )}
 
       {/* Vista de Estadísticas */}
