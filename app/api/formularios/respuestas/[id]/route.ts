@@ -29,7 +29,7 @@ interface RouteContext {
 
 /**
  * GET /api/formularios/respuestas/[id]
- * Obtiene una respuesta específica
+ * Obtiene una respuesta especifica
  */
 export async function GET(
   request: NextRequest,
@@ -127,7 +127,7 @@ export async function PATCH(
     if (!validation.success) {
       return NextResponse.json(
         {
-          error: 'Datos de respuesta inválidos',
+          error: 'Datos de respuesta invalidos',
           details: validation.error.errors.map(e => ({
             field: e.path.join('.'),
             message: e.message,
@@ -161,7 +161,7 @@ export async function PATCH(
       updateData.completadoEn = new Date(updateData.completadoEn);
     }
 
-    // Si se está completando, incrementar el contador en la plantilla
+    // Si se esta completando, incrementar el contador en la plantilla
     if (
       validation.data.estado === 'completado' &&
       existingData?.estado !== 'completado'

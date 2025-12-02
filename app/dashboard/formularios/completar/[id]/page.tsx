@@ -6,8 +6,8 @@ import { ModuleErrorBoundary } from '@/components/ui/ErrorBoundary';
 import type { FormularioPlantilla, RespuestaFormulario, Paciente } from '@/types';
 
 export const metadata = {
-  title: 'Completar Formulario - Gestión Clínica',
-  description: 'Completar formulario clínico para paciente',
+  title: 'Completar Formulario - Gestion Clinica',
+  description: 'Completar formulario clinico para paciente',
 };
 
 interface PageProps {
