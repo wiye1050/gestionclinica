@@ -11,6 +11,7 @@ import { sanitizeInput } from '@/lib/utils/sanitize';
 import { CompactFilters, type ActiveFilterChip } from '@/components/shared/CompactFilters';
 import { KPIGrid } from '@/components/shared/KPIGrid';
 import { captureError } from '@/lib/utils/errorLogging';
+import { createServicioAction, updateServicioAction, deleteServicioAction } from './actions';
 
 // Lazy loading del componente de exportación
 const ExportButton = lazy(() => import('@/components/ui/ExportButton').then(m => ({ default: m.ExportButton })));
@@ -89,23 +90,20 @@ export default function ServiciosClient({
   };
 
   const patchServicio = async (servicioId: string, updates: Record<string, unknown>) => {
-    const response = await fetch(`/api/servicios/${sanitizeId(servicioId)}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(sanitizeUpdates(updates)),
+    const result = await updateServicioAction({
+      id: sanitizeId(servicioId),
+      ...sanitizeUpdates(updates),
     });
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || 'No se pudo actualizar el servicio');
+    if (!result.success) {
+      throw new Error(result.error || 'No se pudo actualizar el servicio');
     }
     await invalidateServicios();
   };
 
   const deleteServicio = async (servicioId: string) => {
-    const response = await fetch(`/api/servicios/${sanitizeId(servicioId)}`, { method: 'DELETE' });
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || 'No se pudo eliminar el servicio');
+    const result = await deleteServicioAction(sanitizeId(servicioId));
+    if (!result.success) {
+      throw new Error(result.error || 'No se pudo eliminar el servicio');
     }
     await invalidateServicios();
   };
@@ -163,28 +161,23 @@ export default function ServiciosClient({
         esActual: nuevoServicio.esActual,
       };
 
-      const response = await fetch('/api/servicios', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          catalogoServicioId: catalogoServicio.id,
-          grupoId: grupo.id,
-          tiquet: sanitizedNuevoServicio.tiquet,
-          profesionalPrincipalId: profPrincipal.id,
-          profesionalSegundaOpcionId: sanitizedNuevoServicio.profesionalSegundaOpcionId || null,
-          profesionalTerceraOpcionId: sanitizedNuevoServicio.profesionalTerceraOpcionId || null,
-          requiereApoyo: sanitizedNuevoServicio.requiereApoyo || catalogoServicio.requiereApoyo,
-          sala: sanitizeInput(
-            sanitizedNuevoServicio.sala || catalogoServicio.salaPredeterminada || ''
-          ),
-          supervision: sanitizedNuevoServicio.supervision || catalogoServicio.requiereSupervision,
-          esActual: sanitizedNuevoServicio.esActual,
-        }),
+      const result = await createServicioAction({
+        catalogoServicioId: catalogoServicio.id,
+        grupoId: grupo.id,
+        tiquet: sanitizedNuevoServicio.tiquet,
+        profesionalPrincipalId: profPrincipal.id,
+        profesionalSegundaOpcionId: sanitizedNuevoServicio.profesionalSegundaOpcionId || null,
+        profesionalTerceraOpcionId: sanitizedNuevoServicio.profesionalTerceraOpcionId || null,
+        requiereApoyo: sanitizedNuevoServicio.requiereApoyo || catalogoServicio.requiereApoyo,
+        sala: sanitizeInput(
+          sanitizedNuevoServicio.sala || catalogoServicio.salaPredeterminada || ''
+        ),
+        supervision: sanitizedNuevoServicio.supervision || catalogoServicio.requiereSupervision,
+        esActual: sanitizedNuevoServicio.esActual,
       });
 
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error || 'No se pudo crear el servicio');
+      if (!result.success) {
+        throw new Error(result.error || 'No se pudo crear el servicio');
       }
 
       await queryClient.invalidateQueries({ queryKey: ['servicios-asignados'] });

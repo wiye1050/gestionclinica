@@ -12,6 +12,7 @@ import { DEFAULT_COLOR } from '@/components/agenda/v2/agendaHelpers';
 import { CompactFilters, type ActiveFilterChip } from '@/components/shared/CompactFilters';
 import { KPIGrid } from '@/components/shared/KPIGrid';
 import { useProfesionalesManager } from '@/lib/hooks/useProfesionalesManager';
+import { createProfesionalAction, updateProfesionalAction, deleteProfesionalAction } from './actions';
 
 interface ProfesionalesClientProps {
   initialProfesionales: Profesional[];
@@ -83,16 +84,12 @@ export default function ProfesionalesClient({ initialProfesionales }: Profesiona
 
     try {
       const sanitizedPayload = sanitizeProfesionalPayload(formData);
-      const endpoint = editandoId ? `/api/profesionales/${editandoId}` : '/api/profesionales';
-      const method = editandoId ? 'PATCH' : 'POST';
-      const response = await fetch(endpoint, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sanitizedPayload),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result?.error || 'No se pudo guardar el profesional');
+      const result = editandoId
+        ? await updateProfesionalAction({ id: editandoId, ...sanitizedPayload })
+        : await createProfesionalAction(sanitizedPayload);
+
+      if (!result.success) {
+        throw new Error(result.error || 'No se pudo guardar el profesional');
       }
       resetForm();
       await invalidateProfesionales();
@@ -126,10 +123,9 @@ export default function ProfesionalesClient({ initialProfesionales }: Profesiona
     if (!confirm('¿Eliminar este profesional? Esta acción no se puede deshacer.')) return;
 
     try {
-      const response = await fetch(`/api/profesionales/${id}`, { method: 'DELETE' });
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload?.error || 'No se pudo eliminar profesional');
+      const result = await deleteProfesionalAction(id);
+      if (!result.success) {
+        throw new Error(result.error || 'No se pudo eliminar profesional');
       }
       await invalidateProfesionales();
     } catch (error) {
@@ -151,14 +147,12 @@ export default function ProfesionalesClient({ initialProfesionales }: Profesiona
   // Cambiar estado activo/inactivo
   const toggleActivo = async (id: string, estadoActual: boolean) => {
     try {
-      const response = await fetch(`/api/profesionales/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ activo: !estadoActual }),
+      const result = await updateProfesionalAction({
+        id,
+        activo: !estadoActual,
       });
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload?.error || 'No se pudo actualizar el estado');
+      if (!result.success) {
+        throw new Error(result.error || 'No se pudo actualizar el estado');
       }
       await invalidateProfesionales();
     } catch (error) {

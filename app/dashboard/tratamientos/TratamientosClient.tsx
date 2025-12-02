@@ -7,6 +7,7 @@ import { useTratamientosModule, useInvalidateTratamientosModule } from '@/lib/ho
 import { Plus, Edit2, Trash2, Save, X, List, Clock } from 'lucide-react';
 import { sanitizeHTML, sanitizeInput } from '@/lib/utils/sanitize';
 import { captureError } from '@/lib/utils/errorLogging';
+import { createTratamientoAction, updateTratamientoAction, deleteTratamientoAction } from './actions';
 
 interface Props {
   initialModule: TratamientosModule;
@@ -77,16 +78,12 @@ export default function TratamientosClient({ initialModule }: Props) {
     };
 
     try {
-      const endpoint = editandoId ? `/api/tratamientos/${editandoId}` : '/api/tratamientos';
-      const method = editandoId ? 'PATCH' : 'POST';
-      const response = await fetch(endpoint, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result?.error || 'No se pudo guardar el tratamiento');
+      const result = editandoId
+        ? await updateTratamientoAction(editandoId, payload)
+        : await createTratamientoAction(payload);
+
+      if (!result.success) {
+        throw new Error(result.error || 'No se pudo guardar el tratamiento');
       }
       resetForm();
       invalidateModule();
@@ -114,10 +111,9 @@ export default function TratamientosClient({ initialModule }: Props) {
   const eliminarTratamiento = async (id: string) => {
     if (!confirm('¿Eliminar este tratamiento? Esta acción no se puede deshacer.')) return;
     try {
-      const response = await fetch(`/api/tratamientos/${id}`, { method: 'DELETE' });
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload?.error || 'No se pudo eliminar');
+      const result = await deleteTratamientoAction(id);
+      if (!result.success) {
+        throw new Error(result.error || 'No se pudo eliminar');
       }
       invalidateModule();
     } catch (error) {
@@ -184,14 +180,9 @@ export default function TratamientosClient({ initialModule }: Props) {
 
   const toggleActivo = async (id: string, estadoActual: boolean) => {
     try {
-      const response = await fetch(`/api/tratamientos/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ activo: !estadoActual }),
-      });
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload?.error || 'No se pudo actualizar el estado');
+      const result = await updateTratamientoAction(id, { activo: !estadoActual });
+      if (!result.success) {
+        throw new Error(result.error || 'No se pudo actualizar el estado');
       }
       invalidateModule();
     } catch (error) {
