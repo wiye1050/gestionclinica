@@ -63,7 +63,7 @@ export async function updateTratamientoAction(tratamientoId: string, data: Recor
       return { success: false, error: 'ID de tratamiento inválido' };
     }
 
-    const result = await updateTratamiento(tratamientoId, data as Partial<any>, {
+    const result = await updateTratamiento(tratamientoId, data, {
       userId: user.uid,
       userEmail: user.email ?? undefined,
     });
