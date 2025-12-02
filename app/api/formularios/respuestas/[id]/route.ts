@@ -4,7 +4,7 @@ import { z } from 'zod';
 import type { RespuestaFormulario } from '@/types';
 
 const updateRespuestaSchema = z.object({
-  respuestas: z.record(z.any()).optional(),
+  respuestas: z.record(z.string(), z.unknown()).optional(),
   estado: z.enum(['borrador', 'completado', 'validado', 'archivado']).optional(),
   validadoPor: z.string().optional(),
   validadoPorNombre: z.string().optional(),
@@ -128,7 +128,7 @@ export async function PATCH(
       return NextResponse.json(
         {
           error: 'Datos de respuesta invalidos',
-          details: validation.error.errors.map(e => ({
+          details: validation.error.issues.map((e) => ({
             field: e.path.join('.'),
             message: e.message,
           })),

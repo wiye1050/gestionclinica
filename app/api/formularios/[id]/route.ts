@@ -22,8 +22,8 @@ const updatePlantillaSchema = z.object({
     'otro',
   ]).optional(),
   estado: z.enum(['activo', 'borrador', 'inactivo', 'archivado']).optional(),
-  campos: z.array(z.any()).optional(),
-  secciones: z.array(z.any()).optional(),
+  campos: z.array(z.unknown()).optional(),
+  secciones: z.array(z.unknown()).optional(),
   requiereValidacionMedica: z.boolean().optional(),
   generaPDF: z.boolean().optional(),
   templatePDF: z.string().optional(),
@@ -32,7 +32,7 @@ const updatePlantillaSchema = z.object({
   notificarAlCompletar: z.boolean().optional(),
   emailsNotificacion: z.array(z.string().email()).optional(),
   modificadoPor: z.string().optional(),
-  metadatos: z.record(z.any()).optional(),
+  metadatos: z.record(z.string(), z.unknown()).optional(),
 });
 
 interface RouteContext {
@@ -129,7 +129,7 @@ export async function PATCH(
       return NextResponse.json(
         {
           error: 'Datos de formulario inválidos',
-          details: validation.error.errors.map(e => ({
+          details: validation.error.issues.map((e) => ({
             field: e.path.join('.'),
             message: e.message,
           })),

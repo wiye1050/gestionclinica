@@ -22,8 +22,8 @@ const createPlantillaSchema = z.object({
     'otro',
   ]),
   estado: z.enum(['activo', 'borrador', 'inactivo', 'archivado']).default('borrador'),
-  campos: z.array(z.any()).min(1, 'Debe tener al menos un campo'),
-  secciones: z.array(z.any()).optional(),
+  campos: z.array(z.unknown()).min(1, 'Debe tener al menos un campo'),
+  secciones: z.array(z.unknown()).optional(),
   requiereValidacionMedica: z.boolean().default(false),
   generaPDF: z.boolean().default(false),
   templatePDF: z.string().optional(),
@@ -32,7 +32,7 @@ const createPlantillaSchema = z.object({
   notificarAlCompletar: z.boolean().default(false),
   emailsNotificacion: z.array(z.string().email()).optional(),
   creadoPor: z.string(),
-  metadatos: z.record(z.any()).optional(),
+  metadatos: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Datos de formulario inválidos',
-          details: validation.error.errors.map(e => ({
+          details: validation.error.issues.map((e) => ({
             field: e.path.join('.'),
             message: e.message,
           })),

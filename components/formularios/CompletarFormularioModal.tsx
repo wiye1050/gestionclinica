@@ -206,47 +206,49 @@ export default function CompletarFormularioModal({
                 const estadoConfig = ESTADOS_BADGE[plantilla.estado] || ESTADOS_BADGE.activo;
 
                 return (
-                  <Card
+                  <button
                     key={plantilla.id}
-                    className="hover:shadow-lg transition-shadow cursor-pointer"
                     onClick={() => handleSeleccionarPlantilla(plantilla)}
+                    className="w-full text-left"
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <FileText className="w-5 h-5 text-brand shrink-0" />
-                          <h3 className="font-semibold text-gray-900">
-                            {plantilla.nombre}
-                          </h3>
-                          <Badge tone={estadoConfig.tone}>
-                            {estadoConfig.label}
-                          </Badge>
-                          <Badge tone="muted">
-                            {TIPOS_FORMULARIO[plantilla.tipo]}
-                          </Badge>
+                    <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <FileText className="w-5 h-5 text-brand shrink-0" />
+                            <h3 className="font-semibold text-gray-900">
+                              {plantilla.nombre}
+                            </h3>
+                            <Badge tone={estadoConfig.tone}>
+                              {estadoConfig.label}
+                            </Badge>
+                            <Badge tone="muted">
+                              {TIPOS_FORMULARIO[plantilla.tipo]}
+                            </Badge>
+                          </div>
+
+                          {plantilla.descripcion && (
+                            <p className="text-sm text-gray-600 mb-3 ml-8">
+                              {plantilla.descripcion}
+                            </p>
+                          )}
+
+                          <div className="flex gap-4 text-xs text-gray-500 ml-8">
+                            <span>{plantilla.campos.length} campos</span>
+                            {plantilla.requiereValidacionMedica && (
+                              <span className="text-amber-600">Requiere validacion medica</span>
+                            )}
+                            {plantilla.generaPDF && (
+                              <span className="text-green-600">Genera PDF</span>
+                            )}
+                            <span>v{plantilla.version}</span>
+                          </div>
                         </div>
 
-                        {plantilla.descripcion && (
-                          <p className="text-sm text-gray-600 mb-3 ml-8">
-                            {plantilla.descripcion}
-                          </p>
-                        )}
-
-                        <div className="flex gap-4 text-xs text-gray-500 ml-8">
-                          <span>{plantilla.campos.length} campos</span>
-                          {plantilla.requiereValidacionMedica && (
-                            <span className="text-amber-600">Requiere validacion medica</span>
-                          )}
-                          {plantilla.generaPDF && (
-                            <span className="text-green-600">Genera PDF</span>
-                          )}
-                          <span>v{plantilla.version}</span>
-                        </div>
+                        <ChevronRight className="w-5 h-5 text-gray-400 shrink-0 ml-4" />
                       </div>
-
-                      <ChevronRight className="w-5 h-5 text-gray-400 shrink-0 ml-4" />
-                    </div>
-                  </Card>
+                    </Card>
+                  </button>
                 );
               })}
             </div>

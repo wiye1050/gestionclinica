@@ -14,7 +14,7 @@ const createRespuestaSchema = z.object({
   eventoAgendaId: z.string().optional(),
   servicioId: z.string().optional(),
   episodioId: z.string().optional(),
-  respuestas: z.record(z.any()),
+  respuestas: z.record(z.string(), z.unknown()),
   estado: z.enum(['borrador', 'completado', 'validado', 'archivado']).default('borrador'),
   requiereSeguimiento: z.boolean().default(false),
   fechaSeguimiento: z.date().optional(),
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Datos de respuesta inválidos',
-          details: validation.error.errors.map(e => ({
+          details: validation.error.issues.map((e) => ({
             field: e.path.join('.'),
             message: e.message,
           })),

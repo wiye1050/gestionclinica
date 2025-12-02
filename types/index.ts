@@ -919,7 +919,9 @@ export type TipoCampoFormulario =
   | 'file'
   | 'signature'
   | 'scale'
-  | 'yesno';
+  | 'yesno'
+  | 'heading'
+  | 'paragraph';
 
 /**
  * Definición de un campo en un formulario

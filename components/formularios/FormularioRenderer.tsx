@@ -142,8 +142,8 @@ export default function FormularioRenderer({
             value={(valor as number) || ''}
             onChange={(e) => handleChange(parseFloat(e.target.value))}
             placeholder={campo.placeholder}
-            min={campo.validacion?.min}
-            max={campo.validacion?.max}
+            min={campo.min}
+            max={campo.max}
             className={commonClasses}
           />
         );
@@ -350,7 +350,7 @@ export default function FormularioRenderer({
             // Los heading y paragraph ocupan siempre ancho completo
             const width = campo.tipo === 'heading' || campo.tipo === 'paragraph'
               ? 'col-span-12'
-              : getCampoWidth(campo.ancho);
+              : getCampoWidth(campo.ancho || 'full');
 
             return (
               <div key={campo.id} className={width}>
