@@ -1,34 +1,13 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth/server';
 import { createPaciente } from '@/lib/server/pacientesAdmin';
 import { captureError } from '@/lib/utils/errorLogging';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { validateRequest } from '@/lib/utils/apiValidation';
 import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
+import { createPacienteSchema } from '@/lib/validators';
 import type { Query } from 'firebase-admin/firestore';
 import type { AppRole } from '@/lib/auth/roles';
-
-// Schema de validación para crear paciente
-const createPacienteSchema = z.object({
-  nombre: z.string().min(1, 'El nombre es requerido').max(100),
-  apellidos: z.string().min(1, 'Los apellidos son requeridos').max(100),
-  documentoId: z.string().optional(),
-  email: z.string().email('Email inválido').optional().or(z.literal('')),
-  telefono: z.string().optional(),
-  fechaNacimiento: z.string().optional(),
-  direccion: z.string().optional(),
-  codigoPostal: z.string().optional(),
-  ciudad: z.string().optional(),
-  estado: z.enum(['activo', 'inactivo', 'alta']).default('activo'),
-  riesgo: z.enum(['alto', 'medio', 'bajo']).optional(),
-  profesionalReferenteId: z.string().optional(),
-  grupoPacienteId: z.string().optional(),
-  notas: z.string().max(2000).optional(),
-  alergias: z.array(z.string()).optional(),
-  alertasClinicas: z.array(z.string()).optional(),
-  diagnosticosPrincipales: z.array(z.string()).optional(),
-});
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();

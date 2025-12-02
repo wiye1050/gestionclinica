@@ -3,6 +3,8 @@ import { revalidateTag } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth/server';
 import { createProfesional, getSerializedProfesionales } from '@/lib/server/profesionales';
 import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
+import { validateRequest } from '@/lib/utils/apiValidation';
+import { createProfesionalSchema } from '@/lib/validators';
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -37,9 +39,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
   }
 
+  // Validar request con Zod
+  const validation = await validateRequest(request, createProfesionalSchema);
+  if (!validation.success) {
+    return validation.error;
+  }
+
   try {
-    const body = await request.json();
-    const result = await createProfesional(body, { userId: user.uid, userEmail: user.email ?? undefined });
+    const result = await createProfesional(validation.data, { userId: user.uid, userEmail: user.email ?? undefined });
     revalidateTag('profesionales');
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

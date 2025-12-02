@@ -2,20 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { bucket } from '@/lib/storage/client';
 import { getCurrentUser } from '@/lib/auth/server';
 import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
+import {
+  MAX_FILE_SIZE,
+  ALLOWED_FILE_TYPES,
+  validateFileMetadataSchema,
+  getFileExtension,
+  getContentTypeFromExtension,
+  type AllowedFolder,
+} from '@/lib/validators';
 import type { AppRole } from '@/lib/auth/roles';
-
-// Configuración de seguridad para uploads
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-];
 
 // Upload allows more permissive access including reception role
 const UPLOAD_ROLES = new Set<AppRole>(['admin', 'coordinador', 'profesional', 'recepcion']);
@@ -38,27 +33,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Validar tamaño de archivo
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB` },
-        { status: 413 }
-      );
-    }
-
-    // Validar tipo de archivo
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return NextResponse.json(
-        { error: `File type not allowed. Allowed types: ${ALLOWED_TYPES.join(', ')}` },
-        { status: 415 }
-      );
-    }
-
-    // Sanitizar carpeta/nombre de archivo
-    const sanitizedFolder = /^[a-z0-9/_-]+$/i.test(targetFolder)
-      ? targetFolder
-      : 'general';
+    // Sanitizar nombre de archivo
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const fileExtension = getFileExtension(sanitizedFileName);
+    const expectedContentType = getContentTypeFromExtension(fileExtension);
+
+    // Validar metadata del archivo con Zod
+    const validation = validateFileMetadataSchema.safeParse({
+      filename: sanitizedFileName,
+      contentType: expectedContentType || file.type,
+      size: file.size,
+      folder: targetFolder,
+    });
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: 'Invalid file',
+          details: validation.error.flatten().fieldErrors,
+        },
+        { status: 400 }
+      );
+    }
+
+    const sanitizedFolder = validation.data.folder;
 
     const timestamp = Date.now();
     const fileName = `${sanitizedFolder}/${timestamp}-${sanitizedFileName}`;

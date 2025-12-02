@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 import { createTratamiento, getSerializedTratamientos, getSerializedCatalogoServicios } from '@/lib/server/tratamientos';
+import { validateRequest } from '@/lib/utils/apiValidation';
+import { createTratamientoSchema } from '@/lib/validators';
 
 
 export async function GET() {
@@ -34,9 +36,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
   }
 
+  // Validar request con Zod
+  const validation = await validateRequest(request, createTratamientoSchema);
+  if (!validation.success) {
+    return validation.error;
+  }
+
   try {
-    const body = await request.json();
-    const result = await createTratamiento(body, {
+    const result = await createTratamiento(validation.data, {
       userId: user.uid,
       userEmail: user.email ?? undefined,
     });

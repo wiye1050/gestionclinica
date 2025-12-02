@@ -1,26 +1,9 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth/server';
 import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 import { createAgendaEvent } from '@/lib/server/agendaEvents';
 import { validateRequest } from '@/lib/utils/apiValidation';
-
-
-// Schema de validación para crear evento
-const createEventSchema = z.object({
-  titulo: z.string().min(1, 'El título es requerido').max(200, 'Título muy largo'),
-  tipo: z.enum(['consulta', 'seguimiento', 'revision', 'tratamiento', 'urgencia', 'administrativo']).default('consulta'),
-  pacienteId: z.string().nullable().optional(),
-  profesionalId: z.string().min(1, 'El profesional es requerido'),
-  salaId: z.string().nullable().optional(),
-  servicioId: z.string().nullable().optional(),
-  fechaInicio: z.string().min(1, 'La fecha de inicio es requerida'),
-  fechaFin: z.string().min(1, 'La fecha de fin es requerida'),
-  estado: z.enum(['programada', 'confirmada', 'realizada', 'cancelada']).default('programada'),
-  prioridad: z.enum(['alta', 'media', 'baja']).default('media'),
-  notas: z.string().max(1000, 'Notas muy largas').default(''),
-  requiereSeguimiento: z.boolean().default(false),
-});
+import { createEventoAgendaSchema } from '@/lib/validators';
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -33,7 +16,7 @@ export async function POST(request: Request) {
   }
 
   // Validar request con Zod
-  const validation = await validateRequest(request, createEventSchema);
+  const validation = await validateRequest(request, createEventoAgendaSchema);
   if (!validation.success) {
     return validation.error;
   }

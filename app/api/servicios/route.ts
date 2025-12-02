@@ -2,19 +2,8 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { createServicioAsignado, getServiciosModuleSerialized } from '@/lib/server/servicios';
 import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
-
-type CreateServicioInput = {
-  catalogoServicioId: string;
-  grupoId: string;
-  tiquet?: string;
-  profesionalPrincipalId: string;
-  profesionalSegundaOpcionId?: string;
-  profesionalTerceraOpcionId?: string;
-  requiereApoyo?: boolean;
-  sala?: string;
-  supervision?: boolean;
-  esActual?: boolean;
-};
+import { validateRequest } from '@/lib/utils/apiValidation';
+import { createServicioSchema } from '@/lib/validators';
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -43,26 +32,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
   }
 
+  // Validar request con Zod
+  const validation = await validateRequest(request, createServicioSchema);
+  if (!validation.success) {
+    return validation.error;
+  }
+
   try {
-    const body = (await request.json()) as Partial<CreateServicioInput>;
-    if (!body.catalogoServicioId || !body.grupoId || !body.profesionalPrincipalId) {
-      return NextResponse.json(
-        { error: 'Faltan datos obligatorios (servicio, grupo o profesional principal).' },
-        { status: 400 }
-      );
-    }
+    const data = validation.data;
 
     const result = await createServicioAsignado({
-      catalogoServicioId: body.catalogoServicioId,
-      grupoId: body.grupoId,
-      tiquet: body.tiquet ?? 'NO',
-      profesionalPrincipalId: body.profesionalPrincipalId,
-      profesionalSegundaOpcionId: body.profesionalSegundaOpcionId || null,
-      profesionalTerceraOpcionId: body.profesionalTerceraOpcionId || null,
-      requiereApoyo: body.requiereApoyo ?? false,
-      sala: body.sala ?? '',
-      supervision: body.supervision ?? false,
-      esActual: body.esActual ?? false,
+      catalogoServicioId: data.catalogoServicioId,
+      grupoId: data.grupoId,
+      tiquet: data.tiquet,
+      profesionalPrincipalId: data.profesionalPrincipalId,
+      profesionalSegundaOpcionId: data.profesionalSegundaOpcionId || null,
+      profesionalTerceraOpcionId: data.profesionalTerceraOpcionId || null,
+      requiereApoyo: data.requiereApoyo,
+      sala: data.sala ?? '',
+      supervision: data.supervision,
+      esActual: data.esActual,
       creadoPor: user.email ?? 'desconocido',
       creadoPorId: user.uid,
     });
