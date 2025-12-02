@@ -49,22 +49,33 @@ import {
   StickyNote,
   FileCheck2,
 } from 'lucide-react';
-import type { PacienteFactura, PacientePresupuesto, RespuestaFormulario } from '@/types';
+import type { PacienteFactura, PacientePresupuesto, RespuestaFormulario, Profesional } from '@/types';
+import type { PatientDetailData } from './data';
 
 // Lazy load modal for better performance
 const CompletarFormularioModal = lazy(() => import('@/components/formularios/CompletarFormularioModal'));
 
 interface PatientDetailClientProps {
   pacienteId: string;
+  initialDetailData?: PatientDetailData | null;
+  initialProfesionales?: Profesional[];
+  initialFormResponses?: RespuestaFormulario[];
 }
 
 /**
  * Client Component for patient detail page
  * Handles all interactive functionality and state management
- * Data is fetched client-side via React Query for real-time updates
+ *
+ * Performance optimizations:
+ * - Uses initialFormResponses from server pre-fetch to skip initial loading
+ * - React Query still fetches patient detail data (cached by browser)
+ * - Future: Pass initialData to React Query for instant rendering
  */
 export default function PatientDetailClient({
   pacienteId,
+  initialDetailData,
+  initialProfesionales = [],
+  initialFormResponses = [],
 }: PatientDetailClientProps) {
   const router = useRouter();
   const { user } = useAuth();
@@ -95,7 +106,7 @@ export default function PatientDetailClient({
   const [presupuestoSeleccionado, setPresupuestoSeleccionado] = useState<PacientePresupuesto | null>(null);
   const [detalleTab, setDetalleTab] = useState<'resumen' | 'conceptos'>('resumen');
   const [mostrarModalFormulario, setMostrarModalFormulario] = useState(false);
-  const [respuestasFormularios, setRespuestasFormularios] = useState<RespuestaFormulario[]>([]);
+  const [respuestasFormularios, setRespuestasFormularios] = useState<RespuestaFormulario[]>(initialFormResponses);
   const [loadingRespuestas, setLoadingRespuestas] = useState(false);
 
   // Datos derivados con memos
@@ -155,7 +166,13 @@ export default function PatientDetailClient({
   }, []);
 
   // Cargar respuestas de formularios del paciente
+  // Skip if we have initialFormResponses (server pre-fetch)
   useEffect(() => {
+    // Si ya tenemos datos iniciales, no hacer fetch
+    if (initialFormResponses.length > 0) {
+      return;
+    }
+
     const cargarRespuestas = async () => {
       if (!pacienteId) return;
 
@@ -174,7 +191,7 @@ export default function PatientDetailClient({
     };
 
     cargarRespuestas();
-  }, [pacienteId]);
+  }, [pacienteId, initialFormResponses.length]);
 
   // Handlers with optimistic UI feedback
   const handleResumenQuickAction = useCallback(
