@@ -93,7 +93,7 @@ export function Tooltip({
 
   // Clone child with event handlers
   const trigger = isValidElement(children)
-    ? cloneElement(children as React.ReactElement<any>, {
+    ? cloneElement(children as React.ReactElement<React.HTMLAttributes<HTMLElement>>, {
         onMouseEnter: handleMouseEnter,
         onMouseLeave: handleMouseLeave,
       })

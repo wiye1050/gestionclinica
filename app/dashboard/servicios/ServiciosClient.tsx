@@ -616,7 +616,7 @@ export default function ServiciosClient({
                 {serviciosFiltrados.length === 0 ? (
                   <tr>
                     <td colSpan={11} className="px-4 py-8 text-center text-text-muted">
-                      No hay servicios asignados. Usa el botón "Asignar Servicio"
+                      No hay servicios asignados. Usa el boton &quot;Asignar Servicio&quot;
                     </td>
                   </tr>
                 ) : (

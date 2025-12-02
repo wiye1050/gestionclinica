@@ -5,7 +5,7 @@ export interface OptimisticActionOptions<T> {
   /**
    * Function to execute
    */
-  action: (...args: any[]) => Promise<T>;
+  action: (...args: unknown[]) => Promise<T>;
 
   /**
    * Toast message to show immediately (optimistic feedback)
@@ -62,7 +62,7 @@ export function useOptimisticAction<T = void>({
   const [error, setError] = useState<Error | null>(null);
 
   const execute = useCallback(
-    async (...args: any[]) => {
+    async (...args: unknown[]) => {
       setIsLoading(true);
       setError(null);
 
