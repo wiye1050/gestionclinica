@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useDebounce } from '@/lib/hooks/useDebounce';
+import { apiGet, apiPost, handleApiError } from '@/lib/utils/apiClient';
 
 interface CompletarFormularioModalProps {
   isOpen: boolean;
@@ -62,13 +63,16 @@ export default function CompletarFormularioModal({
   const cargarPlantillas = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/formularios?estado=activo');
-      if (!response.ok) throw new Error('Error al cargar plantillas');
-      const data = await response.json();
-      setPlantillas(data);
-    } catch (error) {
-      console.error('Error cargando plantillas:', error);
-      toast.error('Error al cargar formularios disponibles');
+      const result = await apiGet<FormularioPlantilla[]>('/api/formularios?estado=activo', {
+        module: 'completar-formulario-modal',
+        action: 'cargar-plantillas',
+      });
+
+      if (!handleApiError(result, 'Error al cargar formularios disponibles')) {
+        return;
+      }
+
+      setPlantillas(result.data);
     } finally {
       setLoading(false);
     }
@@ -91,25 +95,21 @@ export default function CompletarFormularioModal({
         creadoPor: userId,
       };
 
-      const response = await fetch('/api/formularios/respuestas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(nuevaRespuesta),
+      const result = await apiPost<{ id: string }>('/api/formularios/respuestas', nuevaRespuesta, {
+        module: 'completar-formulario-modal',
+        action: 'crear-respuesta',
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Error al crear formulario');
+      if (!handleApiError(result, 'Error al iniciar formulario')) {
+        return;
       }
 
-      const result = await response.json();
       toast.success('Formulario iniciado correctamente');
 
       // Redirigir a una pagina de completar formulario
-      router.push(`/dashboard/formularios/completar/${result.id}?pacienteId=${paciente.id}`);
+      router.push(`/dashboard/formularios/completar/${result.data.id}?pacienteId=${paciente.id}`);
     } catch (error) {
-      console.error('Error al seleccionar plantilla:', error);
-      toast.error(error instanceof Error ? error.message : 'Error al iniciar formulario');
+      toast.error(error instanceof Error ? error.message : 'Error inesperado');
     }
   };
 
