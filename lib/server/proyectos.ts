@@ -1,4 +1,5 @@
 import { adminDb } from '@/lib/firebaseAdmin';
+import { logger } from '@/lib/utils/logger';
 import type {
   Proyecto,
   ProyectoActualizacion,
@@ -240,7 +241,7 @@ export function deserializeProyectos(serialized: SerializedProyecto[]): Proyecto
 export async function getSerializedProyectos(): Promise<SerializedProyecto[]> {
   if (!adminDb) {
     if (process.env.NODE_ENV !== 'production') {
-      console.warn('[proyectos] Firebase Admin no configurado; se devolverá lista vacía.');
+      logger.warn('[proyectos] Firebase Admin no configurado; se devolverá lista vacía.');
     }
     return [];
   }

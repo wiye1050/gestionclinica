@@ -5,6 +5,7 @@ import {
   SESSION_COOKIE_NAME,
   isAuthConfigured,
 } from '@/lib/auth/session';
+import { logger } from '@/lib/utils/logger';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error('[auth] No se pudo crear la cookie de sesión', error);
+    logger.error('[auth] No se pudo crear la cookie de sesión', error as Error);
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
 }

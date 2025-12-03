@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { bucket } from '@/lib/storage/client';
 import { getCurrentUser } from '@/lib/auth/server';
 import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
+import { logger } from '@/lib/utils/logger';
 import {
   MAX_FILE_SIZE,
   ALLOWED_FILE_TYPES,
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url });
   } catch (error) {
-    console.error('Upload error:', error);
+    logger.error('Upload error:', error as Error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Upload failed' },
       { status: 500 }

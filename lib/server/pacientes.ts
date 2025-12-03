@@ -1,6 +1,7 @@
 import { adminDb } from '@/lib/firebaseAdmin';
 import type { Paciente } from '@/types';
 import type { DocumentData } from 'firebase-admin/firestore';
+import { logger } from '@/lib/utils/logger';
 
 type ConsentimientoSerializable = {
   tipo: string;
@@ -109,7 +110,7 @@ const serializePaciente = (paciente: Paciente): SerializedPaciente => ({
 export async function getSerializedPacientes(): Promise<SerializedPaciente[]> {
   if (!adminDb) {
     if (process.env.NODE_ENV !== 'production') {
-      console.warn('[pacientes] Firebase Admin no disponible; devolviendo lista vacía.');
+      logger.warn('[pacientes] Firebase Admin no disponible; devolviendo lista vacía.');
     }
     return [];
   }

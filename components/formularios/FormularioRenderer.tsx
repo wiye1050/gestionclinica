@@ -7,6 +7,7 @@ import type { FormularioPlantilla, CampoFormulario } from '@/types';
 import Card from '@/components/ui/Card';
 import { Button } from '@/components/ui';
 import { Badge } from '@/components/ui/Badge';
+import { logger } from '@/lib/utils/logger';
 
 interface FormularioRendererProps {
   plantilla: FormularioPlantilla;
@@ -80,7 +81,7 @@ export default function FormularioRenderer({
       }
       toast.success('Borrador guardado');
     } catch (error) {
-      console.error('Error:', error);
+      logger.error('Error:', error);
       toast.error('Error al guardar borrador');
     } finally {
       setGuardando(false);
@@ -100,7 +101,7 @@ export default function FormularioRenderer({
       }
       toast.success('Formulario completado');
     } catch (error) {
-      console.error('Error:', error);
+      logger.error('Error:', error);
       toast.error('Error al completar formulario');
     } finally {
       setGuardando(false);

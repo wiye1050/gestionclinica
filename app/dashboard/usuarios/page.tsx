@@ -13,6 +13,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { ROLE_LABELS, AppRole } from '@/lib/auth/roles';
+import { logger } from '@/lib/utils/logger';
 
 interface User {
   uid: string;
@@ -43,7 +44,7 @@ export default function UsuariosPage() {
         setUsers(data.users);
       }
     } catch (error) {
-      console.error('Error cargando usuarios:', error);
+      logger.error('Error cargando usuarios:', error);
     } finally {
       setLoading(false);
     }
@@ -79,7 +80,7 @@ export default function UsuariosPage() {
         fetchUsers();
       }
     } catch (error) {
-      console.error('Error actualizando usuario:', error);
+      logger.error('Error actualizando usuario:', error);
     }
     setActionMenuOpen(null);
   };
@@ -101,7 +102,7 @@ export default function UsuariosPage() {
         alert(data.error || 'Error al eliminar usuario');
       }
     } catch (error) {
-      console.error('Error eliminando usuario:', error);
+      logger.error('Error eliminando usuario:', error);
     }
     setActionMenuOpen(null);
   };

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { z } from 'zod';
 import type { RespuestaFormulario } from '@/types';
+import { logger } from '@/lib/utils/logger';
 
 const updateRespuestaSchema = z.object({
   respuestas: z.record(z.string(), z.unknown()).optional(),
@@ -37,7 +38,7 @@ export async function GET(
 ) {
   try {
     if (!adminDb) {
-      console.error('[API /api/formularios/respuestas/[id] GET] Admin DB not initialized');
+      logger.error('[API /api/formularios/respuestas/[id] GET] Admin DB not initialized');
       return NextResponse.json(
         { error: 'Database not available' },
         { status: 500 }
@@ -94,7 +95,7 @@ export async function GET(
 
     return NextResponse.json(respuesta);
   } catch (error) {
-    console.error('[API /api/formularios/respuestas/[id] GET] Error:', error);
+    logger.error('[API /api/formularios/respuestas/[id] GET] Error:', error as Error);
     return NextResponse.json(
       { error: 'Error al obtener respuesta' },
       { status: 500 }
@@ -112,7 +113,7 @@ export async function PATCH(
 ) {
   try {
     if (!adminDb) {
-      console.error('[API /api/formularios/respuestas/[id] PATCH] Admin DB not initialized');
+      logger.error('[API /api/formularios/respuestas/[id] PATCH] Admin DB not initialized');
       return NextResponse.json(
         { error: 'Database not available' },
         { status: 500 }
@@ -187,7 +188,7 @@ export async function PATCH(
       message: 'Respuesta actualizada correctamente',
     });
   } catch (error) {
-    console.error('[API /api/formularios/respuestas/[id] PATCH] Error:', error);
+    logger.error('[API /api/formularios/respuestas/[id] PATCH] Error:', error as Error);
     return NextResponse.json(
       { error: 'Error al actualizar respuesta', details: (error as Error).message },
       { status: 500 }
@@ -205,7 +206,7 @@ export async function DELETE(
 ) {
   try {
     if (!adminDb) {
-      console.error('[API /api/formularios/respuestas/[id] DELETE] Admin DB not initialized');
+      logger.error('[API /api/formularios/respuestas/[id] DELETE] Admin DB not initialized');
       return NextResponse.json(
         { error: 'Database not available' },
         { status: 500 }
@@ -251,7 +252,7 @@ export async function DELETE(
       message: 'Respuesta eliminada correctamente',
     });
   } catch (error) {
-    console.error('[API /api/formularios/respuestas/[id] DELETE] Error:', error);
+    logger.error('[API /api/formularios/respuestas/[id] DELETE] Error:', error as Error);
     return NextResponse.json(
       { error: 'Error al eliminar respuesta', details: (error as Error).message },
       { status: 500 }

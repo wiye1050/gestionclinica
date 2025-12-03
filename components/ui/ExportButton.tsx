@@ -3,6 +3,7 @@
 import { Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportToExcel, exportToCSV, ExportColumn } from '@/lib/utils/export';
+import { logger } from '@/lib/utils/logger';
 
 interface ExportButtonProps<T> {
   data: T[];
@@ -34,7 +35,7 @@ export function ExportButton<T extends Record<string, unknown>>({
         toast.success('Exportación a CSV completada');
       }
     } catch (error) {
-      console.error('Error exportando:', error);
+      logger.error('Error exportando:', error);
       toast.error('Error al exportar. Por favor, inténtalo de nuevo.');
     }
   };

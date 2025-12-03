@@ -55,6 +55,7 @@ import {
 } from 'lucide-react';
 import type { PacienteFactura, PacientePresupuesto, RespuestaFormulario, Profesional } from '@/types';
 import type { PatientDetailData } from './data';
+import { logger } from '@/lib/utils/logger';
 
 // Lazy load modal for better performance
 const CompletarFormularioModal = lazy(() => import('@/components/formularios/CompletarFormularioModal'));
@@ -187,7 +188,7 @@ export default function PatientDetailClient({
         const data = await response.json();
         setRespuestasFormularios(data);
       } catch (error) {
-        console.error('Error cargando respuestas de formularios:', error);
+        logger.error('Error cargando respuestas de formularios:', error);
         setRespuestasFormularios([]);
       } finally {
         setLoadingRespuestas(false);
@@ -378,7 +379,7 @@ export default function PatientDetailClient({
         }),
       });
     } catch (err) {
-      console.error('Error preparando historial para correo:', err);
+      logger.error('Error preparando historial para correo:', err);
       toast.error('No se pudo preparar el correo con el historial.');
     } finally {
       setCompartiendo(false);
@@ -419,7 +420,7 @@ export default function PatientDetailClient({
         toast.success(`${fileCount} documento${fileCount > 1 ? 's subidos' : ' subido'} correctamente`, { id: toastId });
         await refreshDocumentos();
       } catch (error) {
-        console.error('Error subiendo documentos', error);
+        logger.error('Error subiendo documentos', error);
         toast.error('No se pudieron subir los documentos', { id: toastId });
       }
     },
@@ -447,7 +448,7 @@ export default function PatientDetailClient({
         toast.success('Documento eliminado', { id: toastId });
         await refreshDocumentos();
       } catch (error) {
-        console.error('Error eliminando documento', error);
+        logger.error('Error eliminando documento', error);
         toast.error('No se pudo eliminar el documento', { id: toastId });
       }
     },
@@ -662,7 +663,7 @@ export default function PatientDetailClient({
         });
         await refreshFacturacion();
       } catch (error) {
-        console.error('Error registrando pago', error);
+        logger.error('Error registrando pago', error);
         toast.error('No se pudo registrar el pago.');
       }
     },

@@ -1,6 +1,7 @@
 import { adminDb } from '@/lib/firebaseAdmin';
 import { sanitizeHTML, sanitizeStringArray, sanitizeText } from '@/lib/utils/sanitize';
 import type { SerializedCatalogoServicio } from '@/lib/utils/catalogoServicios';
+import { logger } from '@/lib/utils/logger';
 
 export type CatalogoServicioInput = {
   nombre: string;
@@ -61,7 +62,7 @@ export async function createCatalogoServicio(
 export async function getSerializedCatalogoServicios(): Promise<SerializedCatalogoServicio[]> {
   if (!adminDb) {
     if (process.env.NODE_ENV !== 'production') {
-      console.warn('[catalogo-servicios] Firebase Admin no configurado');
+      logger.warn('[catalogo-servicios] Firebase Admin no configurado');
     }
     return [];
   }

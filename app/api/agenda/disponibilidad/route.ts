@@ -5,6 +5,7 @@ import { adminDb } from '@/lib/firebaseAdmin';
 import { AGENDA_CONFIG } from '@/components/agenda/v2/agendaHelpers';
 import { validateSearchParams } from '@/lib/utils/apiValidation';
 import { getCurrentUser } from '@/lib/auth/server';
+import { logger } from '@/lib/utils/logger';
 
 // Schema de validación para query params
 const disponibilidadSchema = z.object({
@@ -108,7 +109,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ slots: slots.slice(0, 6) });
   } catch (error) {
-    console.error('[agenda|disponibilidad]', error);
+    logger.error('[agenda|disponibilidad]', error as Error);
     return NextResponse.json({ error: 'No se pudo obtener disponibilidad' }, { status: 500 });
   }
 }

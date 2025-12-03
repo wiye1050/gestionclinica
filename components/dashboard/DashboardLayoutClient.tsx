@@ -14,6 +14,7 @@ import { Breadcrumbs } from '@/components/dashboard/Breadcrumbs';
 import { UserDropdown } from '@/components/dashboard/UserDropdown';
 import { collection, getCountFromServer, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { logger } from '@/lib/utils/logger';
 
 type InitialUser = {
   uid: string;
@@ -118,7 +119,7 @@ export function DashboardLayoutClient({
     if (confirm('¿Cerrar sesión?')) {
       const result = await logout();
       if (!result.success) {
-        console.error('No se pudo cerrar sesión', result.error);
+        logger.error('No se pudo cerrar sesión', result.error);
       }
       router.push('/');
     }

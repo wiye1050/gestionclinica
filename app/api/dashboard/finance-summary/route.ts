@@ -3,6 +3,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { getCurrentUser } from '@/lib/auth/server';
 import { canViewFinances } from '@/lib/auth/roles';
+import { logger } from '@/lib/utils/logger';
 
 export async function GET() {
   const currentUser = await getCurrentUser();
@@ -86,7 +87,7 @@ export async function GET() {
       totalFacturado: facturadoMes,
     });
   } catch (error) {
-    console.error('Error generando resumen financiero', error);
+    logger.error('Error generando resumen financiero', error as Error);
     return NextResponse.json({ error: 'No se pudo obtener el resumen financiero.' }, { status: 500 });
   }
 }

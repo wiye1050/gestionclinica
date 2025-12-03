@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getMonthlyReportData } from '@/lib/server/informes';
 import { getCurrentUser } from '@/lib/auth/server';
+import { logger } from '@/lib/utils/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
     const data = await getMonthlyReportData(year, month);
     return NextResponse.json(data);
   } catch (error) {
-    console.error('[informe-mensual] Error al generar datos', error);
+    logger.error('[informe-mensual] Error al generar datos', error as Error);
     return NextResponse.json(
       { error: 'No se pudo generar el informe mensual' },
       { status: 500 }

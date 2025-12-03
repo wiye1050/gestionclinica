@@ -9,6 +9,7 @@ import {
   UserPreferencesUpdate,
   DEFAULT_PREFERENCES,
 } from '@/lib/types/userPreferences';
+import { logger } from '@/lib/utils/logger';
 
 interface UseUserPreferencesReturn {
   preferences: UserPreferences;
@@ -49,7 +50,7 @@ export function useUserPreferences(): UseUserPreferencesReturn {
           setPreferences(DEFAULT_PREFERENCES);
         }
       } catch (err) {
-        console.error('Error cargando preferencias:', err);
+        logger.error('Error cargando preferencias:', err as Error);
         setError('No se pudieron cargar las preferencias');
         setPreferences(DEFAULT_PREFERENCES);
       } finally {
@@ -102,7 +103,7 @@ export function useUserPreferences(): UseUserPreferencesReturn {
           return updated;
         });
       } catch (err) {
-        console.error('Error actualizando preferencias:', err);
+        logger.error('Error actualizando preferencias:', err as Error);
         setError('No se pudieron guardar las preferencias');
         throw err;
       }
@@ -123,7 +124,7 @@ export function useUserPreferences(): UseUserPreferencesReturn {
       await setDoc(docRef, DEFAULT_PREFERENCES);
       setPreferences(DEFAULT_PREFERENCES);
     } catch (err) {
-      console.error('Error reseteando preferencias:', err);
+      logger.error('Error reseteando preferencias:', err as Error);
       setError('No se pudieron resetear las preferencias');
       throw err;
     }

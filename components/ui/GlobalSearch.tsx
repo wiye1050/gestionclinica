@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Search, FileText, Users, Package, Lightbulb, ClipboardList, ArrowRight } from 'lucide-react';
 import { collection, getDocs, query, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { logger } from '@/lib/utils/logger';
 
 interface SearchResult {
   id: string;
@@ -176,7 +177,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
 
       setResults([...searchResults.slice(0, 10), ...matchingNav]);
     } catch (error) {
-      console.error('Error en búsqueda:', error);
+      logger.error('Error en búsqueda:', error);
     } finally {
       setLoading(false);
     }

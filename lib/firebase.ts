@@ -3,6 +3,7 @@ import { getFirestore, initializeFirestore, type Firestore } from 'firebase/fire
 import { getAuth } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
+import { logger } from '@/lib/utils/logger';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -35,7 +36,7 @@ if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY)
       isTokenAutoRefreshEnabled: true
     });
   } catch (error) {
-    console.warn('App Check initialization failed:', error);
+    logger.warn('App Check initialization failed:', error);
   }
 }
 

@@ -7,6 +7,7 @@ import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore
 import { db } from '@/lib/firebase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { logger } from '@/lib/utils/logger';
 
 export default function InformesPage() {
   const [loading, setLoading] = useState(false);
@@ -232,7 +233,7 @@ export default function InformesPage() {
       toast.success('Informe generado correctamente');
 
     } catch (error) {
-      console.error('Error al generar PDF:', error);
+      logger.error('Error al generar PDF:', error);
       toast.error('Error al generar el informe. Por favor, inténtalo de nuevo.');
     } finally {
       setLoading(false);

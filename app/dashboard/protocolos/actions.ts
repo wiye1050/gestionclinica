@@ -6,6 +6,7 @@ import { getCurrentUser } from '@/lib/auth/server';
 import { createProtocolo, createVersion, registerLectura } from '@/lib/server/protocolos';
 import { createProtocolSchema, createProtocolVersionSchema } from '@/lib/validators/protocols';
 import { logAudit } from '@/lib/utils/audit';
+import { logger } from '@/lib/utils/logger';
 
 type ActionState = { success: boolean; error: string | null };
 
@@ -25,7 +26,7 @@ export async function createProtocolAction(prevState: ActionState, formData: For
 
   const parsed = createProtocolSchema.safeParse(values);
   if (!parsed.success) {
-    console.error('Error de validación:', parsed.error);
+    logger.error('Error de validación:', parsed.error);
     return {
       success: false,
       error: parsed.error.issues.map((issue) => issue.message).join('. ')
@@ -52,7 +53,7 @@ export async function createProtocolAction(prevState: ActionState, formData: For
     revalidatePath('/dashboard/protocolos');
     return { success: true, error: null };
   } catch (error) {
-    console.error('Error creando protocolo', error);
+    logger.error('Error creando protocolo', error);
     return { success: false, error: 'No se pudo crear el protocolo.' };
   }
 }
@@ -140,7 +141,7 @@ export async function createProtocolVersionAction(prevState: ActionState, formDa
     revalidatePath(`/dashboard/protocolos/${parsed.data.protocoloId}`);
     return { success: true, error: null };
   } catch (error) {
-    console.error('Error creando versión', error);
+    logger.error('Error creando versión', error);
     return { success: false, error: 'No se pudo crear la versión.' };
   }
 }

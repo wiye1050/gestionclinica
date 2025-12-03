@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { getCurrentUser } from '@/lib/auth/server';
+import { logger } from '@/lib/utils/logger';
 
 /**
  * POST /api/admin/migrate-colors
@@ -36,11 +37,11 @@ export async function POST() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
-    console.log('🚀 Iniciando migración de colores...\n');
+    logger.info('🚀 Iniciando migración de colores...\n');
 
     // Verificar que adminDb esté disponible
     if (!adminDb) {
-      console.error('❌ Firebase Admin no está configurado');
+      logger.error('❌ Firebase Admin no está configurado');
       return NextResponse.json(
         {
           success: false,
@@ -56,7 +57,7 @@ export async function POST() {
     };
 
     // Migrar profesionales
-    console.log('📋 Migrando profesionales...');
+    logger.info('📋 Migrando profesionales...');
     const profesionalesSnap = await adminDb.collection('profesionales').get();
 
     const profesionalesBatch = adminDb.batch();
@@ -65,7 +66,7 @@ export async function POST() {
       if (!data.color) {
         const color = PROFESIONAL_COLORS[index % PROFESIONAL_COLORS.length];
         profesionalesBatch.update(doc.ref, { color });
-        console.log(`  ✓ ${doc.id}: ${color}`);
+        logger.debug(`  ✓ ${doc.id}: ${color}`);
         results.profesionales.updated++;
       } else {
         results.profesionales.skipped++;
@@ -74,13 +75,13 @@ export async function POST() {
 
     if (results.profesionales.updated > 0) {
       await profesionalesBatch.commit();
-      console.log(`✅ Actualizados ${results.profesionales.updated} profesionales`);
+      logger.info(`✅ Actualizados ${results.profesionales.updated} profesionales`);
     } else {
-      console.log('✅ Todos los profesionales ya tienen color');
+      logger.info('✅ Todos los profesionales ya tienen color');
     }
 
     // Migrar servicios
-    console.log('\n📋 Migrando servicios del catálogo...');
+    logger.info('\n📋 Migrando servicios del catálogo...');
     const serviciosSnap = await adminDb.collection('catalogo-servicios').get();
 
     const serviciosBatch = adminDb.batch();
@@ -90,7 +91,7 @@ export async function POST() {
         const categoria = (data.categoria || 'medicina') as string;
         const color = SERVICIO_COLORS_BY_CATEGORIA[categoria] || '#3B82F6';
         serviciosBatch.update(doc.ref, { color });
-        console.log(`  ✓ ${doc.id} (${categoria}): ${color}`);
+        logger.debug(`  ✓ ${doc.id} (${categoria}): ${color}`);
         results.servicios.updated++;
       } else {
         results.servicios.skipped++;
@@ -99,13 +100,13 @@ export async function POST() {
 
     if (results.servicios.updated > 0) {
       await serviciosBatch.commit();
-      console.log(`✅ Actualizados ${results.servicios.updated} servicios`);
+      logger.info(`✅ Actualizados ${results.servicios.updated} servicios`);
     } else {
-      console.log('✅ Todos los servicios ya tienen color');
+      logger.info('✅ Todos los servicios ya tienen color');
     }
 
-    console.log('\n✨ Migración completada exitosamente');
-    console.log(`   Total registros actualizados: ${results.profesionales.updated + results.servicios.updated}`);
+    logger.info('\n✨ Migración completada exitosamente');
+    logger.info(`   Total registros actualizados: ${results.profesionales.updated + results.servicios.updated}`);
 
     return NextResponse.json({
       success: true,
@@ -114,7 +115,7 @@ export async function POST() {
     });
 
   } catch (error) {
-    console.error('❌ Error durante la migración:', error);
+    logger.error('❌ Error durante la migración:', error as Error);
     return NextResponse.json(
       {
         success: false,

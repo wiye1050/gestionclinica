@@ -6,6 +6,7 @@ import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestor
 import { db } from '@/lib/firebase';
 import { AuditLogEntry } from '@/types';
 import { Activity, Filter, RefreshCcw, Search } from 'lucide-react';
+import { logger } from '@/lib/utils/logger';
 
 type TimeRange = '24h' | '7d' | '30d' | 'all';
 
@@ -50,7 +51,7 @@ export default function AuditoriaPage() {
         setLoading(false);
       },
       (err) => {
-        console.error('Error cargando auditoría', err);
+        logger.error('Error cargando auditoría', err);
         setError(err instanceof Error ? err.message : 'Error desconocido al cargar auditoría.');
         setLoading(false);
       }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
 import { z } from 'zod';
+import { logger } from '@/lib/utils/logger';
 
 // Schema para actualizar usuario
 const updateUserSchema = z.object({
@@ -45,7 +46,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error obteniendo usuario:', error);
+    logger.error('Error obteniendo usuario:', error as Error);
     return NextResponse.json({ error: 'Error al obtener usuario' }, { status: 500 });
   }
 }
@@ -98,7 +99,7 @@ export async function PATCH(
           displayName: parsed.data.displayName,
         });
       } catch (authError) {
-        console.warn('No se pudo actualizar displayName en Auth:', authError);
+        logger.warn('No se pudo actualizar displayName en Auth:', authError as Error);
       }
     }
 
@@ -107,19 +108,19 @@ export async function PATCH(
       try {
         await adminAuth.updateUser(id, { disabled: true });
       } catch (authError) {
-        console.warn('No se pudo deshabilitar usuario en Auth:', authError);
+        logger.warn('No se pudo deshabilitar usuario en Auth:', authError as Error);
       }
     } else if (parsed.data.active === true && adminAuth) {
       try {
         await adminAuth.updateUser(id, { disabled: false });
       } catch (authError) {
-        console.warn('No se pudo habilitar usuario en Auth:', authError);
+        logger.warn('No se pudo habilitar usuario en Auth:', authError as Error);
       }
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error actualizando usuario:', error);
+    logger.error('Error actualizando usuario:', error as Error);
     return NextResponse.json({ error: 'Error al actualizar usuario' }, { status: 500 });
   }
 }
@@ -157,13 +158,13 @@ export async function DELETE(
       try {
         await adminAuth.deleteUser(id);
       } catch (authError) {
-        console.warn('No se pudo eliminar usuario de Auth:', authError);
+        logger.warn('No se pudo eliminar usuario de Auth:', authError as Error);
       }
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error eliminando usuario:', error);
+    logger.error('Error eliminando usuario:', error as Error);
     return NextResponse.json({ error: 'Error al eliminar usuario' }, { status: 500 });
   }
 }

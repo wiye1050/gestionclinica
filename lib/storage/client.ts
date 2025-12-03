@@ -1,4 +1,5 @@
 import { Storage } from '@google-cloud/storage';
+import { logger } from '@/lib/utils/logger';
 
 // Configuración segura de Google Cloud Storage usando variables de entorno
 const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID || 'delta-vertex-476113-u7';
@@ -16,7 +17,7 @@ if (process.env.GOOGLE_CLOUD_CREDENTIALS) {
       credentials,
     });
   } catch (error) {
-    console.error('Error parsing GOOGLE_CLOUD_CREDENTIALS:', error);
+    logger.error('Error parsing GOOGLE_CLOUD_CREDENTIALS:', error);
     throw new Error('Invalid GOOGLE_CLOUD_CREDENTIALS format. Must be valid JSON.');
   }
 } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
@@ -28,7 +29,7 @@ if (process.env.GOOGLE_CLOUD_CREDENTIALS) {
 } else {
   // Fallback: Usar credenciales por defecto de la aplicación (ADC)
   // Esto funciona automáticamente en Google Cloud Run, App Engine, etc.
-  console.warn('No Google Cloud credentials found. Using Application Default Credentials (ADC).');
+  logger.warn('No Google Cloud credentials found. Using Application Default Credentials (ADC).');
   storage = new Storage({ projectId });
 }
 

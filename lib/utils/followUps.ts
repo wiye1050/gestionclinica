@@ -9,6 +9,7 @@ import {
   type QueryDocumentSnapshot
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { logger } from '@/lib/utils/logger';
 
 type FollowUpDoc = QueryDocumentSnapshot<DocumentData>;
 
@@ -152,7 +153,7 @@ export const getPendingFollowUpPatientIds = async (options?: {
 
         return siguePendiente ? pacienteId : null;
       } catch (error) {
-        console.error('Error al evaluar seguimientos para paciente', pacienteId, error);
+        logger.error('Error al evaluar seguimientos para paciente', error as Error, { pacienteId });
         return pacienteId;
       }
     })

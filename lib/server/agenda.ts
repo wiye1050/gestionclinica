@@ -1,8 +1,9 @@
 import { addDays } from 'date-fns';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { logger } from '@/lib/utils/logger';
 
 if (!adminDb && process.env.NODE_ENV !== 'production') {
-  console.warn('[agenda] Firebase Admin no disponible; los datos iniciales se cargarán en el cliente.');
+  logger.warn('[agenda] Firebase Admin no disponible; los datos iniciales se cargarán en el cliente.');
 }
 
 export type SerializedAgendaEvent = {

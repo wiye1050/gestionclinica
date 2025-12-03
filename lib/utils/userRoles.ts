@@ -4,6 +4,7 @@ import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { AppRole, ROLE_LABELS, ROLE_DESCRIPTIONS } from '@/lib/auth/roles';
+import { logger } from '@/lib/utils/logger';
 
 // Re-exportar tipos para compatibilidad
 export type UserRole = AppRole;
@@ -40,7 +41,7 @@ export async function createUserProfile(
       lastLogin: new Date()
     });
   } catch (error) {
-    console.error('Error creating user profile:', error);
+    logger.error('Error creating user profile:', error);
     throw error;
   }
 }
@@ -67,7 +68,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
       lastLogin: data.lastLogin?.toDate()
     };
   } catch (error) {
-    console.error('Error getting user profile:', error);
+    logger.error('Error getting user profile:', error);
     return null;
   }
 }
@@ -83,7 +84,7 @@ export async function updateLastLogin(uid: string): Promise<void> {
       { merge: true }
     );
   } catch (error) {
-    console.error('Error updating last login:', error);
+    logger.error('Error updating last login:', error);
   }
 }
 

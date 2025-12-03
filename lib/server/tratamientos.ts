@@ -1,6 +1,7 @@
 import { adminDb } from '@/lib/firebaseAdmin';
 import { sanitizeHTML, sanitizeInput } from '@/lib/utils/sanitize';
 import type { SerializedTratamiento, SerializedCatalogoServicio } from '@/lib/utils/tratamientos';
+import { logger } from '@/lib/utils/logger';
 
 type ServicioIncluidoInput = {
   servicioId: string;
@@ -35,7 +36,7 @@ const toISO = (value: unknown): string | undefined => {
 export async function getSerializedTratamientos(): Promise<SerializedTratamiento[]> {
   if (!adminDb) {
     if (process.env.NODE_ENV !== 'production') {
-      console.warn('[tratamientos] Firebase Admin no configurado.');
+      logger.warn('[tratamientos] Firebase Admin no configurado.');
     }
     return [];
   }

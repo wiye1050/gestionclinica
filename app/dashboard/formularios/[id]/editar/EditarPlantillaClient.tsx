@@ -9,6 +9,7 @@ import type { TipoFormulario, TipoCampoFormulario, CampoFormulario, FormularioPl
 import Card from '@/components/ui/Card';
 import { Button } from '@/components/ui';
 import { Badge } from '@/components/ui/Badge';
+import { logger } from '@/lib/utils/logger';
 
 interface EditarPlantillaClientProps {
   plantilla: FormularioPlantilla;
@@ -153,7 +154,7 @@ export default function EditarPlantillaClient({ plantilla, userId }: EditarPlant
       toast.success('Plantilla actualizada correctamente');
       router.push(`/dashboard/formularios/${plantilla.id}`);
     } catch (error) {
-      console.error('Error:', error);
+      logger.error('Error:', error);
       toast.error('Error al guardar los cambios');
     } finally {
       setGuardando(false);

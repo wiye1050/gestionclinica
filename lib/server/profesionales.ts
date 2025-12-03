@@ -2,6 +2,7 @@ import { adminDb } from '@/lib/firebaseAdmin';
 import { cached } from '@/lib/server/cache';
 import { deserializeProfesionales, type ApiProfesional } from '@/lib/utils/profesionales';
 import { sanitizeStringArray, sanitizeText } from '@/lib/utils/sanitize';
+import { logger } from '@/lib/utils/logger';
 
 export type SerializedProfesional = ApiProfesional;
 export type ProfesionalInput = {
@@ -80,7 +81,7 @@ export async function createProfesional(
 export async function getSerializedProfesionales(limit = 400): Promise<SerializedProfesional[]> {
   if (!adminDb) {
     if (process.env.NODE_ENV !== 'production') {
-      console.warn('[profesionales] Firebase Admin no configurado');
+      logger.warn('[profesionales] Firebase Admin no configurado');
     }
     return [];
   }

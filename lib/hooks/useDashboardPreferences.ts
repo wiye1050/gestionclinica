@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { logger } from '@/lib/utils/logger';
 
 // Widget IDs para el dashboard
 export type WidgetId =
@@ -63,7 +64,7 @@ export function useDashboardPreferences() {
         setPreferences({ ...DEFAULT_PREFERENCES, ...parsed });
       }
     } catch (error) {
-      console.error('Error loading dashboard preferences:', error);
+      logger.error('Error loading dashboard preferences:', error as Error);
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +76,7 @@ export function useDashboardPreferences() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newPreferences));
       setPreferences(newPreferences);
     } catch (error) {
-      console.error('Error saving dashboard preferences:', error);
+      logger.error('Error saving dashboard preferences:', error as Error);
     }
   }, []);
 

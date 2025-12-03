@@ -2,6 +2,7 @@ import { adminDb } from '@/lib/firebaseAdmin';
 import { cached } from '@/lib/server/cache';
 import type { DailyReport } from '@/types';
 import { sanitizeHTML, sanitizeInput } from '@/lib/utils/sanitize';
+import { logger } from '@/lib/utils/logger';
 
 const assertAdminDb = () => {
   if (!adminDb) {
@@ -73,7 +74,7 @@ const toISOString = (value: unknown): string | undefined => {
 export async function getSerializedDailyReports(limit = 200): Promise<SerializedDailyReport[]> {
   if (!adminDb) {
     if (process.env.NODE_ENV !== 'production') {
-      console.warn('[reports] Firebase Admin no configurado, devolviendo lista vacía');
+      logger.warn('[reports] Firebase Admin no configurado, devolviendo lista vacía');
     }
     return [];
   }

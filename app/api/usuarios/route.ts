@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
 import { z } from 'zod';
+import { logger } from '@/lib/utils/logger';
 
 // Schema para crear usuario
 const createUserSchema = z.object({
@@ -43,7 +44,7 @@ export async function GET() {
 
     return NextResponse.json({ users });
   } catch (error) {
-    console.error('Error listando usuarios:', error);
+    logger.error('Error listando usuarios:', error as Error);
     return NextResponse.json({ error: 'Error al listar usuarios' }, { status: 500 });
   }
 }
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error creando usuario:', error);
+    logger.error('Error creando usuario:', error as Error);
     const message = error instanceof Error ? error.message : 'Error al crear usuario';
     return NextResponse.json({ error: message }, { status: 500 });
   }

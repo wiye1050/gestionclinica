@@ -9,6 +9,7 @@ import type { TipoFormulario, TipoCampoFormulario, CampoFormulario } from '@/typ
 import Card from '@/components/ui/Card';
 import { Button } from '@/components/ui';
 import { Badge } from '@/components/ui/Badge';
+import { logger } from '@/lib/utils/logger';
 
 interface NuevaPlantillaClientProps {
   userId: string;
@@ -157,7 +158,7 @@ export default function NuevaPlantillaClient({ userId, userName }: NuevaPlantill
       toast.success('Plantilla creada correctamente');
       router.push('/dashboard/formularios');
     } catch (error) {
-      console.error('[NuevaPlantilla] Error:', error);
+      logger.error('[NuevaPlantilla] Error:', error);
       toast.error(`Error al guardar la plantilla: ${(error as Error).message}`);
     } finally {
       setGuardando(false);

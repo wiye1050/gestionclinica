@@ -6,6 +6,7 @@
  */
 
 import { captureError } from './errorLogging';
+import { logger } from '@/lib/utils/logger';
 
 interface ApiClientOptions extends Omit<RequestInit, 'method' | 'body'> {
   /** Module name for error logging */
@@ -89,7 +90,7 @@ async function apiFetch<T>(
  *   action: 'fetch-users'
  * });
  * if (result.success) {
- *   console.log(result.data);
+ *   logger.debug(result.data);
  * }
  * ```
  */

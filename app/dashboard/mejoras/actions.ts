@@ -5,6 +5,7 @@ import { createMejoraSchema, updateMejoraEstadoSchema, addEvidenciaSchema } from
 import { logAudit } from '@/lib/utils/audit';
 import { getCurrentUser } from '@/lib/auth/server';
 import { createMejora, updateMejoraEstado, agregarEvidencia } from '@/lib/server/mejoras';
+import { logger } from '@/lib/utils/logger';
 
 type ActionState = { success: boolean; error: string | null };
 
@@ -64,7 +65,7 @@ export async function crearMejoraAction(prevState: ActionState, formData: FormDa
     revalidatePath('/dashboard/mejoras');
     return { success: true, error: null };
   } catch (error) {
-    console.error('Error creando mejora', error);
+    logger.error('Error creando mejora', error);
     return { success: false, error: 'No se pudo crear la mejora.' };
   }
 }

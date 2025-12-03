@@ -6,6 +6,7 @@ import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import type { AgendaLinkBuilder } from './types';
 import { Calendar, AlertCircle } from 'lucide-react';
+import { logger } from '@/lib/utils/logger';
 
 interface AvailabilitySlot {
   start: string;
@@ -47,7 +48,7 @@ export default function PatientAvailabilityCard({
           setSlots(data.slots ?? []);
         }
       } catch (err) {
-        console.error('availability', err);
+        logger.error('availability', err);
         if (isMounted) {
           setError('No se pudo obtener la disponibilidad.');
         }

@@ -1,4 +1,5 @@
 import { serverFetchGet } from '@/lib/utils/serverFetch';
+import { logger } from '@/lib/utils/logger';
 import type {
   Paciente,
   Profesional,
@@ -35,7 +36,7 @@ export async function fetchPatientDetail(pacienteId: string): Promise<PatientDet
     );
     return data;
   } catch (error) {
-    console.error('Error fetching patient detail:', error);
+    logger.error('Error fetching patient detail:', error as Error);
     return null;
   }
 }
@@ -53,7 +54,7 @@ export async function fetchProfesionales(): Promise<Profesional[]> {
     );
     return data || [];
   } catch (error) {
-    console.error('Error fetching profesionales:', error);
+    logger.error('Error fetching profesionales:', error as Error);
     return [];
   }
 }
@@ -71,7 +72,7 @@ export async function fetchPatientFormResponses(pacienteId: string): Promise<Res
     );
     return data || [];
   } catch (error) {
-    console.error('Error fetching form responses:', error);
+    logger.error('Error fetching form responses:', error as Error);
     return [];
   }
 }

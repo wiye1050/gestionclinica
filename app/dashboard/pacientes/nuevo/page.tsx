@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { useProfesionalesManager } from '@/lib/hooks/useProfesionalesManager';
 import { PacienteForm, PacienteFormValues } from '@/components/pacientes/PacienteForm';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 export default function NuevoPacientePage() {
   const router = useRouter();
@@ -63,7 +64,7 @@ export default function NuevoPacientePage() {
       toast.success('Paciente registrado correctamente');
       router.push('/dashboard/pacientes');
     } catch (err) {
-      console.error('Error al crear paciente:', err);
+      logger.error('Error al crear paciente:', err);
       const mensaje =
         err instanceof Error ? err.message : 'Error desconocido al guardar el paciente.';
       setError(mensaje);

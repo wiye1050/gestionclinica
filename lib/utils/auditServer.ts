@@ -1,4 +1,5 @@
 import { adminDb } from '@/lib/firebaseAdmin';
+import { logger } from '@/lib/utils/logger';
 
 interface AuditLogPayload {
   actorUid: string;
@@ -15,7 +16,7 @@ interface AuditLogPayload {
 export const logAuditServer = async (payload: AuditLogPayload) => {
   if (!adminDb) {
     if (process.env.NODE_ENV !== 'production') {
-      console.warn('[audit] Firebase Admin no configurado; se omite auditoría.');
+      logger.warn('[audit] Firebase Admin no configurado; se omite auditoría.');
     }
     return;
   }
@@ -26,6 +27,6 @@ export const logAuditServer = async (payload: AuditLogPayload) => {
       createdAt: new Date(),
     });
   } catch (error) {
-    console.error('Error registrando auditoría (server)', error);
+    logger.error('Error registrando auditoría (server)', error);
   }
 };

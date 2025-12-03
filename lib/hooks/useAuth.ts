@@ -10,6 +10,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { createUserProfile, updateLastLogin } from '@/lib/utils/userRoles';
+import { logger } from '@/lib/utils/logger';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -22,7 +23,7 @@ export const useAuth = () => {
 
       if (!currentUser) {
         void fetch('/api/auth/session', { method: 'DELETE' }).catch((error) => {
-          console.warn('[auth] No se pudo limpiar la cookie de sesión', error);
+          logger.warn('[auth] No se pudo limpiar la cookie de sesión', error as Error);
         });
         return;
       }
@@ -39,7 +40,7 @@ export const useAuth = () => {
           })
         )
         .catch((error) => {
-          console.warn('[auth] No se pudo sincronizar la sesión con el servidor', error);
+          logger.warn('[auth] No se pudo sincronizar la sesión con el servidor', error as Error);
         });
     });
 
@@ -57,10 +58,10 @@ export const useAuth = () => {
           body: JSON.stringify({ idToken: token }),
         });
         if (!response.ok) {
-          console.warn('[auth] No se pudo establecer la sesión del servidor tras login');
+          logger.warn('[auth] No se pudo establecer la sesión del servidor tras login');
         }
       } catch (sessionError) {
-        console.warn('[auth] Error sincronizando la sesión tras login', sessionError);
+        logger.warn('[auth] Error sincronizando la sesión tras login', sessionError as Error);
       }
 
       return { success: true, user: result.user };
@@ -75,7 +76,7 @@ export const useAuth = () => {
       try {
         await createUserProfile(result.user.uid, email, 'invitado', displayName);
       } catch (profileError) {
-        console.warn('[auth] No se pudo crear el perfil del usuario', profileError);
+        logger.warn('[auth] No se pudo crear el perfil del usuario', profileError as Error);
       }
       try {
         const token = await result.user.getIdToken();
@@ -85,10 +86,10 @@ export const useAuth = () => {
           body: JSON.stringify({ idToken: token }),
         });
         if (!response.ok) {
-          console.warn('[auth] No se pudo establecer la sesión del servidor tras registro');
+          logger.warn('[auth] No se pudo establecer la sesión del servidor tras registro');
         }
       } catch (sessionError) {
-        console.warn('[auth] Error sincronizando la sesión tras registro', sessionError);
+        logger.warn('[auth] Error sincronizando la sesión tras registro', sessionError as Error);
       }
 
       return { success: true, user: result.user };
@@ -102,10 +103,10 @@ export const useAuth = () => {
       try {
         const response = await fetch('/api/auth/session', { method: 'DELETE' });
         if (!response.ok) {
-          console.warn('[auth] No se pudo eliminar la sesión del servidor al cerrar sesión');
+          logger.warn('[auth] No se pudo eliminar la sesión del servidor al cerrar sesión');
         }
       } catch (sessionError) {
-        console.warn('[auth] Error eliminando la sesión del servidor', sessionError);
+        logger.warn('[auth] Error eliminando la sesión del servidor', sessionError as Error);
       }
       await signOut(auth);
       return { success: true };

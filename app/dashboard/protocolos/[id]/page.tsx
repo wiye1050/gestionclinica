@@ -16,6 +16,7 @@ import { db } from '@/lib/firebase';
 import { Protocolo, ProtocoloVersion, ProtocoloLectura } from '@/types';
 import { registerReadingAction } from '../actions';
 import DOMPurify from 'isomorphic-dompurify';
+import { logger } from '@/lib/utils/logger';
 
 export default function ProtocoloDetallePage() {
   const params = useParams<{ id: string }>();
@@ -71,7 +72,7 @@ export default function ProtocoloDetallePage() {
           })) as ProtocoloLectura[]
         );
       } catch (err) {
-        console.error('Error cargando protocolo', err);
+        logger.error('Error cargando protocolo', err);
       } finally {
         setLoading(false);
       }

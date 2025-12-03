@@ -30,6 +30,7 @@ import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useUserRole, UserRole } from '@/lib/utils/userRoles';
+import { logger } from '@/lib/utils/logger';
 
 interface MenuItem {
   name: string;
@@ -147,7 +148,7 @@ export default function Sidebar() {
           });
         }
       } catch (error) {
-        console.error('Error cargando badges del sidebar:', error);
+        logger.error('Error cargando badges del sidebar:', error);
       }
     };
 

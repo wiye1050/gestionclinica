@@ -5,6 +5,7 @@ import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { initializeNHCCounter } from '@/lib/server/pacientesAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { logger } from '@/lib/utils/logger';
 
 const ADMIN_ROLES = new Set(['admin']);
 
@@ -198,7 +199,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(results, { status: 200 });
   } catch (error) {
-    console.error('[api/pacientes/importar] Error:', error);
+    logger.error('[api/pacientes/importar] Error:', error as Error);
     const message = error instanceof Error ? error.message : 'Error al importar pacientes';
     return NextResponse.json({ error: message }, { status: 500 });
   }

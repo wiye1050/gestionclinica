@@ -7,6 +7,7 @@ import { collection, query, where, getDocs, limit, orderBy, doc, updateDoc } fro
 import { db } from '@/lib/firebase';
 import { Notificacion } from '@/types';
 import { getPendingFollowUpPatientIds } from '@/lib/utils/followUps';
+import { logger } from '@/lib/utils/logger';
 
 interface NotificacionesDropdownProps {
   userUid: string;
@@ -116,7 +117,7 @@ export function NotificacionesDropdown({ userUid }: NotificacionesDropdownProps)
             });
           });
         } catch (error) {
-          console.error('Error cargando notificaciones persistidas:', error);
+          logger.error('Error cargando notificaciones persistidas:', error);
         }
 
         notifs.sort(
@@ -126,7 +127,7 @@ export function NotificacionesDropdown({ userUid }: NotificacionesDropdownProps)
 
         setNotificaciones(notifs);
       } catch (error) {
-        console.error('Error generando notificaciones:', error);
+        logger.error('Error generando notificaciones:', error);
       } finally {
         setLoading(false);
       }
@@ -159,7 +160,7 @@ export function NotificacionesDropdown({ userUid }: NotificacionesDropdownProps)
         });
       }
     } catch (error) {
-      console.error('Error marcando notificación como leída:', error);
+      logger.error('Error marcando notificación como leída:', error);
     }
   };
 
@@ -179,7 +180,7 @@ export function NotificacionesDropdown({ userUid }: NotificacionesDropdownProps)
         )
       );
     } catch (error) {
-      console.error('Error marcando notificaciones como leídas:', error);
+      logger.error('Error marcando notificaciones como leídas:', error);
     }
   };
 

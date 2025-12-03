@@ -5,6 +5,7 @@ import { getCurrentUser } from '@/lib/auth/server';
 import { logAudit } from '@/lib/utils/audit';
 import { revalidatePath } from 'next/cache';
 import { addPacienteHistorial } from '@/lib/server/pacientesAdmin';
+import { logger } from '@/lib/utils/logger';
 
 const resolverSchema = z.object({
   pacienteId: z.string().min(1)
@@ -46,7 +47,7 @@ export async function resolverSeguimientoAction(formData: FormData): Promise<voi
 
     revalidatePath(`/dashboard/pacientes/${parsed.data.pacienteId}`);
   } catch (error) {
-    console.error('Error registrando resolución', error);
+    logger.error('Error registrando resolución', error);
     throw new Error('No se pudo registrar la resolución.');
   }
 }

@@ -3,6 +3,7 @@ import type { DecodedIdToken } from 'firebase-admin/auth';
 import { adminAuth } from '@/lib/firebaseAdmin';
 import { SESSION_COOKIE_NAME } from './session';
 import { AppRole } from './roles';
+import { logger } from '@/lib/utils/logger';
 
 interface CurrentUser {
   uid: string;
@@ -26,7 +27,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   if (!adminAuth) {
     if (process.env.NODE_ENV !== 'production') {
-      console.warn('[auth] Firebase Admin no configurado; getCurrentUser devuelve null.');
+      logger.warn('[auth] Firebase Admin no configurado; getCurrentUser devuelve null.');
     }
     return null;
   }
@@ -65,7 +66,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       roles: roles.length > 0 ? roles : ['invitado']
     };
   } catch (error) {
-    console.warn('[auth] Sesión inválida, se ignorará la cookie', error);
+    logger.warn('[auth] Sesión inválida, se ignorará la cookie', error);
     return null;
   }
 }

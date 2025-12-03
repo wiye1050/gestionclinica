@@ -5,6 +5,7 @@ import { collection, getDocs, query, orderBy, limit, where, Timestamp, getDoc, d
 import { db } from '@/lib/firebase';
 import { useAuth } from './useAuth';
 import { getPendingFollowUpPatientIds } from '@/lib/utils/followUps';
+import { logger } from '@/lib/utils/logger';
 import {
   RecentActivity,
   TodayAppointment,
@@ -45,7 +46,7 @@ export function useRecentActivity() {
         );
         setError(null);
       } catch (err) {
-        console.error('Error cargando actividad', err);
+        logger.error('Error cargando actividad', err as Error);
         if (active) setError('Error cargando actividad');
       } finally {
         if (active) setLoading(false);
@@ -106,7 +107,7 @@ export function useTodayAppointments() {
         );
         setError(null);
       } catch (err) {
-        console.error('Error cargando citas de hoy', err);
+        logger.error('Error cargando citas de hoy', err as Error);
         if (active) {
           setData([]);
           setError('Error cargando citas');
@@ -190,7 +191,7 @@ export function useUserTasks() {
         setData(tasks.slice(0, 5));
         setError(null);
       } catch (err) {
-        console.error('Error cargando tareas', err);
+        logger.error('Error cargando tareas', err as Error);
         if (active) {
           setData([]);
           setError('Error cargando tareas');
@@ -237,7 +238,7 @@ export function useFinanceSummary() {
         setData(summary);
         setError(null);
       } catch (err) {
-        console.error('Error cargando finanzas', err);
+        logger.error('Error cargando finanzas', err as Error);
         if (active) {
           setData({
             facturadoMes: 0,
@@ -300,7 +301,7 @@ export function useStockAlerts() {
         });
         setError(null);
       } catch (err) {
-        console.error('Error cargando inventario', err);
+        logger.error('Error cargando inventario', err as Error);
         if (active) {
           setData({ total: 0, top: [] });
           setError('Error cargando inventario');
@@ -364,7 +365,7 @@ export function useFollowUpPatients() {
         setData(patients.filter((p): p is NonNullable<typeof p> => p !== null));
         setError(null);
       } catch (err) {
-        console.error('Error cargando seguimientos', err);
+        logger.error('Error cargando seguimientos', err as Error);
         if (active) {
           setData([]);
           setError('Error cargando seguimientos');
@@ -421,7 +422,7 @@ export function useRecentEvaluations() {
         );
         setError(null);
       } catch (err) {
-        console.error('Error cargando evaluaciones', err);
+        logger.error('Error cargando evaluaciones', err as Error);
         if (active) {
           setData([]);
           setError('Error cargando evaluaciones');

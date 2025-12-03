@@ -2,6 +2,7 @@ import { getApps, initializeApp, cert, type App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
+import { logger } from '@/lib/utils/logger';
 
 type ServiceAccountConfig = {
   projectId: string;
@@ -20,7 +21,7 @@ function readServiceAccount(): ServiceAccountConfig | null {
         privateKey: (parsed.private_key as string).replace(/\\n/g, '\n'),
       };
     } catch (error) {
-      console.error('FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON', error);
+      logger.error('FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON', error);
     }
   }
 
@@ -60,7 +61,7 @@ if (serviceAccount && !adminApp) {
         });
   globalForAdmin._adminApp = adminApp;
 } else if (!serviceAccount && process.env.NODE_ENV !== 'production') {
-  console.warn(
+  logger.warn(
     'Firebase Admin no está configurado. Define FIREBASE_SERVICE_ACCOUNT_KEY o las variables FIREBASE_ADMIN_* para habilitar la verificación de sesiones.'
   );
 }

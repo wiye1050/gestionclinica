@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { z } from 'zod';
 import type { FormularioPlantilla } from '@/types';
+import { logger } from '@/lib/utils/logger';
 
 const createPlantillaSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio').max(200),
@@ -46,7 +47,7 @@ const createPlantillaSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     if (!adminDb) {
-      console.error('[API /api/formularios GET] Admin DB not initialized');
+      logger.error('[API /api/formularios GET] Admin DB not initialized');
       return NextResponse.json([]);
     }
 
@@ -97,7 +98,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(formularios);
   } catch (error) {
-    console.error('[API /api/formularios GET] Error:', error);
+    logger.error('[API /api/formularios GET] Error:', error as Error);
     // En caso de error (por ejemplo, colección no existe), retornar array vacío
     return NextResponse.json([]);
   }
@@ -110,7 +111,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     if (!adminDb) {
-      console.error('[API /api/formularios POST] Admin DB not initialized');
+      logger.error('[API /api/formularios POST] Admin DB not initialized');
       return NextResponse.json(
         { error: 'Database not available' },
         { status: 500 }
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
       id: docRef.id
     });
   } catch (error) {
-    console.error('[API /api/formularios POST] Error:', error);
+    logger.error('[API /api/formularios POST] Error:', error as Error);
     return NextResponse.json(
       { error: 'Error al crear formulario', details: (error as Error).message },
       { status: 500 }

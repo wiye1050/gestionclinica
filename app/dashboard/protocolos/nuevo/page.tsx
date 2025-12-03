@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { sanitizeHTML, sanitizeInput, sanitizeStringArray } from '@/lib/utils/sanitize';
+import { logger } from '@/lib/utils/logger';
 
 export default function NuevoProtocoloPage() {
   const router = useRouter();
@@ -41,7 +42,7 @@ export default function NuevoProtocoloPage() {
 
       router.push('/dashboard/protocolos');
     } catch (err) {
-      console.error('Error:', err);
+      logger.error('Error:', err);
       setError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
       setLoading(false);

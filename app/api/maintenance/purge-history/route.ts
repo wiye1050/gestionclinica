@@ -3,6 +3,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { adminDb, adminStorage } from '@/lib/firebaseAdmin';
 import { getCurrentUser } from '@/lib/auth/server';
 import { hasRole } from '@/lib/auth/roles';
+import { logger } from '@/lib/utils/logger';
 
 const BATCH_LIMIT = 50;
 
@@ -76,7 +77,7 @@ export async function POST() {
             await bucket.file(storagePath).delete({ ignoreNotFound: true });
             cleanedFiles += 1;
           } catch (error) {
-            console.warn('No se pudo eliminar', storagePath, error);
+            logger.warn('No se pudo eliminar', { storagePath, error: error instanceof Error ? error.message : String(error) });
           }
         }
       }

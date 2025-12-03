@@ -8,6 +8,7 @@ import { db } from '@/lib/firebase';
 import { actualizarEstadoMejoraAction, agregarEvidenciaAction } from '../actions';
 import { Mejora, MejoraEvidencia } from '@/types';
 import { FileUpload } from '@/components/ui/FileUpload';
+import { logger } from '@/lib/utils/logger';
 
 const estadoOptions = [
   { value: 'idea', label: 'Idea' },
@@ -56,7 +57,7 @@ export default function MejoraDetallePage() {
           })) as MejoraEvidencia[]
         );
       } catch (err) {
-        console.error('Error al cargar la mejora', err);
+        logger.error('Error al cargar la mejora', err);
       } finally {
         setLoading(false);
       }

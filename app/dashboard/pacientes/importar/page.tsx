@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 interface PacienteImport {
   numeroHistoria: string;
@@ -142,7 +143,7 @@ export default function ImportarPacientesPage() {
           setIsAdmin(hasAdmin);
         }
       } catch (error) {
-        console.error('Error loading user roles:', error);
+        logger.error('Error loading user roles:', error);
       } finally {
         setLoadingRoles(false);
       }
@@ -225,7 +226,7 @@ export default function ImportarPacientesPage() {
 
       setPreview(pacientes);
     } catch (error) {
-      console.error('Error parsing CSV:', error);
+      logger.error('Error parsing CSV:', error);
       setParseError('Error al leer el archivo CSV');
     }
   }, []);
@@ -259,7 +260,7 @@ export default function ImportarPacientesPage() {
         toast.warning(`${data.duplicados.length} pacientes ya existían (se omitieron)`);
       }
     } catch (error) {
-      console.error('Import error:', error);
+      logger.error('Import error:', error);
       toast.error(error instanceof Error ? error.message : 'Error al importar pacientes');
     } finally {
       setImporting(false);

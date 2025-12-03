@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { z } from 'zod';
 import type { FormularioPlantilla } from '@/types';
+import { logger } from '@/lib/utils/logger';
 
 const updatePlantillaSchema = z.object({
   nombre: z.string().min(1).max(200).optional(),
@@ -49,7 +50,7 @@ export async function GET(
 ) {
   try {
     if (!adminDb) {
-      console.error('[API /api/formularios/[id] GET] Admin DB not initialized');
+      logger.error('[API /api/formularios/[id] GET] Admin DB not initialized');
       return NextResponse.json(
         { error: 'Database not available' },
         { status: 500 }
@@ -95,7 +96,7 @@ export async function GET(
 
     return NextResponse.json(plantilla);
   } catch (error) {
-    console.error('[API /api/formularios/[id] GET] Error:', error);
+    logger.error('[API /api/formularios/[id] GET] Error:', error as Error);
     return NextResponse.json(
       { error: 'Error al obtener plantilla' },
       { status: 500 }
@@ -113,7 +114,7 @@ export async function PATCH(
 ) {
   try {
     if (!adminDb) {
-      console.error('[API /api/formularios/[id] PATCH] Admin DB not initialized');
+      logger.error('[API /api/formularios/[id] PATCH] Admin DB not initialized');
       return NextResponse.json(
         { error: 'Database not available' },
         { status: 500 }
@@ -160,7 +161,7 @@ export async function PATCH(
       message: 'Plantilla actualizada correctamente',
     });
   } catch (error) {
-    console.error('[API /api/formularios/[id] PATCH] Error:', error);
+    logger.error('[API /api/formularios/[id] PATCH] Error:', error as Error);
     return NextResponse.json(
       { error: 'Error al actualizar plantilla', details: (error as Error).message },
       { status: 500 }
@@ -178,7 +179,7 @@ export async function DELETE(
 ) {
   try {
     if (!adminDb) {
-      console.error('[API /api/formularios/[id] DELETE] Admin DB not initialized');
+      logger.error('[API /api/formularios/[id] DELETE] Admin DB not initialized');
       return NextResponse.json(
         { error: 'Database not available' },
         { status: 500 }
@@ -223,7 +224,7 @@ export async function DELETE(
       message: 'Plantilla eliminada correctamente',
     });
   } catch (error) {
-    console.error('[API /api/formularios/[id] DELETE] Error:', error);
+    logger.error('[API /api/formularios/[id] DELETE] Error:', error as Error);
     return NextResponse.json(
       { error: 'Error al eliminar plantilla', details: (error as Error).message },
       { status: 500 }

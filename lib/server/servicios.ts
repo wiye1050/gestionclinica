@@ -1,4 +1,5 @@
 import { adminDb } from '@/lib/firebaseAdmin';
+import { logger } from '@/lib/utils/logger';
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import type { CatalogoServicio, Profesional, ServicioAsignado } from '@/types';
 import { sanitizeInput } from '@/lib/utils/sanitize';
@@ -186,7 +187,7 @@ const mapCatalogo = (doc: QueryDocumentSnapshot): SerializedCatalogoServicio => 
 export async function getServiciosModuleSerialized(): Promise<SerializedServiciosModule> {
   if (!adminDb) {
     if (process.env.NODE_ENV !== 'production') {
-      console.warn('[servicios] Firebase Admin no disponible; devolviendo snapshot vacío.');
+      logger.warn('[servicios] Firebase Admin no disponible; devolviendo snapshot vacío.');
     }
     return { servicios: [], profesionales: [], grupos: [], catalogo: [] };
   }

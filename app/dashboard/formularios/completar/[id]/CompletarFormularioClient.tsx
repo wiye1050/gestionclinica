@@ -8,6 +8,7 @@ import type { FormularioPlantilla, RespuestaFormulario, Paciente } from '@/types
 import FormularioRenderer from '@/components/formularios/FormularioRenderer';
 import { Button } from '@/components/ui';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 interface CompletarFormularioClientProps {
   plantilla: FormularioPlantilla;
@@ -59,7 +60,7 @@ export default function CompletarFormularioClient({
         toast.success('Borrador guardado correctamente');
       }
     } catch (error) {
-      console.error('Error guardando formulario:', error);
+      logger.error('Error guardando formulario:', error);
       throw error;
     } finally {
       setGuardando(false);

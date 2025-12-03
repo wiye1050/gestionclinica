@@ -25,6 +25,7 @@ import { Button } from '@/components/ui';
 import { KPIGrid } from '@/components/shared/KPIGrid';
 import { formatDate } from '@/lib/utils/helpers';
 import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 interface DetallePlantillaClientProps {
   plantilla: FormularioPlantilla;
@@ -127,7 +128,7 @@ export default function DetallePlantillaClient({
       toast.success('Plantilla duplicada correctamente');
       router.push(`/dashboard/formularios/${result.id}/editar`);
     } catch (error) {
-      console.error('Error duplicando plantilla:', error);
+      logger.error('Error duplicando plantilla:', error);
       toast.error(error instanceof Error ? error.message : 'Error al duplicar plantilla');
     } finally {
       setIsDuplicating(false);
@@ -158,7 +159,7 @@ export default function DetallePlantillaClient({
       toast.success('Plantilla archivada correctamente');
       router.refresh();
     } catch (error) {
-      console.error('Error archivando plantilla:', error);
+      logger.error('Error archivando plantilla:', error);
       toast.error(error instanceof Error ? error.message : 'Error al archivar plantilla');
     } finally {
       setIsArchiving(false);
@@ -195,7 +196,7 @@ export default function DetallePlantillaClient({
       toast.success('Plantilla eliminada correctamente');
       router.push('/dashboard/formularios');
     } catch (error) {
-      console.error('Error eliminando plantilla:', error);
+      logger.error('Error eliminando plantilla:', error);
       toast.error(error instanceof Error ? error.message : 'Error al eliminar plantilla');
     } finally {
       setIsDeleting(false);
