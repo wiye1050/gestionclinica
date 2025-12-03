@@ -1,27 +1,38 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { LayoutGrid, List, GanttChart, Plus, Download, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
 import { captureError } from '@/lib/utils/errorLogging';
 import ModuleHeader from '@/components/shared/ModuleHeader';
 import ViewSelector from '@/components/shared/ViewSelector';
-import KanbanView from '@/components/proyectos/KanbanView';
 import ListView from '@/components/proyectos/ListView';
 import GanttView from '@/components/proyectos/GanttView';
 import ProyectoDetalle from '@/components/proyectos/ProyectoDetalle';
-import ProyectoForm from '@/components/proyectos/ProyectoForm';
 import { LoadingSpinner } from '@/components/ui/Loading';
 import { useProyectos } from '@/lib/hooks/useProyectos';
 import { useProfesionalesManager } from '@/lib/hooks/useProfesionalesManager';
 import { CompactFilters, type ActiveFilterChip } from '@/components/shared/CompactFilters';
 import { KPIGrid } from '@/components/shared/KPIGrid';
+import SkeletonLoader from '@/components/shared/SkeletonLoader';
 import type {
   Proyecto,
   EstadoProyecto,
   TipoProyecto,
   PrioridadProyecto,
 } from '@/types/proyectos';
+
+// Lazy load heavy components for better performance
+const KanbanView = dynamic(
+  () => import('@/components/proyectos/KanbanView'),
+  { loading: () => <SkeletonLoader /> }
+);
+
+const ProyectoForm = dynamic(
+  () => import('@/components/proyectos/ProyectoForm'),
+  { ssr: false, loading: () => <SkeletonLoader /> }
+);
 
 type VistaProyecto = 'kanban' | 'lista' | 'gantt';
 type EstadoFiltro = EstadoProyecto | 'todos';

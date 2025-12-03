@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState, Suspense, lazy, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { collection, addDoc, doc, deleteDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { storage, db } from '@/lib/firebase';
@@ -10,10 +11,7 @@ import { usePatientDetailData } from '@/lib/hooks/usePatientDetailData';
 import { useAuth } from '@/lib/hooks/useAuth';
 import PatientProfileLayout, { PatientTab } from '@/components/pacientes/v2/PatientProfileLayout';
 import PatientResumenTab from '@/components/pacientes/v2/PatientResumenTab';
-import PatientHistorialClinicoTab from '@/components/pacientes/v2/PatientHistorialClinicoTab';
-import PatientCitasTab from '@/components/pacientes/v2/PatientCitasTab';
 import PatientDocumentosTab from '@/components/pacientes/v2/PatientDocumentosTab';
-import PatientFacturacionTab from '@/components/pacientes/v2/PatientFacturacionTab';
 import PatientNotasTab from '@/components/pacientes/v2/PatientNotasTab';
 import PatientFormulariosTab from '@/components/pacientes/v2/PatientFormulariosTab';
 import PatientAvailabilityCard from '@/components/pacientes/v2/PatientAvailabilityCard';
@@ -57,8 +55,26 @@ import type { PacienteFactura, PacientePresupuesto, RespuestaFormulario, Profesi
 import type { PatientDetailData } from './data';
 import { logger } from '@/lib/utils/logger';
 
-// Lazy load modal for better performance
-const CompletarFormularioModal = lazy(() => import('@/components/formularios/CompletarFormularioModal'));
+// Lazy load heavy tabs and modals for better performance
+const PatientHistorialClinicoTab = dynamic(
+  () => import('@/components/pacientes/v2/PatientHistorialClinicoTab'),
+  { loading: () => <TabLoadingFallback message="Cargando historial clínico..." /> }
+);
+
+const PatientCitasTab = dynamic(
+  () => import('@/components/pacientes/v2/PatientCitasTab'),
+  { loading: () => <TabLoadingFallback message="Cargando citas..." /> }
+);
+
+const PatientFacturacionTab = dynamic(
+  () => import('@/components/pacientes/v2/PatientFacturacionTab'),
+  { loading: () => <TabLoadingFallback message="Cargando facturación..." /> }
+);
+
+const CompletarFormularioModal = dynamic(
+  () => import('@/components/formularios/CompletarFormularioModal'),
+  { ssr: false, loading: () => <TabLoadingFallback message="Cargando formulario..." /> }
+);
 
 interface PatientDetailClientProps {
   pacienteId: string;
@@ -1054,14 +1070,12 @@ export default function PatientDetailClient({
 
       {/* Modal para completar formulario */}
       {paciente && user && mostrarModalFormulario && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"><TabLoadingFallback message="Cargando formulario..." /></div>}>
-          <CompletarFormularioModal
-            isOpen={mostrarModalFormulario}
-            onClose={() => setMostrarModalFormulario(false)}
-            paciente={paciente}
-            userId={user.uid}
-          />
-        </Suspense>
+        <CompletarFormularioModal
+          isOpen={mostrarModalFormulario}
+          onClose={() => setMostrarModalFormulario(false)}
+          paciente={paciente}
+          userId={user.uid}
+        />
       )}
     </>
   );

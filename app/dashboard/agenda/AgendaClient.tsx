@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import { addDays, addWeeks, startOfWeek, format, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -19,7 +20,6 @@ import AgendaDayView from '@/components/agenda/v2/AgendaDayView';
 import AgendaWeekViewV2 from '@/components/agenda/v2/AgendaWeekViewV2';
 import AgendaResourceView from '@/components/agenda/v2/AgendaResourceView';
 import EventModal from '@/components/agenda/v2/EventModal';
-import AgendaEventDrawer from '@/components/agenda/v2/AgendaEventDrawer';
 import MiniCalendar from '@/components/agenda/v2/MiniCalendar';
 import CollapsibleToolbar from '@/components/agenda/v2/CollapsibleToolbar';
 import AgendaToolbarFilters, { ESTADO_FILTERS, TIPO_FILTERS } from '@/components/agenda/v2/AgendaToolbarFilters';
@@ -35,6 +35,12 @@ import { deserializeAgendaEvents } from '@/lib/utils/agendaEvents';
 import { useAgendaFilters } from '@/lib/hooks/useAgendaFilters';
 import { useAgendaActions } from '@/lib/hooks/useAgendaActions';
 import { useAgendaModals } from '@/lib/hooks/useAgendaModals';
+
+// Lazy load AgendaEventDrawer for better performance
+const AgendaEventDrawer = dynamic(
+  () => import('@/components/agenda/v2/AgendaEventDrawer'),
+  { ssr: false, loading: () => <div className="h-full w-full flex items-center justify-center"><SkeletonLoader /></div> }
+);
 
 export type VistaAgenda = 'diaria' | 'semanal' | 'multi' | 'boxes' | 'paciente';
 type AgendaResource = { id: string; nombre: string; tipo: 'profesional' | 'sala' };

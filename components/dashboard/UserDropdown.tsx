@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import {
   ChevronDown,
   LogOut,
@@ -11,7 +12,13 @@ import {
   Moon,
   Settings
 } from 'lucide-react';
-import { UserSettingsModal } from './UserSettingsModal';
+import Loading from '@/components/ui/Loading';
+
+// Lazy load modal for better performance
+const UserSettingsModal = dynamic(
+  () => import('./UserSettingsModal').then((mod) => ({ default: mod.UserSettingsModal })),
+  { ssr: false, loading: () => <Loading /> }
+);
 
 interface UserDropdownProps {
   user: {

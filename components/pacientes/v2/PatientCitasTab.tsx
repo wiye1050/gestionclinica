@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import {
   Calendar,
   Clock,
@@ -15,10 +16,16 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import AgendaEventDrawer from '@/components/agenda/v2/AgendaEventDrawer';
 import type { AgendaEvent } from '@/components/agenda/v2/agendaHelpers';
 import type { Paciente } from '@/types';
 import type { AgendaLinkBuilder } from './types';
+import SkeletonLoader from '@/components/shared/SkeletonLoader';
+
+// Lazy load AgendaEventDrawer for better performance
+const AgendaEventDrawer = dynamic(
+  () => import('@/components/agenda/v2/AgendaEventDrawer'),
+  { ssr: false, loading: () => <div className="h-full w-full flex items-center justify-center"><SkeletonLoader /></div> }
+);
 
 export interface Cita {
   id: string;

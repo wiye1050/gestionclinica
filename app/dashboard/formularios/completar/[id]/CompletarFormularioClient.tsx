@@ -3,12 +3,19 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { ArrowLeft } from 'lucide-react';
 import type { FormularioPlantilla, RespuestaFormulario, Paciente } from '@/types';
-import FormularioRenderer from '@/components/formularios/FormularioRenderer';
 import { Button } from '@/components/ui';
 import { toast } from 'sonner';
 import { logger } from '@/lib/utils/logger';
+import SkeletonLoader from '@/components/shared/SkeletonLoader';
+
+// Lazy load FormularioRenderer for better performance
+const FormularioRenderer = dynamic(
+  () => import('@/components/formularios/FormularioRenderer'),
+  { ssr: false, loading: () => <SkeletonLoader /> }
+);
 
 interface CompletarFormularioClientProps {
   plantilla: FormularioPlantilla;

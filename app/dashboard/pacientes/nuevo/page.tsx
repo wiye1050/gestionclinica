@@ -3,11 +3,19 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useProfesionalesManager } from '@/lib/hooks/useProfesionalesManager';
-import { PacienteForm, PacienteFormValues } from '@/components/pacientes/PacienteForm';
+import type { PacienteFormValues } from '@/components/pacientes/PacienteForm';
 import { toast } from 'sonner';
 import { logger } from '@/lib/utils/logger';
+import SkeletonLoader from '@/components/shared/SkeletonLoader';
+
+// Lazy load PacienteForm for better performance
+const PacienteForm = dynamic(
+  () => import('@/components/pacientes/PacienteForm').then((mod) => ({ default: mod.PacienteForm })),
+  { ssr: false, loading: () => <SkeletonLoader /> }
+);
 
 export default function NuevoPacientePage() {
   const router = useRouter();
