@@ -17,6 +17,10 @@ import PatientFacturacionTab from '@/components/pacientes/v2/PatientFacturacionT
 import PatientNotasTab from '@/components/pacientes/v2/PatientNotasTab';
 import PatientFormulariosTab from '@/components/pacientes/v2/PatientFormulariosTab';
 import PatientAvailabilityCard from '@/components/pacientes/v2/PatientAvailabilityCard';
+import PatientResumenServiciosCard from '@/components/pacientes/v2/PatientResumenServiciosCard';
+import PatientResumenPendientesCard from '@/components/pacientes/v2/PatientResumenPendientesCard';
+import PatientHistorialFilters from '@/components/pacientes/v2/PatientHistorialFilters';
+import PatientHistorialListItem from '@/components/pacientes/v2/PatientHistorialListItem';
 import DetailPanel from '@/components/shared/DetailPanel';
 import { TabErrorBoundary } from '@/components/pacientes/TabErrorBoundary';
 import { TabLoadingFallback } from '@/components/pacientes/TabLoadingFallback';
@@ -727,106 +731,12 @@ export default function PatientDetailClient({
         />
       )}
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase text-text-muted">
-                Tratamientos y servicios
-              </p>
-              <p className="text-lg font-semibold text-text">Seguimiento en curso</p>
-            </div>
-            <Link
-              href="/dashboard/servicios"
-              className="text-xs font-semibold text-brand hover:underline"
-            >
-              Ver servicios
-            </Link>
-          </div>
-          {serviciosRelacionados.length === 0 ? (
-            <p className="text-sm text-text-muted">No hay servicios activos para este paciente.</p>
-          ) : (
-            <div className="space-y-3">
-              {serviciosRelacionados.slice(0, 3).map((servicio) => (
-                <div key={servicio.id} className="rounded-2xl border border-border px-4 py-3">
-                  <p className="text-sm font-semibold text-text">
-                    {servicio.catalogoServicioNombre ?? 'Servicio'}
-                  </p>
-                  <p className="text-xs text-text-muted">
-                    {servicio.profesionalPrincipalNombre ?? 'Sin profesional'} ·{' '}
-                    {servicio.esActual ? 'En progreso' : 'Planificado'}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-4 rounded-3xl border border-border bg-card p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase text-text-muted">
-                Pendientes y documentos
-              </p>
-              <p className="text-lg font-semibold text-text">Integración con otros módulos</p>
-            </div>
-            <Link
-              href={`/dashboard/pacientes/${paciente.id}`}
-              className="text-xs font-semibold text-brand hover:underline"
-            >
-              Ver ficha completa
-            </Link>
-          </div>
-          {seguimientoPendiente ? (
-            <div className="rounded-2xl border border-warn bg-warn-bg/30 px-4 py-3 text-sm">
-              <p className="font-semibold text-warn">Seguimiento pendiente</p>
-              <p className="text-text">
-                Hay tareas de seguimiento registradas en el historial reciente. Revisa la pestaña de
-                notas o marca el seguimiento como resuelto.
-              </p>
-              <form action={resolverSeguimientoAction} className="mt-2">
-                <input type="hidden" name="pacienteId" value={pacienteId} />
-                <button className="rounded-pill border border-success bg-success-bg px-3 py-1 text-xs font-semibold text-success hover:bg-success-bg/80 focus-visible:focus-ring">
-                  Marcar seguimiento resuelto
-                </button>
-              </form>
-            </div>
-          ) : (
-            <p className="text-sm text-text-muted">No hay seguimientos pendientes registrados.</p>
-          )}
-
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase text-text-muted">
-              Documentos recientes
-            </p>
-            {documentos.length === 0 ? (
-              <p className="text-sm text-text-muted">Sin documentos adjuntos.</p>
-            ) : (
-              <div className="space-y-2">
-                {documentos.slice(0, 3).map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="flex items-center justify-between rounded-2xl border border-border px-3 py-2 text-sm"
-                  >
-                    <div>
-                      <p className="font-medium text-text">{doc.nombre}</p>
-                      <p className="text-xs text-text-muted">
-                        {doc.fechaSubida.toLocaleDateString('es-ES')} · {doc.subidoPor}
-                      </p>
-                    </div>
-                    <a
-                      href={doc.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs font-semibold text-brand hover:underline"
-                    >
-                      Abrir
-                    </a>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <PatientResumenServiciosCard servicios={serviciosRelacionados} />
+        <PatientResumenPendientesCard
+          pacienteId={pacienteId}
+          documentos={documentos}
+          seguimientoPendiente={seguimientoPendiente}
+        />
       </div>
 
       {relacionesError && (
@@ -849,53 +759,15 @@ export default function PatientDetailClient({
       />
 
       <section className="panel-block space-y-4 p-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-text">Historial del paciente</h2>
-            <p className="text-sm text-text-muted">
-              Registros de atenciones, seguimientos y cambios administrativos.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="text-text-muted">Mostrar:</span>
-            {HISTORIAL_FILTROS.map((filtro) => (
-              <button
-                key={filtro.value}
-                onClick={() => setHistorialFiltro(filtro.value)}
-                className={`rounded-pill px-3 py-1 transition-colors ${
-                  historialFiltro === filtro.value
-                    ? 'bg-brand text-white'
-                    : 'bg-muted text-text hover:bg-cardHover'
-                }`}
-              >
-                {filtro.label}
-              </button>
-            ))}
-            <div className="flex items-center gap-2 pl-2">
-              <button
-                onClick={() => void exportarHistorialExcel()}
-                className="rounded-pill border border-success px-3 py-1 text-success hover:bg-success-bg"
-                disabled={historialFiltrado.length === 0}
-              >
-                Exportar Excel
-              </button>
-              <button
-                onClick={() => void exportarHistorialPDF()}
-                className="rounded-pill border border-brand px-3 py-1 text-brand hover:bg-brand-subtle"
-                disabled={historialFiltrado.length === 0}
-              >
-                Exportar PDF
-              </button>
-              <button
-                onClick={() => void compartirHistorialPorCorreo()}
-                className="rounded-pill border border-brand px-3 py-1 text-brand hover:bg-brand-subtle disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={historialFiltrado.length === 0 || compartiendo}
-              >
-                {compartiendo ? 'Preparando…' : 'Enviar por correo'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <PatientHistorialFilters
+          filtro={historialFiltro}
+          onFiltroChange={setHistorialFiltro}
+          onExportarExcel={() => void exportarHistorialExcel()}
+          onExportarPDF={() => void exportarHistorialPDF()}
+          onCompartirCorreo={() => void compartirHistorialPorCorreo()}
+          compartiendo={compartiendo}
+          historialCount={historialFiltrado.length}
+        />
 
         {historialFiltrado.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-muted p-6 text-text-muted">
@@ -904,51 +776,7 @@ export default function PatientDetailClient({
         ) : (
           <div className="space-y-4">
             {historialFiltrado.map((registro) => (
-              <article key={registro.id} className="panel-block shadow-sm">
-                <header className="flex flex-col gap-2 border-b border-border/70 px-6 py-4 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="text-xs text-text-muted">
-                      {registro.fecha.toLocaleString('es-ES', {
-                        day: '2-digit',
-                        month: 'long',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <span
-                        className={`rounded-pill px-2 py-1 text-xs font-semibold ${
-                          HISTORIAL_BADGE_COLORS[registro.tipo] ?? 'bg-cardHover text-text-muted'
-                        }`}
-                      >
-                        {registro.tipo.toUpperCase()}
-                      </span>
-                      <p className="text-sm text-text-muted">
-                        Registrado por {registro.creadoPor ?? 'sistema'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-sm text-text-muted">
-                    {registro.profesionalNombre ?? 'Profesional no asignado'}
-                  </div>
-                </header>
-                <div className="space-y-3 px-6 py-4 text-sm text-text">
-                  <p>{registro.descripcion}</p>
-                  {registro.resultado && (
-                    <p className="rounded-2xl bg-success-bg px-3 py-2 text-success">
-                      <span className="font-medium">Resultado: </span>
-                      {registro.resultado}
-                    </p>
-                  )}
-                  {registro.planesSeguimiento && (
-                    <p className="rounded-2xl bg-brand-subtle px-3 py-2 text-brand">
-                      <span className="font-medium">Seguimiento: </span>
-                      {registro.planesSeguimiento}
-                    </p>
-                  )}
-                </div>
-              </article>
+              <PatientHistorialListItem key={registro.id} registro={registro} />
             ))}
           </div>
         )}
