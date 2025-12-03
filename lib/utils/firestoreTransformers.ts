@@ -357,3 +357,30 @@ export function getProfesionalNombreCompleto(profesional: Profesional): string {
 export function getPacienteNombreCompleto(paciente: Paciente): string {
   return `${paciente.nombre} ${paciente.apellidos}`.trim();
 }
+
+/**
+ * Convierte un valor de Firestore Timestamp a ISO string
+ * Útil para serializar respuestas de API
+ */
+export function toDateISO(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (value instanceof Date) return value.toISOString();
+  if (typeof (value as { toDate?: () => Date })?.toDate === 'function') {
+    const date = (value as { toDate: () => Date }).toDate();
+    return date instanceof Date ? date.toISOString() : null;
+  }
+  return null;
+}
+
+/**
+ * Convierte un valor de Firestore Timestamp a Date o retorna null
+ */
+export function toDateOrNull(value: unknown): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof (value as { toDate?: () => Date })?.toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  return null;
+}

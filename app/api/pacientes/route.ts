@@ -6,6 +6,7 @@ import { adminDb } from '@/lib/firebaseAdmin';
 import { validateRequest } from '@/lib/utils/apiValidation';
 import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 import { createPacienteSchema } from '@/lib/validators';
+import { toDateISO } from '@/lib/utils/firestoreTransformers';
 import type { Query } from 'firebase-admin/firestore';
 import type { AppRole } from '@/lib/auth/roles';
 
@@ -72,16 +73,6 @@ export async function GET(request: Request) {
     const pacientes = slice
       .map((docSnap) => {
         const data = docSnap.data() ?? {};
-        const toDateISO = (value: unknown) => {
-          if (!value) return null;
-          if (typeof value === 'string') return value;
-          if (value instanceof Date) return value.toISOString();
-          if (typeof (value as { toDate?: () => Date })?.toDate === 'function') {
-            const date = (value as { toDate: () => Date }).toDate();
-            return date instanceof Date ? date.toISOString() : null;
-          }
-          return null;
-        };
 
         return {
           id: docSnap.id,
