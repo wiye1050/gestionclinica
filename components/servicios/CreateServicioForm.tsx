@@ -1,4 +1,5 @@
 import type { CatalogoServicio, GrupoPaciente, Profesional } from '@/types';
+import { FormField, FormSection } from '@/components/shared/form';
 
 type TiquetValue = 'SI' | 'NO' | 'CORD' | 'ESPACH';
 
@@ -34,158 +35,136 @@ export default function CreateServicioForm({
   grupos,
   profesionales,
 }: CreateServicioFormProps) {
+  const servicioOptions = catalogoServicios.map((s) => ({
+    value: s.id,
+    label: `${s.nombre} (${s.tiempoEstimado} min)`,
+  }));
+
+  const grupoOptions = grupos.map((g) => ({ value: g.id, label: g.nombre }));
+
+  const profesionalOptions = profesionales.map((p) => ({
+    value: p.id,
+    label: `${p.nombre} ${p.apellidos}`,
+  }));
+
   return (
     <div className="panel-block p-6 shadow-sm">
       <h2 className="mb-4 text-xl font-semibold text-text">Asignar servicio a grupo</h2>
-      <form onSubmit={onSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-text mb-1">
-              Servicio del Catálogo *
-            </label>
-            <select
-              value={formData.catalogoServicioId}
-              onChange={(e) => onChange({ ...formData, catalogoServicioId: e.target.value })}
-              className="w-full px-3 py-2 border border-border rounded-lg text-text"
-              required
-            >
-              <option value="">Seleccionar servicio...</option>
-              {catalogoServicios.map((servicio) => (
-                <option key={servicio.id} value={servicio.id}>
-                  {servicio.nombre} ({servicio.tiempoEstimado} min)
-                </option>
-              ))}
-            </select>
-          </div>
+      <form onSubmit={onSubmit} className="space-y-6">
+        <FormSection title="Información básica" description="Selecciona el servicio y grupo">
+          <FormField
+            name="catalogoServicioId"
+            label="Servicio del Catálogo"
+            type="select"
+            required
+            value={formData.catalogoServicioId}
+            onChange={(e) => onChange({ ...formData, catalogoServicioId: e.target.value })}
+            options={servicioOptions}
+            placeholder="Seleccionar servicio..."
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-text mb-1">Grupo *</label>
-            <select
-              value={formData.grupoId}
-              onChange={(e) => onChange({ ...formData, grupoId: e.target.value })}
-              className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
-              required
-            >
-              <option value="">Seleccionar grupo...</option>
-              {grupos.map((grupo) => (
-                <option key={grupo.id} value={grupo.id}>
-                  {grupo.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
+          <FormField
+            name="grupoId"
+            label="Grupo"
+            type="select"
+            required
+            value={formData.grupoId}
+            onChange={(e) => onChange({ ...formData, grupoId: e.target.value })}
+            options={grupoOptions}
+            placeholder="Seleccionar grupo..."
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-text mb-1">Tiquet CRM</label>
-            <select
-              value={formData.tiquet}
-              onChange={(e) => onChange({ ...formData, tiquet: e.target.value as TiquetValue })}
-              className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
-            >
-              <option value="SI">SI</option>
-              <option value="NO">NO</option>
-              <option value="CORD">CORD</option>
-              <option value="ESPACH">ESPACH</option>
-            </select>
-          </div>
+          <FormField
+            name="tiquet"
+            label="Tiquet CRM"
+            type="select"
+            value={formData.tiquet}
+            onChange={(e) => onChange({ ...formData, tiquet: e.target.value as TiquetValue })}
+            options={[
+              { value: 'SI', label: 'SI' },
+              { value: 'NO', label: 'NO' },
+              { value: 'CORD', label: 'CORD' },
+              { value: 'ESPACH', label: 'ESPACH' },
+            ]}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-text mb-1">Citar con (Principal) *</label>
-            <select
-              value={formData.profesionalPrincipalId}
-              onChange={(e) =>
-                onChange({ ...formData, profesionalPrincipalId: e.target.value })
-              }
-              className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
-              required
-            >
-              <option value="">Seleccionar profesional...</option>
-              {profesionales.map((prof) => (
-                <option key={prof.id} value={prof.id}>
-                  {prof.nombre} {prof.apellidos}
-                </option>
-              ))}
-            </select>
-          </div>
+          <FormField
+            name="sala"
+            label="Sala"
+            type="text"
+            value={formData.sala}
+            onChange={(e) => onChange({ ...formData, sala: e.target.value })}
+            placeholder="Sobreescribir sala predeterminada"
+            helperText="Opcional: deja vacío para usar la sala predeterminada"
+          />
+        </FormSection>
 
-          <div>
-            <label className="block text-sm font-medium text-text mb-1">Segunda Opción</label>
-            <select
-              value={formData.profesionalSegundaOpcionId}
-              onChange={(e) =>
-                onChange({ ...formData, profesionalSegundaOpcionId: e.target.value })
-              }
-              className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
-            >
-              <option value="">Seleccionar profesional...</option>
-              {profesionales.map((prof) => (
-                <option key={prof.id} value={prof.id}>
-                  {prof.nombre} {prof.apellidos}
-                </option>
-              ))}
-            </select>
-          </div>
+        <FormSection title="Profesionales asignados" description="Selecciona hasta 3 profesionales">
+          <FormField
+            name="profesionalPrincipalId"
+            label="Citar con (Principal)"
+            type="select"
+            required
+            value={formData.profesionalPrincipalId}
+            onChange={(e) => onChange({ ...formData, profesionalPrincipalId: e.target.value })}
+            options={profesionalOptions}
+            placeholder="Seleccionar profesional..."
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-text mb-1">Tercera Opción</label>
-            <select
-              value={formData.profesionalTerceraOpcionId}
-              onChange={(e) =>
-                onChange({ ...formData, profesionalTerceraOpcionId: e.target.value })
-              }
-              className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
-            >
-              <option value="">Seleccionar profesional...</option>
-              {profesionales.map((prof) => (
-                <option key={prof.id} value={prof.id}>
-                  {prof.nombre} {prof.apellidos}
-                </option>
-              ))}
-            </select>
-          </div>
+          <FormField
+            name="profesionalSegundaOpcionId"
+            label="Segunda Opción"
+            type="select"
+            value={formData.profesionalSegundaOpcionId}
+            onChange={(e) => onChange({ ...formData, profesionalSegundaOpcionId: e.target.value })}
+            options={profesionalOptions}
+            placeholder="Seleccionar profesional..."
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-text mb-1">Sala (opcional)</label>
-            <input
-              type="text"
-              value={formData.sala}
-              onChange={(e) => onChange({ ...formData, sala: e.target.value })}
-              className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
-              placeholder="Sobreescribir sala predeterminada"
-            />
-          </div>
-        </div>
+          <FormField
+            name="profesionalTerceraOpcionId"
+            label="Tercera Opción"
+            type="select"
+            value={formData.profesionalTerceraOpcionId}
+            onChange={(e) => onChange({ ...formData, profesionalTerceraOpcionId: e.target.value })}
+            options={profesionalOptions}
+            placeholder="Seleccionar profesional..."
+          />
+        </FormSection>
 
-        <div className="flex flex-wrap items-center gap-4">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={formData.esActual}
-              onChange={(e) => onChange({ ...formData, esActual: e.target.checked })}
-              className="h-4 w-4 rounded border-border"
-            />
-            <span className="text-sm text-text">Es actual</span>
-          </label>
+        <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border bg-muted p-4">
+          <FormField
+            name="esActual"
+            label="Es actual"
+            type="checkbox"
+            checked={formData.esActual}
+            onChange={(e) =>
+              onChange({ ...formData, esActual: (e.target as HTMLInputElement).checked })
+            }
+            fullWidth={false}
+          />
 
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={formData.requiereApoyo}
-              onChange={(e) => onChange({ ...formData, requiereApoyo: e.target.checked })}
-              className="h-4 w-4 rounded border-border"
-            />
-            <span className="text-sm text-text">Requiere apoyo</span>
-          </label>
+          <FormField
+            name="requiereApoyo"
+            label="Requiere apoyo"
+            type="checkbox"
+            checked={formData.requiereApoyo}
+            onChange={(e) =>
+              onChange({ ...formData, requiereApoyo: (e.target as HTMLInputElement).checked })
+            }
+            fullWidth={false}
+          />
 
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={formData.supervision}
-              onChange={(e) => onChange({ ...formData, supervision: e.target.checked })}
-              className="h-4 w-4 rounded border-border"
-            />
-            <span className="text-sm text-text">Supervisión</span>
-          </label>
+          <FormField
+            name="supervision"
+            label="Supervisión"
+            type="checkbox"
+            checked={formData.supervision}
+            onChange={(e) =>
+              onChange({ ...formData, supervision: (e.target as HTMLInputElement).checked })
+            }
+            fullWidth={false}
+          />
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
