@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth/server';
 import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
@@ -6,8 +6,11 @@ import { adminDb } from '@/lib/firebaseAdmin';
 import { initializeNHCCounter } from '@/lib/server/pacientesAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/utils/logger';
+import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';
 
 const ADMIN_ROLES = new Set(['admin']);
+
+const limiter = rateLimit(RATE_LIMIT_STRICT);
 
 // Schema para cada paciente importado
 const pacienteImportSchema = z.object({
@@ -28,7 +31,11 @@ const importRequestSchema = z.object({
   pacientes: z.array(pacienteImportSchema).min(1).max(1000),
 });
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Aplicar rate limiting
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });

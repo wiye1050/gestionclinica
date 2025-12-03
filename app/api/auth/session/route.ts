@@ -6,10 +6,16 @@ import {
   isAuthConfigured,
 } from '@/lib/auth/session';
 import { logger } from '@/lib/utils/logger';
+import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+const limiter = rateLimit(RATE_LIMIT_STRICT);
+
 export async function POST(request: NextRequest) {
+  // Aplicar rate limiting
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
   if (!adminAuth || !isAuthConfigured()) {
     return NextResponse.json(
       { error: 'Autenticación del lado del servidor no está configurada.' },

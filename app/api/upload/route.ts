@@ -12,11 +12,17 @@ import {
   type AllowedFolder,
 } from '@/lib/validators';
 import type { AppRole } from '@/lib/auth/roles';
+import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';
 
 // Upload allows more permissive access including reception role
 const UPLOAD_ROLES = new Set<AppRole>(['admin', 'coordinador', 'profesional', 'recepcion']);
 
+const limiter = rateLimit(RATE_LIMIT_STRICT);
+
 export async function POST(request: NextRequest) {
+  // Aplicar rate limiting
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
