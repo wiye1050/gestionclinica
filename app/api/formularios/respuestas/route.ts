@@ -3,6 +3,9 @@ import { adminDb } from '@/lib/firebaseAdmin';
 import { z } from 'zod';
 import type { RespuestaFormulario } from '@/types';
 import { logger } from '@/lib/utils/logger';
+import { rateLimit, RATE_LIMIT_MODERATE } from '@/lib/middleware/rateLimit';
+
+const limiter = rateLimit(RATE_LIMIT_MODERATE);
 
 const createRespuestaSchema = z.object({
   formularioPlantillaId: z.string().min(1, 'El ID de la plantilla es obligatorio'),
@@ -118,6 +121,10 @@ export async function GET(request: NextRequest) {
  * Crea una nueva respuesta de formulario
  */
 export async function POST(request: NextRequest) {
+  // Aplicar rate limiting
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     if (!adminDb) {
       logger.error('[API /api/formularios/respuestas POST] Admin DB not initialized');

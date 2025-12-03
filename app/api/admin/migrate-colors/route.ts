@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { getCurrentUser } from '@/lib/auth/server';
 import { logger } from '@/lib/utils/logger';
+import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';
 
 /**
  * POST /api/admin/migrate-colors
@@ -27,7 +28,13 @@ const SERVICIO_COLORS_BY_CATEGORIA: Record<string, string> = {
   enfermeria: '#F59E0B',   // Naranja
 };
 
-export async function POST() {
+const limiter = rateLimit(RATE_LIMIT_STRICT);
+
+export async function POST(request: NextRequest) {
+  // Aplicar rate limiting
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {

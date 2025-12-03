@@ -3,6 +3,9 @@ import { getCurrentUser } from '@/lib/auth/server';
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
 import { z } from 'zod';
 import { logger } from '@/lib/utils/logger';
+import { rateLimit, RATE_LIMIT_MODERATE } from '@/lib/middleware/rateLimit';
+
+const limiter = rateLimit(RATE_LIMIT_MODERATE);
 
 // Schema para crear usuario
 const createUserSchema = z.object({
@@ -51,6 +54,10 @@ export async function GET() {
 
 // POST - Crear nuevo usuario
 export async function POST(request: NextRequest) {
+  // Aplicar rate limiting
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser || !currentUser.roles?.includes('admin')) {

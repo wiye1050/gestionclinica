@@ -1,13 +1,20 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { Timestamp } from 'firebase-admin/firestore';
 import { adminDb, adminStorage } from '@/lib/firebaseAdmin';
 import { getCurrentUser } from '@/lib/auth/server';
 import { hasRole } from '@/lib/auth/roles';
 import { logger } from '@/lib/utils/logger';
+import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';
 
 const BATCH_LIMIT = 50;
 
-export async function POST() {
+const limiter = rateLimit(RATE_LIMIT_STRICT);
+
+export async function POST(request: NextRequest) {
+  // Aplicar rate limiting
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     return NextResponse.json({ error: 'No autenticado.' }, { status: 401 });

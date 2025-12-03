@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { createPaciente } from '@/lib/server/pacientesAdmin';
 import { captureError } from '@/lib/utils/errorLogging';
@@ -9,6 +9,9 @@ import { createPacienteSchema } from '@/lib/validators';
 import { toDateISO } from '@/lib/utils/firestoreTransformers';
 import type { Query } from 'firebase-admin/firestore';
 import type { AppRole } from '@/lib/auth/roles';
+import { rateLimit, RATE_LIMIT_MODERATE } from '@/lib/middleware/rateLimit';
+
+const limiter = rateLimit(RATE_LIMIT_MODERATE);
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -112,7 +115,11 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Aplicar rate limiting
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
