@@ -1,105 +1,94 @@
 'use client';
 
 import { EstadisticasProyectos } from '@/types/proyectos';
-import { TrendingUp, CheckCircle } from 'lucide-react';
+import { TrendingUp, CheckCircle, FolderKanban, AlertCircle, Clock, XCircle } from 'lucide-react';
+import { KPIGrid } from '@/components/shared/KPIGrid';
 
 interface KPIsProyectosProps {
   estadisticas: EstadisticasProyectos;
 }
 
 export default function KPIsProyectos({ estadisticas }: KPIsProyectosProps) {
+  const total =
+    estadisticas.porEstado.propuesta +
+    estadisticas.porEstado.planificacion +
+    estadisticas.porEstado['en-curso'] +
+    estadisticas.porEstado.pausado +
+    estadisticas.porEstado.completado +
+    estadisticas.porEstado.cancelado;
+
+  const porcentajeCompletado = total > 0
+    ? Math.round((estadisticas.porEstado.completado / total) * 100)
+    : 0;
+
+  const estadoItems = [
+    {
+      label: 'En Curso',
+      value: estadisticas.porEstado['en-curso'],
+      icon: TrendingUp,
+      accent: 'brand' as const,
+      helper: 'Proyectos activos',
+    },
+    {
+      label: 'Completados',
+      value: estadisticas.porEstado.completado,
+      icon: CheckCircle,
+      accent: 'success' as const,
+      helper: `${porcentajeCompletado}% del total`,
+    },
+    {
+      label: 'En Planificación',
+      value: estadisticas.porEstado.planificacion,
+      icon: Clock,
+      accent: 'purple' as const,
+      helper: 'Próximos a iniciar',
+    },
+    {
+      label: 'Pausados',
+      value: estadisticas.porEstado.pausado,
+      icon: AlertCircle,
+      accent: 'warn' as const,
+      helper: 'Requieren atención',
+    },
+    {
+      label: 'Propuestas',
+      value: estadisticas.porEstado.propuesta,
+      icon: FolderKanban,
+      accent: 'gray' as const,
+      helper: 'En evaluación',
+    },
+    {
+      label: 'Cancelados',
+      value: estadisticas.porEstado.cancelado,
+      icon: XCircle,
+      accent: 'danger' as const,
+      helper: 'Archivados',
+    },
+  ];
+
+  const tipoItems = [
+    { label: 'Desarrollo', value: estadisticas.porTipo.desarrollo, accent: 'brand' as const },
+    { label: 'Operacional', value: estadisticas.porTipo.operacional, accent: 'success' as const },
+    { label: 'Investigación', value: estadisticas.porTipo.investigacion, accent: 'purple' as const },
+    { label: 'Marketing', value: estadisticas.porTipo.marketing, accent: 'warn' as const },
+    { label: 'Mejora', value: estadisticas.porTipo.mejora, accent: 'brand' as const },
+    { label: 'Infraestructura', value: estadisticas.porTipo.infraestructura, accent: 'gray' as const },
+  ];
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {/* Distribución por Estado */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-blue-600" />
-          Por Estado
+    <div className="space-y-6">
+      <div>
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-muted">
+          Distribución por Estado
         </h3>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-700">Propuesta</span>
-            <span className="font-medium text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
-              {estadisticas.porEstado.propuesta}
-            </span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-700">Planificación</span>
-            <span className="font-medium text-gray-900 bg-blue-100 px-2 py-0.5 rounded">
-              {estadisticas.porEstado.planificacion}
-            </span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-700">En Curso</span>
-            <span className="font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-              {estadisticas.porEstado['en-curso']}
-            </span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-700">Pausado</span>
-            <span className="font-medium text-gray-900 bg-orange-100 px-2 py-0.5 rounded">
-              {estadisticas.porEstado.pausado}
-            </span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-700">Completado</span>
-            <span className="font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded">
-              {estadisticas.porEstado.completado}
-            </span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-700">Cancelado</span>
-            <span className="font-medium text-gray-900 bg-red-100 px-2 py-0.5 rounded">
-              {estadisticas.porEstado.cancelado}
-            </span>
-          </div>
-        </div>
+        <KPIGrid items={estadoItems} />
       </div>
 
-      {/* Distribución por Tipo */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          <CheckCircle className="w-4 h-4 text-green-600" />
-          Por Tipo
+      <div>
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-muted">
+          Distribución por Tipo
         </h3>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-700">Desarrollo</span>
-            <span className="font-medium text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
-              {estadisticas.porTipo.desarrollo}
-            </span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-700">Operacional</span>
-            <span className="font-medium text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
-              {estadisticas.porTipo.operacional}
-            </span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-700">Investigación</span>
-            <span className="font-medium text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
-              {estadisticas.porTipo.investigacion}
-            </span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-700">Marketing</span>
-            <span className="font-medium text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
-              {estadisticas.porTipo.marketing}
-            </span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-700">Mejora</span>
-            <span className="font-medium text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
-              {estadisticas.porTipo.mejora}
-            </span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-700">Infraestructura</span>
-            <span className="font-medium text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
-              {estadisticas.porTipo.infraestructura}
-            </span>
-          </div>
-        </div>
+        <KPIGrid items={tipoItems} />
       </div>
     </div>
   );

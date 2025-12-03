@@ -2,15 +2,18 @@
 
 import clsx from 'clsx';
 import type { ReactNode } from 'react';
+import KPICard from './KPICard';
+import type { LucideIcon } from 'lucide-react';
 
-export type KPIAccent = 'brand' | 'green' | 'blue' | 'purple' | 'gray' | 'red';
+// Soporta tanto nombres nuevos (success, danger, warn) como antiguos (green, red, yellow, blue) para compatibilidad
+export type KPIAccent = 'brand' | 'success' | 'danger' | 'warn' | 'purple' | 'gray' | 'green' | 'red' | 'yellow' | 'blue' | 'orange';
 
 export interface KPIItem {
   id?: string;
   label: string;
   value: string | number;
   helper?: string;
-  icon?: ReactNode;
+  icon?: LucideIcon | ReactNode;
   accent?: KPIAccent;
 }
 
@@ -19,15 +22,19 @@ interface KPIGridProps {
   className?: string;
 }
 
-const accentClasses: Record<KPIAccent, string> = {
-  brand: 'text-brand',
-  green: 'text-emerald-600',
-  blue: 'text-blue-600',
-  purple: 'text-violet-600',
-  gray: 'text-text',
-  red: 'text-red-600',
-};
-
+/**
+ * Grid responsive de KPIs que usa el componente KPICard unificado
+ *
+ * @example
+ * ```tsx
+ * <KPIGrid
+ *   items={[
+ *     { label: 'Total', value: 42, icon: Users, accent: 'brand' },
+ *     { label: 'Activos', value: 38, icon: CheckCircle, accent: 'success', helper: '90%' },
+ *   ]}
+ * />
+ * ```
+ */
 export function KPIGrid({ items, className }: KPIGridProps) {
   const columnClass = (() => {
     if (items.length >= 4) return 'lg:grid-cols-4';
@@ -38,28 +45,15 @@ export function KPIGrid({ items, className }: KPIGridProps) {
   return (
     <div className={clsx('grid grid-cols-1 gap-4 sm:grid-cols-2', columnClass, className)}>
       {items.map((item) => (
-        <div
+        <KPICard
           key={item.id ?? item.label}
-          className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-colors hover:border-brand/40"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                {item.label}
-              </p>
-              <p
-                className={clsx(
-                  'mt-1 text-2xl font-semibold text-text',
-                  accentClasses[item.accent ?? 'brand']
-                )}
-              >
-                {item.value}
-              </p>
-            </div>
-            {item.icon && <div className="text-brand/80">{item.icon}</div>}
-          </div>
-          {item.helper && <p className="mt-2 text-xs text-text-muted">{item.helper}</p>}
-        </div>
+          title={item.label}
+          value={item.value}
+          icon={item.icon ?? <></>}
+          color={item.accent ?? 'brand'}
+          variant="minimal"
+          subtitle={item.helper}
+        />
       ))}
     </div>
   );

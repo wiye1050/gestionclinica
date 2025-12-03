@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { isSameDay, isToday, isThisWeek } from 'date-fns';
-import StatCard from '@/components/shared/StatCard';
+import KPICard from '@/components/shared/KPICard';
 import { Calendar, CheckCircle, XCircle, TrendingUp } from 'lucide-react';
 import { AgendaEvent, calculateOccupancyRate } from './agendaHelpers';
 
@@ -71,36 +71,40 @@ export default function AgendaKPIs({ events, currentDate, viewMode }: AgendaKPIs
 
   return (
     <>
-      <StatCard
+      <KPICard
         title={currentLabel.total}
         value={viewMode === 'day' ? stats.today : stats.total}
         icon={Calendar}
-        color="blue"
+        color="brand"
+        variant="compact"
         subtitle={currentLabel.subtitle}
       />
-      
-      <StatCard
+
+      <KPICard
         title="Confirmados"
         value={stats.confirmed}
         icon={CheckCircle}
-        color="green"
+        color="success"
+        variant="compact"
         subtitle={`${Math.round((stats.confirmed / Math.max(stats.total, 1)) * 100)}% del total`}
       />
-      
-      <StatCard
+
+      <KPICard
         title="Cancelados"
         value={stats.cancelled}
         icon={XCircle}
-        color="red"
+        color="danger"
+        variant="compact"
         subtitle={stats.cancelled > 0 ? 'Requieren atención' : 'Sin cancelaciones'}
       />
-      
+
       {(viewMode === 'day' || viewMode === 'week') && (
-        <StatCard
+        <KPICard
           title="Ocupación"
           value={`${stats.occupancy}%`}
           icon={TrendingUp}
-          color={stats.occupancy > 80 ? 'red' : stats.occupancy > 60 ? 'yellow' : 'green'}
+          color={stats.occupancy > 80 ? 'danger' : stats.occupancy > 60 ? 'warn' : 'success'}
+          variant="compact"
           subtitle={
             stats.occupancy > 80 ? 'Muy alta' :
             stats.occupancy > 60 ? 'Alta' :
@@ -110,11 +114,12 @@ export default function AgendaKPIs({ events, currentDate, viewMode }: AgendaKPIs
       )}
 
       {(viewMode === 'month' || viewMode === 'resource') && (
-        <StatCard
+        <KPICard
           title="Completados"
           value={stats.completed}
           icon={CheckCircle}
           color="purple"
+          variant="compact"
           subtitle={`${Math.round((stats.completed / Math.max(stats.total, 1)) * 100)}% finalizados`}
         />
       )}
