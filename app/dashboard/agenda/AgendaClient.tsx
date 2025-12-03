@@ -22,6 +22,8 @@ import EventModal from '@/components/agenda/v2/EventModal';
 import AgendaEventDrawer from '@/components/agenda/v2/AgendaEventDrawer';
 import MiniCalendar from '@/components/agenda/v2/MiniCalendar';
 import CollapsibleToolbar from '@/components/agenda/v2/CollapsibleToolbar';
+import AgendaToolbarFilters, { ESTADO_FILTERS, TIPO_FILTERS } from '@/components/agenda/v2/AgendaToolbarFilters';
+import WeekDaySelector from '@/components/agenda/v2/WeekDaySelector';
 import PrimaryTabs from '@/components/shared/PrimaryTabs';
 import { AgendaEvent } from '@/components/agenda/v2/agendaHelpers';
 import { CalendarDays, List, LayoutGrid, Boxes, ChevronRight } from 'lucide-react';
@@ -36,35 +38,6 @@ import { useAgendaModals } from '@/lib/hooks/useAgendaModals';
 
 export type VistaAgenda = 'diaria' | 'semanal' | 'multi' | 'boxes' | 'paciente';
 type AgendaResource = { id: string; nombre: string; tipo: 'profesional' | 'sala' };
-
-const ESTADO_FILTERS: Array<{
-  id: AgendaEvent['estado'] | 'todos';
-  label: string;
-  className: string;
-}> = [
-  { id: 'todos', label: 'Todos', className: 'border border-border text-text-muted' },
-  { id: 'programada', label: 'Programadas', className: 'bg-yellow-100 text-yellow-800' },
-  { id: 'confirmada', label: 'Confirmadas', className: 'bg-green-100 text-green-800' },
-  { id: 'realizada', label: 'Realizadas', className: 'bg-gray-200 text-gray-700' },
-  { id: 'cancelada', label: 'Canceladas', className: 'bg-red-100 text-red-800' },
-];
-
-const TIPO_FILTERS: Array<{ id: AgendaEvent['tipo'] | 'todos'; label: string }> = [
-  { id: 'todos', label: 'Todos' },
-  { id: 'consulta', label: 'Consulta' },
-  { id: 'seguimiento', label: 'Seguimiento' },
-  { id: 'revision', label: 'Revisión' },
-  { id: 'tratamiento', label: 'Tratamiento' },
-  { id: 'urgencia', label: 'Urgencia' },
-  { id: 'administrativo', label: 'Administrativo' },
-];
-
-const RECURSO_PRESETS = [
-  { id: 'todos', label: 'Todos' },
-  { id: 'medicina', label: 'Equipo médico' },
-  { id: 'fisioterapia', label: 'Fisioterapia' },
-  { id: 'enfermeria', label: 'Enfermería' },
-];
 
 const VIEW_TABS: Array<{ id: VistaAgenda; label: string; helper: string; icon: ReactNode }> = [
   { id: 'diaria', label: 'Diaria', helper: 'Detalle por horas', icon: <CalendarDays className="h-4 w-4" /> },
@@ -644,99 +617,22 @@ export default function AgendaClient({
               </details>
             </div>
 
-            <select
-              value={selectedSala}
-              onChange={(e) => setSelectedSala(e.target.value)}
-              className="rounded-lg border border-border bg-card px-2 py-1.5 text-[9px] font-semibold text-text focus-visible:focus-ring"
-            >
-              <option value="todas">Todas las salas</option>
-              {salas.map((sala) => (
-                <option key={sala.id} value={sala.id}>
-                  {sala.nombre}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={tipoFilter}
-              onChange={(e) => setTipoFilter(e.target.value as AgendaEvent['tipo'] | 'todos')}
-              className="rounded-lg border border-border bg-card px-2 py-1.5 text-[9px] font-semibold text-text focus-visible:focus-ring"
-            >
-              {TIPO_FILTERS.map((tipo) => (
-                <option key={tipo.id} value={tipo.id}>
-                  {tipo.label}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={resourcePreset}
-              disabled={vista !== 'multi'}
-              onChange={(e) =>
-                setResourcePreset(e.target.value as 'todos' | 'medicina' | 'fisioterapia' | 'enfermeria')
-              }
-              className={`rounded-lg border border-border bg-card px-2 py-1.5 text-[9px] font-semibold text-text focus-visible:focus-ring ${
-                vista !== 'multi' ? 'cursor-not-allowed opacity-60' : ''
-              }`}
-            >
-              {RECURSO_PRESETS.map((preset) => (
-                <option key={preset.id} value={preset.id}>
-                  {preset.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
-            {ESTADO_FILTERS.map((filter) => (
-              <button
-                key={filter.id}
-                onClick={() => setEstadoFilter(filter.id)}
-                className={`rounded-full px-2 py-1 text-[9px] font-semibold transition-all focus-visible:focus-ring ${
-                  estadoFilter === filter.id
-                    ? `${filter.className} border border-transparent`
-                    : 'border border-border text-text-muted hover:bg-cardHover'
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
-            <div className="inline-flex rounded-full border border-border bg-card p-0.5 text-[9px] font-semibold text-text-muted">
-              {[
-                { id: 'comfort', label: 'Amplia' },
-                { id: 'compact', label: 'Compacta' },
-              ].map((option) => (
-                <button
-                  key={option.id}
-                  onClick={() => setViewDensity(option.id as 'comfort' | 'compact')}
-                  className={`rounded-full px-2 py-1 text-[9px] transition-all ${
-                    viewDensity === option.id
-                      ? 'bg-brand text-white'
-                      : 'text-text-muted hover:bg-cardHover'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            <div className="inline-flex rounded-full border border-border bg-card p-0.5 text-[9px] font-semibold text-text-muted">
-              {[
-                { id: 'single', label: 'Una columna' },
-                { id: 'multi', label: 'Multi-columna' },
-              ].map((option) => (
-                <button
-                  key={option.id}
-                  onClick={() => setDayViewMode(option.id as 'single' | 'multi')}
-                  className={`rounded-full px-2 py-1 text-[9px] transition-all ${
-                    dayViewMode === option.id
-                      ? 'bg-brand text-white'
-                      : 'text-text-muted hover:bg-cardHover'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+            <AgendaToolbarFilters
+              selectedSala={selectedSala}
+              salas={salas}
+              onSalaChange={setSelectedSala}
+              tipoFilter={tipoFilter}
+              onTipoChange={setTipoFilter}
+              resourcePreset={resourcePreset}
+              onResourcePresetChange={setResourcePreset}
+              isResourcePresetDisabled={vista !== 'multi'}
+              estadoFilter={estadoFilter}
+              onEstadoChange={setEstadoFilter}
+              viewDensity={viewDensity}
+              onViewDensityChange={setViewDensity}
+              dayViewMode={dayViewMode}
+              onDayViewModeChange={setDayViewMode}
+            />
           </div>
         </div>
       </CollapsibleToolbar>
@@ -841,31 +737,7 @@ export default function AgendaClient({
               onMonthChange={setCurrentDate}
               events={eventosFiltrados}
             />
-            <div>
-              <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-wide text-text-muted">
-                Semana
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {weekDays.map((day) => {
-                  const isActive = day.isSelected;
-                  return (
-                    <button
-                      key={`${day.label}-${day.dayNumber}`}
-                      onClick={() => setCurrentDate(day.date)}
-                      className={`flex flex-col items-center rounded-lg border px-2 py-1.5 text-[9px] font-semibold uppercase tracking-wide transition-all focus-visible:focus-ring ${
-                        isActive
-                          ? 'border-brand bg-brand/20 text-text'
-                          : 'border-border bg-card text-text-muted hover:bg-cardHover'
-                      }`}
-                    >
-                      <span>{day.label}</span>
-                      <span className="text-sm leading-none text-text">{day.dayNumber}</span>
-                      {day.isToday && <span className="text-[8px] text-brand">hoy</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <WeekDaySelector weekDays={weekDays} onDateSelect={setCurrentDate} />
           </aside>
         </div>
       </section>
