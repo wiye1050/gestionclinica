@@ -3,7 +3,7 @@
 import { Suspense, lazy, useState, useMemo } from 'react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useServiciosModule } from '@/lib/hooks/useServiciosModule';
-import { Plus, CheckSquare, Square, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { LoadingTable } from '@/components/ui/Loading';
 import type { ServicioAsignado, Profesional, GrupoPaciente, CatalogoServicio } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
@@ -12,24 +12,13 @@ import { CompactFilters, type ActiveFilterChip } from '@/components/shared/Compa
 import { KPIGrid } from '@/components/shared/KPIGrid';
 import { captureError } from '@/lib/utils/errorLogging';
 import { createServicioAction, updateServicioAction, deleteServicioAction } from './actions';
+import CreateServicioForm, { type NuevoServicioForm } from '@/components/servicios/CreateServicioForm';
+import ServiciosTable from '@/components/servicios/ServiciosTable';
 
 // Lazy loading del componente de exportación
 const ExportButton = lazy(() => import('@/components/ui/ExportButton').then(m => ({ default: m.ExportButton })));
 
 type TiquetValue = 'SI' | 'NO' | 'CORD' | 'ESPACH';
-
-type NuevoServicioForm = {
-  catalogoServicioId: string;
-  grupoId: string;
-  tiquet: TiquetValue;
-  profesionalPrincipalId: string;
-  profesionalSegundaOpcionId: string;
-  profesionalTerceraOpcionId: string;
-  requiereApoyo: boolean;
-  sala: string;
-  supervision: boolean;
-  esActual: boolean;
-};
 
 interface ServiciosClientProps {
   initialServicios: ServicioAsignado[];
@@ -300,22 +289,6 @@ export default function ServiciosClient({
     setSoloActuales(false);
   };
 
-  // Obtener color del tiquet
-  const getColorTiquet = (tiquet: string) => {
-    switch (tiquet) {
-      case 'SI':
-        return 'bg-success-bg text-success';
-      case 'NO':
-        return 'bg-danger-bg text-danger';
-      case 'CORD':
-        return 'bg-warn-bg text-warn';
-      case 'ESPACH':
-        return 'bg-brand-subtle text-brand';
-      default:
-        return 'bg-cardHover text-text-muted';
-    }
-  };
-
   // Datos para exportar
   const exportData = useMemo(() => serviciosFiltrados.map(servicio => ({
     'Servicio': servicio.catalogoServicioNombre,
@@ -389,157 +362,15 @@ export default function ServiciosClient({
 
       {/* Formulario Asignar Servicio */}
       {mostrarFormulario && (
-        <div className="panel-block p-6 shadow-sm">
-          <h2 className="mb-4 text-xl font-semibold text-text">Asignar servicio a grupo</h2>
-          <form onSubmit={handleCrearServicio} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Servicio del Catálogo *</label>
-                <select
-                  value={nuevoServicio.catalogoServicioId}
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, catalogoServicioId: e.target.value})}
-                  className="w-full px-3 py-2 border border-border rounded-lg text-text"
-                  required
-                >
-                  <option value="">Seleccionar servicio...</option>
-                  {catalogoServicios.map(servicio => (
-                    <option key={servicio.id} value={servicio.id}>
-                      {servicio.nombre} ({servicio.tiempoEstimado} min)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Grupo *</label>
-                <select
-                  value={nuevoServicio.grupoId}
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, grupoId: e.target.value})}
-                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
-                  required
-                >
-                  <option value="">Seleccionar grupo...</option>
-                  {grupos.map(grupo => (
-                    <option key={grupo.id} value={grupo.id}>{grupo.nombre}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Tiquet CRM</label>
-                <select
-                  value={nuevoServicio.tiquet}
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, tiquet: e.target.value as TiquetValue})}
-                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
-                >
-                  <option value="SI">SI</option>
-                  <option value="NO">NO</option>
-                  <option value="CORD">CORD</option>
-                  <option value="ESPACH">ESPACH</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Citar con (Principal) *</label>
-                <select
-                  value={nuevoServicio.profesionalPrincipalId}
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, profesionalPrincipalId: e.target.value})}
-                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
-                  required
-                >
-                  <option value="">Seleccionar profesional...</option>
-                  {profesionales.map(prof => (
-                    <option key={prof.id} value={prof.id}>{prof.nombre} {prof.apellidos}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Segunda Opción</label>
-                <select
-                  value={nuevoServicio.profesionalSegundaOpcionId}
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, profesionalSegundaOpcionId: e.target.value})}
-                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
-                >
-                  <option value="">Seleccionar profesional...</option>
-                  {profesionales.map(prof => (
-                    <option key={prof.id} value={prof.id}>{prof.nombre} {prof.apellidos}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Tercera Opción</label>
-                <select
-                  value={nuevoServicio.profesionalTerceraOpcionId}
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, profesionalTerceraOpcionId: e.target.value})}
-                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
-                >
-                  <option value="">Seleccionar profesional...</option>
-                  {profesionales.map(prof => (
-                    <option key={prof.id} value={prof.id}>{prof.nombre} {prof.apellidos}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-text mb-1">Sala (opcional)</label>
-                <input
-                  type="text"
-                  value={nuevoServicio.sala}
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, sala: e.target.value})}
-                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-text focus-visible:focus-ring"
-                  placeholder="Sobreescribir sala predeterminada"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-4">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={nuevoServicio.esActual}
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, esActual: e.target.checked})}
-                  className="h-4 w-4 rounded border-border"
-                />
-                <span className="text-sm text-text">Es actual</span>
-              </label>
-
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={nuevoServicio.requiereApoyo}
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, requiereApoyo: e.target.checked})}
-                  className="h-4 w-4 rounded border-border"
-                />
-                <span className="text-sm text-text">Requiere apoyo</span>
-              </label>
-
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={nuevoServicio.supervision}
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, supervision: e.target.checked})}
-                  className="h-4 w-4 rounded border-border"
-                />
-                <span className="text-sm text-text">Supervisión</span>
-              </label>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <button type="submit" className="btn-gradient px-6 py-2.5 text-sm">
-                Asignar Servicio
-              </button>
-              <button
-                type="button"
-                onClick={() => setMostrarFormulario(false)}
-                className="rounded-pill border border-border bg-card px-5 py-2 text-sm font-medium text-text hover:bg-cardHover focus-visible:focus-ring"
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
+        <CreateServicioForm
+          formData={nuevoServicio}
+          onChange={setNuevoServicio}
+          onSubmit={handleCrearServicio}
+          onCancel={() => setMostrarFormulario(false)}
+          catalogoServicios={catalogoServicios}
+          grupos={grupos}
+          profesionales={profesionales}
+        />
       )}
 
       <CompactFilters
@@ -587,131 +418,14 @@ export default function ServiciosClient({
       {loading ? (
         <LoadingTable rows={10} />
       ) : (
-        <div className="overflow-hidden panel-block shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b border-border bg-cardHover">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Actual</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Servicio</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Grupo</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Tiquet</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Citar con</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">2ª Opción</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">3ª Opción</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Apoyo</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Sala</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Tiempo</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {serviciosFiltrados.length === 0 ? (
-                  <tr>
-                    <td colSpan={11} className="px-4 py-8 text-center text-text-muted">
-                      No hay servicios asignados. Usa el boton &quot;Asignar Servicio&quot;
-                    </td>
-                  </tr>
-                ) : (
-                  serviciosFiltrados.map((servicio) => (
-                    <tr key={servicio.id} className="hover:bg-cardHover">
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => toggleActual(servicio.id, servicio.esActual)}
-                          className="text-text-muted hover:text-brand"
-                        >
-                          {servicio.esActual ? (
-                            <CheckSquare className="h-5 w-5 text-brand" />
-                          ) : (
-                            <Square className="h-5 w-5 text-text-muted" />
-                          )}
-                        </button>
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-text">
-                        {servicio.catalogoServicioNombre}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-text-muted">
-                        {servicio.grupoNombre}
-                      </td>
-                      <td className="px-4 py-3">
-                        <select
-                          value={servicio.tiquet}
-                          onChange={(e) => actualizarTiquet(servicio.id, e.target.value)}
-                          className={`px-2 py-1 rounded text-xs font-medium ${getColorTiquet(servicio.tiquet)}`}
-                        >
-                          <option value="SI">SI</option>
-                          <option value="NO">NO</option>
-                          <option value="CORD">CORD</option>
-                          <option value="ESPACH">ESPACH</option>
-                        </select>
-                      </td>
-                      <td className="px-4 py-3">
-                        <select
-                          value={servicio.profesionalPrincipalId}
-                          onChange={(e) => actualizarProfesional(servicio.id, 'profesionalPrincipalId', e.target.value)}
-                          className="rounded-lg border border-border bg-card px-2 py-1 text-sm text-text focus-visible:focus-ring"
-                        >
-                          <option value="">Seleccionar...</option>
-                          {profesionales.map(prof => (
-                            <option key={prof.id} value={prof.id}>
-                              {prof.nombre} {prof.apellidos}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-4 py-3">
-                        <select
-                          value={servicio.profesionalSegundaOpcionId || ''}
-                          onChange={(e) => actualizarProfesional(servicio.id, 'profesionalSegundaOpcionId', e.target.value)}
-                          className="rounded-lg border border-border bg-card px-2 py-1 text-sm text-text focus-visible:focus-ring"
-                        >
-                          <option value="">-</option>
-                          {profesionales.map(prof => (
-                            <option key={prof.id} value={prof.id}>
-                              {prof.nombre} {prof.apellidos}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-4 py-3">
-                        <select
-                          value={servicio.profesionalTerceraOpcionId || ''}
-                          onChange={(e) => actualizarProfesional(servicio.id, 'profesionalTerceraOpcionId', e.target.value)}
-                          className="rounded-lg border border-border bg-card px-2 py-1 text-sm text-text focus-visible:focus-ring"
-                        >
-                          <option value="">-</option>
-                          {profesionales.map(prof => (
-                            <option key={prof.id} value={prof.id}>
-                              {prof.nombre} {prof.apellidos}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {servicio.requiereApoyo && <span className="text-warn">✓</span>}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-text-muted">
-                        {servicio.sala || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-text-muted">
-                        {servicio.tiempoReal ? `${servicio.tiempoReal}min` : '-'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => eliminarServicio(servicio.id)}
-                          className="text-danger transition-colors hover:text-danger/80"
-                          title="Eliminar"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <ServiciosTable
+          servicios={serviciosFiltrados}
+          profesionales={profesionales}
+          onToggleActual={toggleActual}
+          onUpdateTiquet={actualizarTiquet}
+          onUpdateProfesional={actualizarProfesional}
+          onDelete={eliminarServicio}
+        />
       )}
     </div>
   );
