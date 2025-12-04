@@ -26,7 +26,7 @@ export function useAgendaFilters() {
 
   // View states
   const [vista, setVista] = useState<VistaAgenda>('multi');
-  const [viewDensity, setViewDensity] = useState<'comfort' | 'compact'>('comfort');
+  const [viewDensity, setViewDensity] = useState<'compact' | 'normal' | 'spacious'>('normal');
   const [dayViewMode, setDayViewMode] = useState<'single' | 'multi'>('single');
 
   // Loading state

@@ -20,17 +20,11 @@ import AgendaDayView from '@/components/agenda/v2/AgendaDayView';
 import AgendaWeekViewV2 from '@/components/agenda/v2/AgendaWeekViewV2';
 import AgendaResourceView from '@/components/agenda/v2/AgendaResourceView';
 import EventModal from '@/components/agenda/v2/EventModal';
-import MiniCalendar from '@/components/agenda/v2/MiniCalendar';
-import CollapsibleToolbar from '@/components/agenda/v2/CollapsibleToolbar';
-import AgendaToolbarFilters, { ESTADO_FILTERS, TIPO_FILTERS } from '@/components/agenda/v2/AgendaToolbarFilters';
-import WeekDaySelector from '@/components/agenda/v2/WeekDaySelector';
-import PrimaryTabs from '@/components/shared/PrimaryTabs';
+import AgendaTopBar from '@/components/agenda/v2/layout/AgendaTopBar';
+import AgendaSidebar from '@/components/agenda/v2/layout/AgendaSidebar';
 import { AgendaEvent } from '@/components/agenda/v2/agendaHelpers';
-import { CalendarDays, List, LayoutGrid, Boxes, ChevronRight } from 'lucide-react';
 import type { SerializedAgendaEvent } from '@/lib/server/agenda';
 import type { Paciente } from '@/types';
-import { CompactFilters, type ActiveFilterChip } from '@/components/shared/CompactFilters';
-import { KPIGrid } from '@/components/shared/KPIGrid';
 import { deserializeAgendaEvents } from '@/lib/utils/agendaEvents';
 import { useAgendaFilters } from '@/lib/hooks/useAgendaFilters';
 import { useAgendaActions } from '@/lib/hooks/useAgendaActions';
@@ -44,13 +38,6 @@ const AgendaEventDrawer = dynamic(
 
 export type VistaAgenda = 'diaria' | 'semanal' | 'multi' | 'boxes' | 'paciente';
 type AgendaResource = { id: string; nombre: string; tipo: 'profesional' | 'sala' };
-
-const VIEW_TABS: Array<{ id: VistaAgenda; label: string; helper: string; icon: ReactNode }> = [
-  { id: 'diaria', label: 'Diaria', helper: 'Detalle por horas', icon: <CalendarDays className="h-4 w-4" /> },
-  { id: 'semanal', label: 'Semanal', helper: 'Vista cronológica', icon: <List className="h-4 w-4" /> },
-  { id: 'multi', label: 'Multi', helper: 'Columnas por profesional', icon: <LayoutGrid className="h-4 w-4" /> },
-  { id: 'boxes', label: 'Boxes', helper: 'Flujo por salas', icon: <Boxes className="h-4 w-4" /> },
-];
 
 interface AgendaClientProps {
   initialWeekStart: string;
@@ -114,8 +101,9 @@ export default function AgendaClient({
   } = useAgendaModals({ prefillRequest });
 
   const [currentDate, setCurrentDate] = useState(() => initialWeekStartDate);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const hourHeight = viewDensity === 'compact' ? 60 : 90;
+  const hourHeight = viewDensity === 'compact' ? 60 : viewDensity === 'spacious' ? 120 : 90;
 
   // Handle prefill request (from URL params)
   useEffect(() => {
@@ -242,55 +230,6 @@ export default function AgendaClient({
     pacienteMap,
   ]);
 
-  const agendaStats = useMemo(() => {
-    const total = eventosFiltrados.length;
-    const confirmadas = eventosFiltrados.filter((evento) => evento.estado === 'confirmada').length;
-    const programadas = eventosFiltrados.filter((evento) => evento.estado === 'programada').length;
-    const canceladas = eventosFiltrados.filter((evento) => evento.estado === 'cancelada').length;
-    const realizadas = eventosFiltrados.filter((evento) => evento.estado === 'realizada').length;
-    return { total, confirmadas, programadas, canceladas, realizadas };
-  }, [eventosFiltrados]);
-
-  const agendaKpis = useMemo(
-    () => [
-      {
-        id: 'total',
-        label: 'Eventos visibles',
-        value: agendaStats.total,
-        helper: 'Según filtros aplicados',
-        accent: 'brand' as const,
-      },
-      {
-        id: 'programadas',
-        label: 'Programadas',
-        value: agendaStats.programadas,
-        helper: 'Pendientes por confirmar',
-        accent: 'blue' as const,
-      },
-      {
-        id: 'confirmadas',
-        label: 'Confirmadas',
-        value: agendaStats.confirmadas,
-        helper: 'Listas para ejecutar',
-        accent: 'green' as const,
-      },
-      {
-        id: 'canceladas',
-        label: 'Canceladas',
-        value: agendaStats.canceladas,
-        helper: 'Requieren seguimiento',
-        accent: 'red' as const,
-      },
-      {
-        id: 'realizadas',
-        label: 'Realizadas',
-        value: agendaStats.realizadas,
-        helper: 'Completadas esta vista',
-        accent: 'purple' as const,
-      },
-    ],
-    [agendaStats]
-  );
 
   const isResourceGridMode = vista === 'multi' || (vista === 'diaria' && dayViewMode === 'multi');
   const resourceColumnLimit = Math.max(isResourceGridMode ? 6 : 4, 1);
@@ -406,6 +345,65 @@ export default function AgendaClient({
     });
   };
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input/textarea
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        // Allow '/' to focus search even in inputs
+        if (e.key === '/' && !target.classList.contains('agenda-search')) {
+          e.preventDefault();
+          const searchInput = document.querySelector('.agenda-search') as HTMLInputElement;
+          searchInput?.focus();
+        }
+        return;
+      }
+
+      // Navigation shortcuts
+      if (e.key === 'ArrowLeft' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        handlePrev();
+      } else if (e.key === 'ArrowRight' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        handleNext();
+      }
+      // View shortcuts (1-4)
+      else if (e.key === '1') {
+        e.preventDefault();
+        setVista('diaria');
+      } else if (e.key === '2') {
+        e.preventDefault();
+        setVista('semanal');
+      } else if (e.key === '3') {
+        e.preventDefault();
+        setVista('multi');
+      } else if (e.key === '4' && false) { // Disabled until boxes is ready
+        e.preventDefault();
+        setVista('boxes');
+      }
+      // Today shortcut
+      else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        handleToday();
+      }
+      // New event shortcut
+      else if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        openModal(new Date());
+      }
+      // Search focus
+      else if (e.key === '/') {
+        e.preventDefault();
+        const searchInput = document.querySelector('.agenda-search') as HTMLInputElement;
+        searchInput?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handlePrev, handleNext, handleToday, setVista, openModal]);
+
   const dateLabel = useMemo(() => {
     if (vista === 'semanal') {
       const weekEnd = addDays(weekStart, 6);
@@ -418,85 +416,6 @@ export default function AgendaClient({
 
     return format(currentDate, "EEEE d 'de' MMMM, yyyy", { locale: es });
   }, [vista, currentDate, weekStart]);
-
-  const weekDays = useMemo(() => {
-    const today = new Date();
-    return Array.from({ length: 7 }).map((_, index) => {
-      const date = addDays(weekStart, index);
-      return {
-        date,
-        label: format(date, 'EEE', { locale: es }),
-        dayNumber: format(date, 'd', { locale: es }),
-        isToday: isSameDay(date, today),
-        isSelected: isSameDay(date, currentDate),
-      };
-    });
-  }, [weekStart, currentDate]);
-
-  // Compute filter labels for chips (must be before any conditional returns)
-  const profesionalesLabel = useMemo(() => {
-    if (selectedProfesionales.length === 0) return undefined;
-    return selectedProfesionales.length === 1
-      ? profesionales.find((p) => p.id === selectedProfesionales[0])?.nombre
-      : `${selectedProfesionales.length} profesionales`;
-  }, [selectedProfesionales, profesionales]);
-
-  const salaLabel = useMemo(() => {
-    if (!selectedSala || selectedSala === 'todas') return undefined;
-    return salas.find((s) => s.id === selectedSala)?.nombre;
-  }, [selectedSala, salas]);
-
-  const tipoLabel = useMemo(() => {
-    if (!tipoFilter || tipoFilter === 'todos') return undefined;
-    return TIPO_FILTERS.find((t) => t.id === tipoFilter)?.label;
-  }, [tipoFilter]);
-
-  const estadoLabel = useMemo(() => {
-    if (!estadoFilter || estadoFilter === 'todos') return undefined;
-    return ESTADO_FILTERS.find((e) => e.id === estadoFilter)?.label;
-  }, [estadoFilter]);
-
-  const agendaFilterChips: ActiveFilterChip[] = [];
-  if (busquedaEvento.trim()) {
-    agendaFilterChips.push({
-      id: 'busqueda',
-      label: 'Búsqueda',
-      value: busquedaEvento,
-      onRemove: () => setBusquedaEvento(''),
-    });
-  }
-  if (profesionalesLabel) {
-    agendaFilterChips.push({
-      id: 'profesionales',
-      label: 'Profesionales',
-      value: profesionalesLabel,
-      onRemove: () => setSelectedProfesionales([]),
-    });
-  }
-  if (salaLabel) {
-    agendaFilterChips.push({
-      id: 'sala',
-      label: 'Sala',
-      value: salaLabel,
-      onRemove: () => setSelectedSala('todas'),
-    });
-  }
-  if (tipoLabel) {
-    agendaFilterChips.push({
-      id: 'tipo',
-      label: 'Tipo',
-      value: tipoLabel,
-      onRemove: () => setTipoFilter('todos'),
-    });
-  }
-  if (estadoLabel) {
-    agendaFilterChips.push({
-      id: 'estado',
-      label: 'Estado',
-      value: estadoLabel,
-      onRemove: () => setEstadoFilter('todos'),
-    });
-  }
 
 
   const renderPlaceholder = (title: string, description: string) => (
@@ -511,178 +430,129 @@ export default function AgendaClient({
   }
 
   return (
-    <div className="space-y-4">
-      <KPIGrid items={agendaKpis} />
-
-      <CompactFilters
-        search={{
-          value: busquedaEvento,
-          onChange: setBusquedaEvento,
-          placeholder: 'Buscar por paciente, profesional o servicio',
-        }}
-        selects={[
-          {
-            id: 'estado',
-            label: 'Estado',
-            value: estadoFilter,
-            onChange: (value) => setEstadoFilter(value as typeof estadoFilter),
-            options: ESTADO_FILTERS.map((option) => ({ value: option.id, label: option.label })),
-          },
-          {
-            id: 'tipo',
-            label: 'Tipo',
-            value: tipoFilter,
-            onChange: (value) => setTipoFilter(value as typeof tipoFilter),
-            options: TIPO_FILTERS.map((option) => ({ value: option.id, label: option.label })),
-          },
-          {
-            id: 'sala',
-            label: 'Sala',
-            value: selectedSala,
-            onChange: setSelectedSala,
-            options: [
-              { value: 'todas', label: 'Todas las salas' },
-              ...salas.map((sala) => ({ value: sala.id, label: sala.nombre })),
-            ],
-          },
-        ]}
-        activeFilters={agendaFilterChips}
-        onClear={agendaFilterChips.length ? clearAgendaFilters : undefined}
-      />
-
-      <CollapsibleToolbar
+    <div className="flex h-[calc(100vh-4rem)] flex-col">
+      {/* TopBar */}
+      <AgendaTopBar
         dateLabel={dateLabel}
         onPrev={handlePrev}
         onNext={handleNext}
         onToday={handleToday}
-        eventCount={eventosFiltrados.length}
+        vista={vista}
+        onVistaChange={setVista}
+        busqueda={busquedaEvento}
+        onBusquedaChange={setBusquedaEvento}
         onNewEvent={() => openModal(new Date())}
-        activeFilters={{
-          profesionales: selectedProfesionales,
-          sala: selectedSala,
-          tipo: tipoFilter,
-          estado: estadoFilter,
-        }}
-        profesionalesLabel={profesionalesLabel}
-        salaLabel={salaLabel}
-        tipoLabel={tipoLabel}
-        estadoLabel={estadoLabel}
-        onClearProfesionales={() => setSelectedProfesionales([])}
-        onClearSala={() => setSelectedSala('todas')}
-        onClearTipo={() => setTipoFilter('todos')}
-        onClearEstado={() => setEstadoFilter('todos')}
-      >
-        {/* Filter Controls - Only shown when expanded */}
-        <div className="space-y-2">
-          <div className="flex flex-wrap gap-2">
-            <div className="relative">
-              <details className="group" title="Profesionales visibles">
-                <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-lg border border-border bg-card px-2 py-1.5 text-[9px] font-semibold text-text shadow-sm transition-colors hover:bg-cardHover">
-                  <span>
-                    {selectedProfesionales.length === 0
-                      ? 'Todos los profesionales'
-                      : `${selectedProfesionales.length} seleccionado${
-                          selectedProfesionales.length > 1 ? 's' : ''
-                        }`}
-                  </span>
-                  <ChevronRight className="h-3.5 w-3.5 text-text-muted transition-transform group-open:rotate-90" />
-                </summary>
-                <div className="absolute left-0 z-50 mt-1 max-h-60 min-w-60 overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
-                  <div className="space-y-0.5 p-1.5 text-xs">
-                    <label className="flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-cardHover">
-                      <input
-                        type="checkbox"
-                        checked={selectedProfesionales.length === 0}
-                        onChange={() => setSelectedProfesionales([])}
-                        className="h-3.5 w-3.5 rounded border-border text-brand focus-visible:ring-2 focus-visible:ring-brand/50"
-                      />
-                      <span>Todos</span>
-                    </label>
-                    {profesionales.map((prof) => (
-                      <label
-                        key={prof.id}
-                        className="flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-cardHover"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedProfesionales.includes(prof.id)}
-                          onChange={(e) => {
-                            setSelectedProfesionales((prev) =>
-                              e.target.checked ? [...prev, prof.id] : prev.filter((id) => id !== prof.id)
-                            );
-                          }}
-                          className="h-3.5 w-3.5 rounded border-border text-brand focus-visible:ring-2 focus-visible:ring-brand/50"
-                        />
-                        <span>
-                          {prof.nombre} {prof.apellidos}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </details>
-            </div>
+        eventCount={eventosFiltrados.length}
+        viewDensity={viewDensity}
+        onViewDensityChange={setViewDensity}
+        dayViewMode={dayViewMode}
+        onDayViewModeChange={setDayViewMode}
+        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+      />
 
-            <AgendaToolbarFilters
-              selectedSala={selectedSala}
-              salas={salas}
-              onSalaChange={setSelectedSala}
-              tipoFilter={tipoFilter}
-              onTipoChange={setTipoFilter}
-              resourcePreset={resourcePreset}
-              onResourcePresetChange={setResourcePreset}
-              isResourcePresetDisabled={vista !== 'multi'}
-              estadoFilter={estadoFilter}
-              onEstadoChange={setEstadoFilter}
-              viewDensity={viewDensity}
-              onViewDensityChange={setViewDensity}
-              dayViewMode={dayViewMode}
-              onDayViewModeChange={setDayViewMode}
-            />
-          </div>
-        </div>
-      </CollapsibleToolbar>
-
-      {highRiskPacientes.length > 0 && (
-        <CrossModuleAlert
-          title="Pacientes de riesgo alto"
-          description={`Hay ${highRiskPacientes.length} pacientes marcados con riesgo alto. Revisa su seguimiento antes de continuar con la agenda.`}
-          actionLabel="Ver pacientes"
-          href="/dashboard/pacientes"
-          tone="warn"
-          chips={highRiskNames}
-        />
-      )}
-
-      <section className="rounded-lg border border-border bg-card shadow-sm p-2 transition-all hover:shadow-md">
-        <PrimaryTabs
-          tabs={VIEW_TABS}
-          current={vista}
-          onChange={(tab) => setVista(tab)}
-          size="sm"
-          disabledTabs={['boxes']}
-          disabledMessage="Vista en desarrollo - Próximamente"
-        />
-
-        <div className="mt-2 grid gap-2 lg:grid-cols-[minmax(0,1fr)_260px]">
+      {/* Main Grid: Sidebar + Content */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Overlay para cerrar sidebar en móvil */}
+        {isSidebarOpen && (
           <div
-            className="rounded-lg border border-border bg-cardHover/30 p-2"
-            style={{ minHeight: '65vh' }}
+            className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm transition-opacity lg:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Sidebar Left - Responsive */}
+        <div
+          className={`
+            fixed lg:static inset-y-0 left-0 z-40 lg:z-auto
+            transform transition-transform duration-300 ease-in-out
+            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          `}
+        >
+          <AgendaSidebar
+            currentDate={currentDate}
+            onDateSelect={(date) => {
+              setCurrentDate(date);
+              setIsSidebarOpen(false); // Cerrar sidebar en móvil al seleccionar fecha
+            }}
+            onMonthChange={setCurrentDate}
+            events={eventosFiltrados}
+            profesionales={profesionales}
+            selectedProfesionales={selectedProfesionales}
+            onProfesionalesChange={setSelectedProfesionales}
+            estadoFilter={estadoFilter}
+            onEstadoChange={(estado) => setEstadoFilter(estado as typeof estadoFilter)}
+            tipoFilter={tipoFilter}
+            onTipoChange={(tipo) => setTipoFilter(tipo as typeof tipoFilter)}
+            selectedSala={selectedSala}
+            salas={salas}
+            onSalaChange={setSelectedSala}
+            onClearBasicFilters={clearAgendaFilters}
+          />
+        </div>
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto bg-background p-4">
+          {/* CrossModule Alert */}
+          {highRiskPacientes.length > 0 && (
+            <div className="mb-4">
+              <CrossModuleAlert
+                title="Pacientes de riesgo alto"
+                description={`Hay ${highRiskPacientes.length} pacientes marcados con riesgo alto. Revisa su seguimiento antes de continuar con la agenda.`}
+                actionLabel="Ver pacientes"
+                href="/dashboard/pacientes"
+                tone="warn"
+                chips={highRiskNames}
+              />
+            </div>
+          )}
+
+          {/* Agenda Views */}
+          <div
+            className="rounded-lg border border-border bg-card shadow-sm"
+            style={{ minHeight: '75vh' }}
           >
-          {vista === 'diaria' &&
-            (dayViewMode === 'single' ? (
-              <AgendaDayView
-                day={currentDate}
+            {vista === 'diaria' &&
+              (dayViewMode === 'single' ? (
+                <AgendaDayView
+                  day={currentDate}
+                  events={eventosFiltrados}
+                  onEventMove={handleEventMoveWrapper}
+                  onEventResize={handleEventResizeWrapper}
+                  onEventClick={handleEventClick}
+                  onQuickAction={handleQuickAction}
+                  onCreateEvent={handleCreateEvent}
+                  hourHeight={hourHeight}
+                  catalogoServicios={catalogoServicios}
+                />
+              ) : (
+                <AgendaResourceView
+                  day={currentDate}
+                  events={eventosFiltrados}
+                  resources={recursos}
+                  onEventMove={handleEventMoveWrapper}
+                  onEventResize={handleEventResizeWrapper}
+                  onEventClick={handleEventClick}
+                  onQuickAction={handleQuickAction}
+                  hourHeight={hourHeight}
+                  catalogoServicios={catalogoServicios}
+                />
+              ))}
+
+            {vista === 'semanal' && (
+              <AgendaWeekViewV2
+                weekStart={weekStart}
                 events={eventosFiltrados}
                 onEventMove={handleEventMoveWrapper}
                 onEventResize={handleEventResizeWrapper}
                 onEventClick={handleEventClick}
                 onQuickAction={handleQuickAction}
-                onCreateEvent={handleCreateEvent}
                 hourHeight={hourHeight}
                 catalogoServicios={catalogoServicios}
               />
-            ) : (
+            )}
+
+            {vista === 'multi' && (
               <AgendaResourceView
                 day={currentDate}
                 events={eventosFiltrados}
@@ -694,34 +564,7 @@ export default function AgendaClient({
                 hourHeight={hourHeight}
                 catalogoServicios={catalogoServicios}
               />
-            ))}
-
-          {vista === 'semanal' && (
-            <AgendaWeekViewV2
-              weekStart={weekStart}
-              events={eventosFiltrados}
-              onEventMove={handleEventMoveWrapper}
-              onEventResize={handleEventResizeWrapper}
-              onEventClick={handleEventClick}
-              onQuickAction={handleQuickAction}
-              hourHeight={hourHeight}
-              catalogoServicios={catalogoServicios}
-            />
-          )}
-
-          {vista === 'multi' && (
-            <AgendaResourceView
-              day={currentDate}
-              events={eventosFiltrados}
-              resources={recursos}
-              onEventMove={handleEventMoveWrapper}
-              onEventResize={handleEventResizeWrapper}
-              onEventClick={handleEventClick}
-              onQuickAction={handleQuickAction}
-              hourHeight={hourHeight}
-              catalogoServicios={catalogoServicios}
-            />
-          )}
+            )}
 
             {vista === 'boxes' &&
               renderPlaceholder(
@@ -735,18 +578,8 @@ export default function AgendaClient({
                 'Consulta la historia completa de citas, documentos y notas de un paciente en un único timeline.'
               )}
           </div>
-
-          <aside className="flex flex-col gap-2 rounded-lg border border-border bg-cardHover/30 p-2">
-            <MiniCalendar
-              currentDate={currentDate}
-              onDateSelect={setCurrentDate}
-              onMonthChange={setCurrentDate}
-              events={eventosFiltrados}
-            />
-            <WeekDaySelector weekDays={weekDays} onDateSelect={setCurrentDate} />
-          </aside>
-        </div>
-      </section>
+        </main>
+      </div>
 
       <EventModal
         isOpen={isModalOpen}

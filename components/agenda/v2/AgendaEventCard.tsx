@@ -174,14 +174,13 @@ export default function AgendaEventCard({
         >
           <div
             className={`
-              h-full rounded-lg shadow-sm border-l-4
+              h-full rounded-lg shadow-sm border-l-4 bg-card
               ${stateStyle}
-              ${hasConflict ? 'ring-2 ring-red-400' : ''}
-              hover:shadow-md transition-shadow
+              ${hasConflict ? 'ring-2 ring-danger' : ''}
+              hover:shadow-md transition-all duration-150
               relative overflow-hidden
             `}
             style={{
-              backgroundColor: `${eventColor}15`,
               borderLeftColor: eventColor,
             }}
           >
@@ -190,10 +189,19 @@ export default function AgendaEventCard({
               {/* Header */}
               <div className="flex items-start justify-between gap-1 mb-1">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1 mb-0.5">
+                  <div className="flex items-center gap-1 mb-1">
                     {estadoIcon}
-                    <span className="font-semibold truncate text-gray-900">
+                    <span className="font-semibold truncate text-text">
                       {event.titulo}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 mb-1">
+                    <Clock className="w-3 h-3 flex-shrink-0 text-text-muted" />
+                    <span className="text-xs font-medium text-text">
+                      {formatTimeRange(event.fechaInicio, event.fechaFin)}
+                    </span>
+                    <span className="text-xs text-text-muted">
+                      ({formatDuration(event.fechaInicio, event.fechaFin)})
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-1 text-[10px] font-semibold">
@@ -204,20 +212,11 @@ export default function AgendaEventCard({
                       {event.tipo}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1 text-text-muted">
-                    <Clock className="w-3 h-3 flex-shrink-0" />
-                    <span className="text-xs text-text">
-                      {formatTimeRange(event.fechaInicio, event.fechaFin)}
-                    </span>
-                    <span className="text-xs text-text-muted">
-                      ({formatDuration(event.fechaInicio, event.fechaFin)})
-                    </span>
-                  </div>
                 </div>
 
                 {/* Prioridad */}
                 {event.prioridad === 'alta' && (
-                  <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                  <AlertTriangle className="w-4 h-4 text-danger flex-shrink-0" />
                 )}
               </div>
 
@@ -274,7 +273,7 @@ export default function AgendaEventCard({
                         e.stopPropagation();
                         onDelete(event);
                       }}
-                      className="p-1 bg-card border border-red-300 rounded hover:bg-red-50 transition-colors text-red-600"
+                      className="p-1 bg-card border border-danger/30 rounded hover:bg-danger-bg transition-colors text-danger"
                       title="Eliminar"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -287,7 +286,7 @@ export default function AgendaEventCard({
             {/* Resize handle */}
             {isResizable && event.estado !== 'realizada' && event.estado !== 'cancelada' && (
               <div
-                className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-muted hover:bg-opacity-50 transition-colors"
+                className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-brand/10 transition-all duration-150"
                 onMouseDown={handleResizeStart}
               />
             )}
@@ -295,7 +294,7 @@ export default function AgendaEventCard({
             {/* Conflicto indicator */}
             {hasConflict && (
               <div className="absolute top-1 right-1">
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                <div className="w-2 h-2 bg-danger rounded-full animate-pulse" />
               </div>
             )}
           </div>

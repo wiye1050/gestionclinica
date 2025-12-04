@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import AgendaTimeline from './AgendaTimeline';
 import AgendaEventCard from './AgendaEventCard';
+import EmptyState from './EmptyState';
 import {
   AgendaEvent,
   AGENDA_CONFIG,
@@ -16,7 +17,7 @@ import {
   calculateFreeSlots,
   calculateOccupancyRate,
 } from './agendaHelpers';
-import { Clock } from 'lucide-react';
+import { Clock, Calendar } from 'lucide-react';
 import type { CatalogoServicio } from '@/types';
 
 interface AgendaDayViewProps {
@@ -200,56 +201,72 @@ export default function AgendaDayView({
 
       {/* Timeline con eventos */}
       <div className="relative flex-1">
-        <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
-          <AgendaTimeline
-            showNowIndicator={true}
-            onSlotClick={handleSlotClick}
-            hourHeight={hourHeight}
-            disableSlotClick={isDragging}
-            onContainerRef={(node) => {
-              timelineRef.current = node;
-            }}
-          >
-            <Droppable droppableId="day-timeline" type="EVENT">
-              {(provided, snapshot) => (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={`absolute inset-0 ${snapshot.isDraggingOver ? 'bg-brand-subtle/60' : ''}`}
-                >
-                  {/* Eventos */}
-                  {dayEvents.map((event, index) => {
-                    const position = calculateEventPosition(event, hourHeight);
-                    const hasConflict = conflictEventIds.has(event.id);
+        {dayEvents.length === 0 ? (
+          <EmptyState
+            title="No hay eventos para este día"
+            description="Haz clic en cualquier horario del timeline para crear una nueva cita, o usa el botón Nueva cita en la parte superior."
+            icon={<Calendar className="h-12 w-12 text-brand" />}
+            action={
+              onCreateEvent
+                ? {
+                    label: 'Crear primera cita',
+                    onClick: () => onCreateEvent(day),
+                  }
+                : undefined
+            }
+          />
+        ) : (
+          <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
+            <AgendaTimeline
+              showNowIndicator={true}
+              onSlotClick={handleSlotClick}
+              hourHeight={hourHeight}
+              disableSlotClick={isDragging}
+              onContainerRef={(node) => {
+                timelineRef.current = node;
+              }}
+            >
+              <Droppable droppableId="day-timeline" type="EVENT">
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`absolute inset-0 ${snapshot.isDraggingOver ? 'bg-brand-subtle/60' : ''}`}
+                  >
+                    {/* Eventos */}
+                    {dayEvents.map((event, index) => {
+                      const position = calculateEventPosition(event, hourHeight);
+                      const hasConflict = conflictEventIds.has(event.id);
 
-                    return (
-                      <AgendaEventCard
-                        key={event.id}
-                        event={event}
-                        index={index}
-                        catalogoServicios={catalogoServicios}
-                        style={{
-                          top: `${position.top}px`,
-                          height: `${position.height}px`,
-                          left: '8px',
-                          right: '8px',
-                        }}
-                        isResizable={true}
-                        onResize={handleResize}
-                        onClick={onEventClick}
-                        onQuickAction={onQuickAction}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                        hasConflict={hasConflict}
-                      />
-                    );
-                  })}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </AgendaTimeline>
-        </DragDropContext>
+                      return (
+                        <AgendaEventCard
+                          key={event.id}
+                          event={event}
+                          index={index}
+                          catalogoServicios={catalogoServicios}
+                          style={{
+                            top: `${position.top}px`,
+                            height: `${position.height}px`,
+                            left: '8px',
+                            right: '8px',
+                          }}
+                          isResizable={true}
+                          onResize={handleResize}
+                          onClick={onEventClick}
+                          onQuickAction={onQuickAction}
+                          onEdit={onEdit}
+                          onDelete={onDelete}
+                          hasConflict={hasConflict}
+                        />
+                      );
+                    })}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </AgendaTimeline>
+          </DragDropContext>
+        )}
       </div>
 
       {/* Footer con huecos libres (opcional) */}
