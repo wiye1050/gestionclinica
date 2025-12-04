@@ -79,15 +79,33 @@ export default function Sidebar() {
   // Rol del usuario (default a recepcion para mostrar al menos módulos básicos mientras carga)
   const userRole: UserRole = role || 'recepcion';
 
+  // Log cuando no hay rol después de cargar (para debugging)
+  useEffect(() => {
+    if (!roleLoading && !role) {
+      logger.warn('[Sidebar] Usuario sin rol asignado, usando rol por defecto "recepcion"');
+    }
+  }, [role, roleLoading]);
+
   // Cargar estado guardado de localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('sidebar-sections');
-    if (saved) {
-      try {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
+
+    try {
+      const saved = localStorage.getItem('sidebar-sections');
+      if (saved) {
         const parsed = JSON.parse(saved);
-        setSectionStates(prev => ({ ...prev, ...parsed }));
+        // Validar que parsed es un objeto
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          setSectionStates(prev => ({ ...prev, ...parsed }));
+        }
+      }
+    } catch (error) {
+      logger.warn('[Sidebar] Error cargando estado de secciones:', error);
+      // Limpiar localStorage corrupto
+      try {
+        localStorage.removeItem('sidebar-sections');
       } catch {
-        // Ignorar errores de parsing
+        // Ignorar si no se puede limpiar
       }
     }
   }, []);
@@ -110,51 +128,63 @@ export default function Sidebar() {
   // Cargar badges de notificación
   useEffect(() => {
     let active = true;
+    let retryCount = 0;
+    const MAX_RETRIES = 2;
 
     const fetchBadges = async () => {
-      try {
-        // Reportes pendientes
-        const reportesSnap = await getDocs(
-          query(collection(db, 'reportes-diarios'), where('estado', '==', 'pendiente'))
-        );
+      // No intentar cargar badges si no hay Firebase configurado
+      if (!db) {
+        logger.warn('[Sidebar] Firebase no configurado, skipping badges');
+        return;
+      }
 
-        // Stock bajo
-        const stockSnap = await getDocs(
-          query(collection(db, 'inventario-productos'), where('alertaStockBajo', '==', true))
-        );
+      try {
+        // Fetch en paralelo con timeouts individuales
+        const [reportesSnap, stockSnap, proyectosSnap, mejorasSnap] = await Promise.allSettled([
+          getDocs(query(collection(db, 'reportes-diarios'), where('estado', '==', 'pendiente'))),
+          getDocs(query(collection(db, 'inventario-productos'), where('alertaStockBajo', '==', true))),
+          getDocs(query(collection(db, 'proyectos'), where('estado', '==', 'en-curso'))),
+          getDocs(query(collection(db, 'mejoras'), where('estado', '==', 'pendiente'))),
+        ]);
 
         // Proyectos atrasados
-        const hoy = new Date();
-        const proyectosSnap = await getDocs(
-          query(collection(db, 'proyectos'), where('estado', '==', 'en-curso'))
-        );
-        const atrasados = proyectosSnap.docs.filter(doc => {
-          const data = doc.data();
-          const fechaFin = data.fechaFin?.toDate?.();
-          return fechaFin && fechaFin < hoy;
-        }).length;
-
-        // Mejoras pendientes
-        const mejorasSnap = await getDocs(
-          query(collection(db, 'mejoras'), where('estado', '==', 'pendiente'))
-        );
+        let atrasados = 0;
+        if (proyectosSnap.status === 'fulfilled') {
+          const hoy = new Date();
+          atrasados = proyectosSnap.value.docs.filter(doc => {
+            const data = doc.data();
+            const fechaFin = data.fechaFin?.toDate?.();
+            return fechaFin && fechaFin < hoy;
+          }).length;
+        }
 
         if (active) {
           setBadges({
-            reportes: reportesSnap.size,
-            stockBajo: stockSnap.size,
+            reportes: reportesSnap.status === 'fulfilled' ? reportesSnap.value.size : 0,
+            stockBajo: stockSnap.status === 'fulfilled' ? stockSnap.value.size : 0,
             proyectosAtrasados: atrasados,
-            mejorasPendientes: mejorasSnap.size,
+            mejorasPendientes: mejorasSnap.status === 'fulfilled' ? mejorasSnap.value.size : 0,
           });
+          retryCount = 0; // Reset retry count on success
         }
       } catch (error) {
-        logger.error('Error cargando badges del sidebar:', error);
+        logger.error('[Sidebar] Error cargando badges:', error);
+        retryCount++;
+
+        // Si falla mucho, detener intentos automáticos
+        if (retryCount >= MAX_RETRIES) {
+          logger.warn('[Sidebar] Demasiados errores cargando badges, deteniendo reintentos automáticos');
+        }
       }
     };
 
     fetchBadges();
-    // Refrescar cada 5 minutos
-    const interval = setInterval(fetchBadges, 5 * 60 * 1000);
+    // Refrescar cada 5 minutos solo si no hay muchos errores
+    const interval = setInterval(() => {
+      if (retryCount < MAX_RETRIES) {
+        fetchBadges();
+      }
+    }, 5 * 60 * 1000);
 
     return () => {
       active = false;
@@ -165,8 +195,14 @@ export default function Sidebar() {
   const toggleSection = (sectionId: string) => {
     setSectionStates(prev => {
       const newState = { ...prev, [sectionId]: !prev[sectionId] };
-      // Guardar en localStorage
-      localStorage.setItem('sidebar-sections', JSON.stringify(newState));
+      // Guardar en localStorage con manejo de errores
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('sidebar-sections', JSON.stringify(newState));
+        } catch (error) {
+          logger.warn('[Sidebar] Error guardando estado de secciones:', error);
+        }
+      }
       return newState;
     });
   };

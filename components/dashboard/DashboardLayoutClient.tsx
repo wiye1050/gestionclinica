@@ -208,7 +208,14 @@ export function DashboardLayoutClient({
 
           <div className="mt-3 flex flex-col gap-3 lg:flex-row">
             <aside className="w-full shrink-0 lg:sticky lg:top-24 lg:w-48">
-              <Sidebar />
+              <ErrorBoundary fallback={
+                <div className="rounded-lg border border-danger/20 bg-danger-bg p-4">
+                  <p className="text-sm font-medium text-danger">Error cargando menú</p>
+                  <p className="text-xs text-text-muted mt-1">Recarga la página</p>
+                </div>
+              }>
+                <Sidebar />
+              </ErrorBoundary>
             </aside>
             <main className="min-w-0 flex-1">
               <div className="dashboard-canvas">
