@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove } from '@dnd-kit/sortable';
@@ -382,10 +383,15 @@ function DashboardContent({ initialKPIs }: DashboardPageClientProps) {
   );
 }
 
+// Cargar DashboardContent solo en el cliente para evitar hydration mismatch con @dnd-kit
+const DashboardContentDynamic = dynamic(
+  () => Promise.resolve(DashboardContent),
+  {
+    ssr: false,
+    loading: () => <DashboardSkeleton />,
+  }
+);
+
 export default function DashboardPageClient({ initialKPIs }: DashboardPageClientProps) {
-  return (
-    <Suspense fallback={<DashboardSkeleton />}>
-      <DashboardContent initialKPIs={initialKPIs} />
-    </Suspense>
-  );
+  return <DashboardContentDynamic initialKPIs={initialKPIs} />;
 }
