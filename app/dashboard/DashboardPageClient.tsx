@@ -278,26 +278,19 @@ function DashboardContent({ initialKPIs }: DashboardPageClientProps) {
   return (
     <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <div className={spacing}>
-      {/* HERO SECTION COMPACTO - Adaptativo para móvil */}
-      <section
-        className={`relative overflow-hidden rounded-xl ${padding} shadow-lg animate-fade-in-scale`}
-        style={{ background: 'linear-gradient(135deg, #0087cd 0%, #006ba4 50%, #00507b 100%)' }}
-      >
-        {/* Decoración de fondo */}
-        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-white/10 blur-3xl" />
-
+      {/* HERO SECTION – versión más ligera */}
+      <section className={`relative overflow-hidden rounded-lg ${padding} bg-slate-50 shadow-sm border border-slate-200/80 animate-fade-in-scale`}>
         <div className="relative">
           {/* Header compacto - Stack en móvil, inline en desktop */}
           <div className={`mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between`}>
             <div>
               <div className="mb-1 flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-white/80" />
-                <h1 className="text-base font-bold text-white sm:text-lg">
+                <Sparkles className="h-4 w-4 text-brand-500" />
+                <h1 className="text-base font-bold text-slate-800 sm:text-lg">
                   {greeting}, {userName}
                 </h1>
               </div>
-              <p className="text-xs capitalize text-white/70">{formattedDate}</p>
+              <p className="text-xs capitalize text-slate-500">{formattedDate}</p>
             </div>
 
             {/* Quick Actions + Settings Button */}
@@ -308,44 +301,42 @@ function DashboardContent({ initialKPIs }: DashboardPageClientProps) {
                   <Link
                     key={action.label}
                     href={action.href}
-                    className={`group flex items-center gap-1.5 rounded-lg bg-gradient-to-r ${action.color} px-3 py-1.5 shadow-md transition-all hover:scale-105 hover:shadow-lg`}
+                    className="group flex items-center gap-1.5 rounded-md border border-emerald-100 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 transition-all hover:border-emerald-200 hover:bg-emerald-50"
                   >
-                    <Icon className="h-3.5 w-3.5 text-white" />
-                    <span className="text-xs font-semibold text-white">{action.label}</span>
+                    <Icon className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>{action.label}</span>
                   </Link>
                 );
               })}
               {/* Settings button */}
               <button
                 onClick={() => setShowSettings(!showSettings)}
-                className="group flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 shadow-md backdrop-blur-sm transition-all hover:bg-white/30 hover:scale-105"
+                className="group flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-all hover:bg-white"
                 aria-label="Configurar dashboard"
               >
-                <Settings className="h-3.5 w-3.5 text-white" />
-                <span className="hidden text-xs font-semibold text-white sm:inline">
-                  Configurar
-                </span>
+                <Settings className="h-3.5 w-3.5 text-slate-600" />
+                <span className="hidden sm:inline">Configurar</span>
               </button>
             </div>
           </div>
 
           {/* Quick Stats - 2 cols móvil, 4 cols tablet+ */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <div className="rounded-lg bg-white/10 p-2 backdrop-blur-sm">
-              <p className="text-[10px] font-medium text-white/80">Citas hoy</p>
-              <p className="text-xl font-bold text-white">{todayAppointments?.length || 0}</p>
+            <div className="rounded-lg border border-slate-100 bg-slate-50 p-2">
+              <p className="text-[10px] font-medium text-slate-600">Citas hoy</p>
+              <p className="text-xl font-bold text-slate-900">{todayAppointments?.length || 0}</p>
             </div>
-            <div className="rounded-lg bg-white/10 p-2 backdrop-blur-sm">
-              <p className="text-[10px] font-medium text-white/80">Seguimientos</p>
-              <p className="text-xl font-bold text-white">{followUpPatients?.length || 0}</p>
+            <div className="rounded-lg border border-slate-100 bg-slate-50 p-2">
+              <p className="text-[10px] font-medium text-slate-600">Seguimientos</p>
+              <p className="text-xl font-bold text-slate-900">{followUpPatients?.length || 0}</p>
             </div>
-            <div className="rounded-lg bg-white/10 p-2 backdrop-blur-sm">
-              <p className="text-[10px] font-medium text-white/80">Servicios</p>
-              <p className="text-xl font-bold text-white">{kpisData?.serviciosActivos || 0}</p>
+            <div className="rounded-lg border border-slate-100 bg-slate-50 p-2">
+              <p className="text-[10px] font-medium text-slate-600">Servicios</p>
+              <p className="text-xl font-bold text-slate-900">{kpisData?.serviciosActivos || 0}</p>
             </div>
-            <div className="rounded-lg bg-white/10 p-2 backdrop-blur-sm">
-              <p className="text-[10px] font-medium text-white/80">Eventos/sem</p>
-              <p className="text-xl font-bold text-white">{kpisData?.eventosSemana || 0}</p>
+            <div className="rounded-lg border border-slate-100 bg-slate-50 p-2">
+              <p className="text-[10px] font-medium text-slate-600">Eventos/sem</p>
+              <p className="text-xl font-bold text-slate-900">{kpisData?.eventosSemana || 0}</p>
             </div>
           </div>
         </div>

@@ -148,10 +148,10 @@ export function DashboardLayoutClient({
       <div className="app-shell app-shell--dashboard text-text">
         <div className="app-shell__content min-h-screen w-full px-0 py-0 bg-white">
           <header
-            className={`sticky top-0 z-30 rounded-none border-b bg-white px-2 py-1.5 transition-all duration-150 ${
+            className={`sticky top-0 z-30 rounded-none border-b bg-brand/5 px-2 py-1.5 transition-all duration-150 ${
               isScrolled
-                ? 'border-slate-200 shadow-[0_2px_6px_rgba(15,23,42,0.08)]'
-                : 'border-slate-100 shadow-[0_1px_4px_rgba(15,23,42,0.05)]'
+                ? 'border-brand/20 shadow-[0_2px_6px_rgba(0,135,205,0.12)]'
+                : 'border-brand/15 shadow-[0_1px_4px_rgba(0,135,205,0.08)]'
             }`}
           >
             <div className="flex items-center gap-2">

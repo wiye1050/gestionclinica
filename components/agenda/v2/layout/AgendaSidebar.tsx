@@ -2,7 +2,6 @@
 
 import MiniCalendar from '../MiniCalendar';
 import ProfesionalFilterList from './ProfesionalFilterList';
-import BasicFilters from './BasicFilters';
 import { AgendaEvent } from '../agendaHelpers';
 
 interface Profesional {
@@ -10,11 +9,6 @@ interface Profesional {
   nombre: string;
   apellidos: string;
   color?: string;
-}
-
-interface Sala {
-  id: string;
-  nombre: string;
 }
 
 interface AgendaSidebarProps {
@@ -28,16 +22,6 @@ interface AgendaSidebarProps {
   profesionales: Profesional[];
   selectedProfesionales: string[];
   onProfesionalesChange: (ids: string[]) => void;
-
-  // Filtros básicos
-  estadoFilter: string;
-  onEstadoChange: (estado: string) => void;
-  tipoFilter: string;
-  onTipoChange: (tipo: string) => void;
-  selectedSala: string;
-  salas: Sala[];
-  onSalaChange: (sala: string) => void;
-  onClearBasicFilters?: () => void;
 }
 
 export default function AgendaSidebar({
@@ -51,19 +35,9 @@ export default function AgendaSidebar({
   profesionales,
   selectedProfesionales,
   onProfesionalesChange,
-
-  // Filtros básicos
-  estadoFilter,
-  onEstadoChange,
-  tipoFilter,
-  onTipoChange,
-  selectedSala,
-  salas,
-  onSalaChange,
-  onClearBasicFilters,
 }: AgendaSidebarProps) {
   return (
-    <aside className="w-[280px] h-full flex-shrink-0 border-r border-border bg-card overflow-y-auto">
+    <aside className="w-[280px] h-full flex-shrink-0 border-r border-border bg-card overflow-y-auto lg:sticky lg:top-0">
       <div className="p-3 space-y-3">
 
         {/* Mini Calendar */}
@@ -83,20 +57,6 @@ export default function AgendaSidebar({
             selectedIds={selectedProfesionales}
             onChange={onProfesionalesChange}
             maxVisible={8}
-          />
-        </div>
-
-        {/* Filtros Básicos */}
-        <div>
-          <BasicFilters
-            estadoFilter={estadoFilter}
-            onEstadoChange={onEstadoChange}
-            tipoFilter={tipoFilter}
-            onTipoChange={onTipoChange}
-            selectedSala={selectedSala}
-            salas={salas}
-            onSalaChange={onSalaChange}
-            onClearAll={onClearBasicFilters}
           />
         </div>
       </div>

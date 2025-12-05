@@ -119,7 +119,8 @@ export default function AgendaTopBar({
               <button
                 key={option.id}
                 onClick={() => onVistaChange(option.id)}
-                className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-all focus-visible:focus-ring ${
+                aria-pressed={vista === option.id}
+                className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-all focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-brand-500 cursor-pointer ${
                   vista === option.id
                     ? 'bg-brand-600 text-white shadow-md scale-105'
                     : 'bg-transparent text-brand-800 hover:bg-brand/10 hover:text-brand-900'
@@ -133,10 +134,11 @@ export default function AgendaTopBar({
 
           {/* Density controls (desktop) */}
           {onViewDensityChange && viewDensity && (
-            <div className="hidden items-center gap-0.5 rounded-lg border border-brand/30 bg-transparent p-1 shadow-sm lg:flex" title="Densidad">
+            <div className="hidden items-center gap-0.5 rounded-lg border border-brand/30 bg-transparent p-1 shadow-sm lg:flex" title="Densidad" role="group" aria-label="Densidad de vista">
               <button
                 onClick={() => onViewDensityChange('compact')}
-                className={`rounded-md p-1.5 transition-all focus-visible:focus-ring ${
+                aria-pressed={viewDensity === 'compact'}
+                className={`rounded-md p-1.5 transition-all focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-brand-500 cursor-pointer ${
                   viewDensity === 'compact'
                     ? 'border border-brand-700 text-brand-800 bg-transparent'
                     : 'border border-transparent text-brand-800 hover:border-brand-200 hover:bg-brand/10 hover:text-brand-900'
@@ -147,7 +149,8 @@ export default function AgendaTopBar({
               </button>
               <button
                 onClick={() => onViewDensityChange('normal')}
-                className={`rounded-md p-1.5 transition-all focus-visible:focus-ring ${
+                aria-pressed={viewDensity === 'normal'}
+                className={`rounded-md p-1.5 transition-all focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-brand-500 cursor-pointer ${
                   viewDensity === 'normal'
                     ? 'border border-brand-700 text-brand-800 bg-transparent'
                     : 'border border-transparent text-brand-800 hover:border-brand-200 hover:bg-brand/10 hover:text-brand-900'
@@ -158,7 +161,8 @@ export default function AgendaTopBar({
               </button>
               <button
                 onClick={() => onViewDensityChange('spacious')}
-                className={`rounded-md p-1.5 transition-all focus-visible:focus-ring ${
+                aria-pressed={viewDensity === 'spacious'}
+                className={`rounded-md p-1.5 transition-all focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-brand-500 cursor-pointer ${
                   viewDensity === 'spacious'
                     ? 'border border-brand-700 text-brand-800 bg-transparent'
                     : 'border border-transparent text-brand-800 hover:border-brand-200 hover:bg-brand/10 hover:text-brand-900'
@@ -172,10 +176,11 @@ export default function AgendaTopBar({
 
           {/* Day View Mode (solo vista diaria, desktop) */}
           {vista === 'diaria' && onDayViewModeChange && dayViewMode && (
-            <div className="hidden items-center gap-0.5 rounded-lg border border-brand/30 bg-transparent p-1 shadow-sm lg:flex" title="Modo vista diaria">
+            <div className="hidden items-center gap-0.5 rounded-lg border border-brand/30 bg-transparent p-1 shadow-sm lg:flex" title="Modo vista diaria" role="group" aria-label="Modo vista diaria">
               <button
                 onClick={() => onDayViewModeChange('single')}
-                className={`inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-all focus-visible:focus-ring ${
+                aria-pressed={dayViewMode === 'single'}
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-all focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-brand-500 cursor-pointer ${
                   dayViewMode === 'single'
                     ? 'bg-brand-600 text-white shadow-sm'
                     : 'bg-transparent text-brand-800 hover:bg-brand/10 hover:text-brand-900'
@@ -186,7 +191,8 @@ export default function AgendaTopBar({
               </button>
               <button
                 onClick={() => onDayViewModeChange('multi')}
-                className={`inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-all focus-visible:focus-ring ${
+                aria-pressed={dayViewMode === 'multi'}
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-all focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-brand-500 cursor-pointer ${
                   dayViewMode === 'multi'
                     ? 'bg-brand-600 text-white shadow-sm'
                     : 'bg-transparent text-brand-800 hover:bg-brand/10 hover:text-brand-900'
@@ -206,7 +212,7 @@ export default function AgendaTopBar({
               value={busqueda}
               onChange={(e) => onBusquedaChange(e.target.value)}
               placeholder="Buscar (presiona /)"
-              className="agenda-search w-48 rounded-lg border border-brand/30 bg-card py-1.5 pl-8 pr-3 text-xs text-text placeholder:text-text-muted shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand hover:border-brand/40 lg:w-64"
+              className="agenda-search w-48 rounded-lg border border-brand/30 bg-card py-1.5 pl-8 pr-3 text-xs text-text placeholder:text-text-muted shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand hover:border-brand/40 lg:w-64 cursor-text"
             />
           </div>
 
@@ -256,7 +262,7 @@ export default function AgendaTopBar({
             value={busqueda}
             onChange={(e) => onBusquedaChange(e.target.value)}
             placeholder="Buscar..."
-            className="agenda-search w-full rounded-lg border border-border bg-card py-1.5 pl-8 pr-2 text-xs text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+            className="agenda-search w-full rounded-lg border border-border bg-card py-1.5 pl-8 pr-2 text-xs text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand cursor-text"
           />
         </div>
       </div>

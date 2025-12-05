@@ -239,7 +239,7 @@ export function useEventosAgenda(
     queryKey: ['agenda-eventos', weekStart.toISOString()],
     queryFn: async () => {
       const response = await fetch(
-        `/api/agenda/events?weekStart=${encodeURIComponent(weekStart.toISOString())}`
+        `/api/agenda/eventos?weekStart=${encodeURIComponent(weekStart.toISOString())}`
       );
       const payload = await response.json();
       if (!response.ok) {

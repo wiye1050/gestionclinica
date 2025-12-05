@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 import { deleteAgendaEvent, updateAgendaEvent } from '@/lib/server/agendaEvents';
+import { checkEventConflicts, validateEventDates } from '@/lib/server/agendaValidation';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { logAuditServer } from '@/lib/utils/auditServer';
 import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';
@@ -41,6 +42,74 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       __profesionalNombre,
       ...updates
     } = body satisfies Record<string, unknown>;
+
+    // Validar fechas si se están actualizando
+    if (updates.fechaInicio && updates.fechaFin) {
+      const fechaInicio = new Date(updates.fechaInicio as string);
+      const fechaFin = new Date(updates.fechaFin as string);
+      const dateError = validateEventDates(fechaInicio, fechaFin);
+      if (dateError) {
+        return NextResponse.json({ error: dateError }, { status: 400 });
+      }
+    }
+
+    // Validar conflictos si se actualizan fechas, profesional o sala
+    if (updates.fechaInicio || updates.profesionalId || updates.salaId) {
+      // Obtener evento actual para tener todos los datos
+      let currentEvent;
+      if (adminDb) {
+        const doc = await adminDb.collection('agenda-eventos').doc(id).get();
+        if (!doc.exists) {
+          return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 });
+        }
+        currentEvent = doc.data();
+      }
+
+      // Si hay datos actuales, validar conflictos
+      if (currentEvent) {
+        const fechaInicio = updates.fechaInicio
+          ? new Date(updates.fechaInicio as string)
+          : currentEvent.fechaInicio?.toDate();
+        const fechaFin = updates.fechaFin
+          ? new Date(updates.fechaFin as string)
+          : currentEvent.fechaFin?.toDate();
+        const profesionalId =
+          updates.profesionalId !== undefined
+            ? (updates.profesionalId as string | null)
+            : currentEvent.profesionalId;
+        const salaId =
+          updates.salaId !== undefined
+            ? (updates.salaId as string | null)
+            : currentEvent.salaId;
+
+        if (fechaInicio && fechaFin && (profesionalId || salaId)) {
+          const conflict = await checkEventConflicts({
+            id, // Excluir evento actual
+            fechaInicio,
+            fechaFin,
+            profesionalId,
+            salaId,
+          });
+
+          if (conflict && conflict.severity === 'error') {
+            return NextResponse.json(
+              {
+                error: 'Conflicto de horario detectado',
+                details: {
+                  message:
+                    conflict.conflictType === 'double-booking-profesional'
+                      ? `El profesional ya tiene una cita en ese horario: "${conflict.conflictingEventTitulo}"`
+                      : `La sala ya está ocupada en ese horario: "${conflict.conflictingEventTitulo}"`,
+                  conflictType: conflict.conflictType,
+                  conflictingEventId: conflict.conflictingEventId,
+                },
+              },
+              { status: 409 }
+            );
+          }
+        }
+      }
+    }
 
     await updateAgendaEvent(id, updates, {
       userId: user.uid,

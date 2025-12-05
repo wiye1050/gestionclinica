@@ -30,6 +30,9 @@ import { deserializeAgendaEvents } from '@/lib/utils/agendaEvents';
 import { useAgendaFilters } from '@/lib/hooks/useAgendaFilters';
 import { useAgendaActions } from '@/lib/hooks/useAgendaActions';
 import { useAgendaModals } from '@/lib/hooks/useAgendaModals';
+import { useAgendaNavigation } from '@/lib/hooks/useAgendaNavigation';
+import { useAgendaKeyboard } from '@/lib/hooks/useAgendaKeyboard';
+import { useLayoutEffect, useRef } from 'react';
 
 // Lazy load AgendaEventDrawer for better performance
 const AgendaEventDrawer = dynamic(
@@ -74,6 +77,7 @@ export default function AgendaClient({
     setTipoFilter,
     busquedaEvento,
     setBusquedaEvento,
+    debouncedBusqueda, // Valor debounced para filtrado
     resourcePreset,
     setResourcePreset,
     vista,
@@ -101,7 +105,17 @@ export default function AgendaClient({
     closeDrawer,
   } = useAgendaModals({ prefillRequest });
 
-  const [currentDate, setCurrentDate] = useState(() => initialWeekStartDate);
+  // Navigation state and handlers (extracted to hook)
+  const {
+    currentDate,
+    setCurrentDate,
+    weekStart,
+    dateLabel,
+    handlePrev,
+    handleNext,
+    handleToday,
+  } = useAgendaNavigation({ initialDate: initialWeekStartDate, vista });
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const hourHeight = viewDensity === 'compact' ? 60 : viewDensity === 'spacious' ? 120 : 90;
@@ -127,14 +141,18 @@ export default function AgendaClient({
 
   const queryClient = useQueryClient();
 
-  const weekStart = useMemo(
-    () => startOfWeek(currentDate, { weekStartsOn: 1 }),
-    [currentDate]
-  );
   const invalidateAgenda = useCallback(
     () => queryClient.invalidateQueries({ queryKey: ['agenda-eventos'] }),
     [queryClient]
   );
+  const topBarRef = useRef<HTMLDivElement | null>(null);
+  const [headerOffset, setHeaderOffset] = useState(0);
+
+  useLayoutEffect(() => {
+    if (topBarRef.current) {
+      setHeaderOffset(topBarRef.current.getBoundingClientRect().height);
+    }
+  }, []);
 
   // CRUD actions (extracted to hook)
   const {
@@ -202,16 +220,14 @@ export default function AgendaClient({
     [highRiskPacientes]
   );
 
-  const normalizedEventSearch = busquedaEvento.trim().toLowerCase();
+  // Usar valor debounced para filtrado (mejor performance)
+  const normalizedEventSearch = debouncedBusqueda.trim().toLowerCase();
 
   const eventosFiltrados = useMemo(() => {
     return eventos.filter((evento) => {
       const matchProfesional =
         selectedProfesionales.length === 0 ||
         selectedProfesionales.includes(evento.profesionalId || '');
-      const matchSala = selectedSala === 'todas' || evento.salaId === selectedSala;
-      const matchEstado = estadoFilter === 'todos' || evento.estado === estadoFilter;
-      const matchTipo = tipoFilter === 'todos' || evento.tipo === tipoFilter;
       const searchablePaciente =
         evento.pacienteNombre ||
         (evento.pacienteId ? pacienteMap.get(evento.pacienteId)?.nombre ?? '' : '');
@@ -219,14 +235,11 @@ export default function AgendaClient({
       const searchableTitulo = evento.titulo ?? '';
       const combinedText = `${searchableTitulo} ${searchablePaciente} ${searchableProfesional}`.toLowerCase();
       const matchBusqueda = normalizedEventSearch.length === 0 || combinedText.includes(normalizedEventSearch);
-      return matchProfesional && matchSala && matchEstado && matchTipo && matchBusqueda;
+      return matchProfesional && matchBusqueda;
     });
   }, [
     eventos,
     selectedProfesionales,
-    selectedSala,
-    estadoFilter,
-    tipoFilter,
     normalizedEventSearch,
     pacienteMap,
   ]);
@@ -241,7 +254,7 @@ export default function AgendaClient({
       .map((id) => profesionales.find((p) => p.id === id))
       .filter(
         (prof): prof is (typeof profesionales)[number] =>
-          Boolean(prof) && (resourcePreset === 'todos' || prof.especialidad === resourcePreset)
+          Boolean(prof) && (resourcePreset === 'todos' || prof?.especialidad === resourcePreset)
       );
 
     return seleccionados.map((prof) => ({
@@ -251,27 +264,6 @@ export default function AgendaClient({
       color: prof.color ?? '#66b7e1', // fallback azul suave si no hay color asignado
     }));
   }, [profesionales, selectedProfesionales, resourcePreset]);
-
-  // Navigation handlers
-  const handlePrev = () => {
-    if (vista === 'semanal') {
-      setCurrentDate((prev) => addWeeks(prev, -1));
-    } else {
-      setCurrentDate((prev) => addDays(prev, -1));
-    }
-  };
-
-  const handleNext = () => {
-    if (vista === 'semanal') {
-      setCurrentDate((prev) => addWeeks(prev, 1));
-    } else {
-      setCurrentDate((prev) => addDays(prev, 1));
-    }
-  };
-
-  const handleToday = () => {
-    setCurrentDate(new Date());
-  };
 
   // Focus agenda on specific event
   const focusAgendaOnEvent = (profesionalId?: string | null, fechaInicio?: Date) => {
@@ -318,75 +310,14 @@ export default function AgendaClient({
     });
   };
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input/textarea
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-        // Allow '/' to focus search even in inputs
-        if (e.key === '/' && !target.classList.contains('agenda-search')) {
-          e.preventDefault();
-          const searchInput = document.querySelector('.agenda-search') as HTMLInputElement;
-          searchInput?.focus();
-        }
-        return;
-      }
-
-      // Navigation shortcuts
-      if (e.key === 'ArrowLeft' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        handlePrev();
-      } else if (e.key === 'ArrowRight' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        handleNext();
-      }
-      // View shortcuts (1-4)
-      else if (e.key === '1') {
-        e.preventDefault();
-        setVista('diaria');
-      } else if (e.key === '2') {
-        e.preventDefault();
-        setVista('semanal');
-      } else if (e.key === '3') {
-        e.preventDefault();
-        setVista('multi');
-      }
-      // Today shortcut
-      else if (e.key === 't' || e.key === 'T') {
-        e.preventDefault();
-        handleToday();
-      }
-      // New event shortcut
-      else if (e.key === 'n' || e.key === 'N') {
-        e.preventDefault();
-        openModal(new Date());
-      }
-      // Search focus
-      else if (e.key === '/') {
-        e.preventDefault();
-        const searchInput = document.querySelector('.agenda-search') as HTMLInputElement;
-        searchInput?.focus();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handlePrev, handleNext, handleToday, setVista, openModal]);
-
-  const dateLabel = useMemo(() => {
-    if (vista === 'semanal') {
-      const weekEnd = addDays(weekStart, 6);
-      return `${format(weekStart, "d 'de' MMM", { locale: es })} - ${format(
-        weekEnd,
-        "d 'de' MMMM, yyyy",
-        { locale: es }
-      )}`;
-    }
-
-    return format(currentDate, "EEEE d 'de' MMMM, yyyy", { locale: es });
-  }, [vista, currentDate, weekStart]);
-
+  // Keyboard shortcuts (extracted to hook)
+  useAgendaKeyboard({
+    handlePrev,
+    handleNext,
+    handleToday,
+    setVista,
+    openModal,
+  });
 
   const renderPlaceholder = (title: string, description: string) => (
     <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
@@ -401,25 +332,6 @@ export default function AgendaClient({
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
-      {/* TopBar */}
-      <AgendaTopBar
-        dateLabel={dateLabel}
-        onPrev={handlePrev}
-        onNext={handleNext}
-        onToday={handleToday}
-        vista={vista}
-        onVistaChange={setVista}
-        busqueda={busquedaEvento}
-        onBusquedaChange={setBusquedaEvento}
-        onNewEvent={() => openModal(new Date())}
-        eventCount={eventosFiltrados.length}
-        viewDensity={viewDensity}
-        onViewDensityChange={setViewDensity}
-        dayViewMode={dayViewMode}
-        onDayViewModeChange={setDayViewMode}
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-      />
-
       {/* Main Grid: Sidebar + Content */}
       <div className="flex flex-1 overflow-hidden">
         {/* Overlay para cerrar sidebar en móvil */}
@@ -450,43 +362,53 @@ export default function AgendaClient({
             profesionales={profesionales}
             selectedProfesionales={selectedProfesionales}
             onProfesionalesChange={setSelectedProfesionales}
-            estadoFilter={estadoFilter}
-            onEstadoChange={(estado) => setEstadoFilter(estado as typeof estadoFilter)}
-            tipoFilter={tipoFilter}
-            onTipoChange={(tipo) => setTipoFilter(tipo as typeof tipoFilter)}
-            selectedSala={selectedSala}
-            salas={salas}
-            onSalaChange={setSelectedSala}
-            onClearBasicFilters={clearAgendaFilters}
           />
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-background p-4">
-          {/* CrossModule Alert */}
-          {highRiskPacientes.length > 0 && (
-            <div className="mb-4">
-              <CrossModuleAlert
-                title="Pacientes de riesgo alto"
-                description={`Hay ${highRiskPacientes.length} pacientes marcados con riesgo alto. Revisa su seguimiento antes de continuar con la agenda.`}
-                actionLabel="Ver pacientes"
-                href="/dashboard/pacientes"
-                tone="warn"
-                chips={highRiskNames}
+        <main className="flex-1 overflow-y-auto bg-background p-0">
+          <div className="bg-card" style={{ minHeight: '75vh' }}>
+            {/* TopBar dentro del bloque de vistas (sticky para quedarse visible con las columnas) */}
+            <div className="sticky top-0 z-20 bg-card" ref={topBarRef}>
+              <AgendaTopBar
+                dateLabel={dateLabel}
+                onPrev={handlePrev}
+                onNext={handleNext}
+                onToday={handleToday}
+                vista={vista}
+                onVistaChange={setVista}
+                busqueda={busquedaEvento}
+                onBusquedaChange={setBusquedaEvento}
+                onNewEvent={() => openModal(new Date())}
+                eventCount={eventosFiltrados.length}
+                viewDensity={viewDensity}
+                onViewDensityChange={setViewDensity}
+                dayViewMode={dayViewMode}
+                onDayViewModeChange={setDayViewMode}
+                onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
               />
             </div>
-          )}
 
-          {/* Agenda Views */}
-          <div
-            className="rounded-lg border border-border bg-card shadow-sm"
-            style={{ minHeight: '75vh' }}
-          >
+            {/* CrossModule Alert */}
+            {highRiskPacientes.length > 0 && (
+              <div className="mb-4">
+                <CrossModuleAlert
+                  title="Pacientes de riesgo alto"
+                  description={`Hay ${highRiskPacientes.length} pacientes marcados con riesgo alto. Revisa su seguimiento antes de continuar con la agenda.`}
+                  actionLabel="Ver pacientes"
+                  href="/dashboard/pacientes"
+                  tone="warn"
+                  chips={highRiskNames}
+                />
+              </div>
+            )}
+
+            {/* Agenda Views */}
             {vista === 'diaria' &&
-              (dayViewMode === 'single' ? (
-                <AgendaDayView
-                  day={currentDate}
-                  events={eventosFiltrados}
+                (dayViewMode === 'single' ? (
+                  <AgendaDayView
+                    day={currentDate}
+                    events={eventosFiltrados}
                   onEventMove={handleEventMoveWrapper}
                   onEventResize={handleEventResizeWrapper}
                   onEventClick={handleEventClick}
@@ -500,6 +422,7 @@ export default function AgendaClient({
                   day={currentDate}
                   events={eventosFiltrados}
                   resources={recursos}
+                  headerOffset={headerOffset}
                   onEventMove={handleEventMoveWrapper}
                   onEventResize={handleEventResizeWrapper}
                   onEventClick={handleEventClick}
@@ -528,6 +451,7 @@ export default function AgendaClient({
                   day={currentDate}
                   events={eventosFiltrados}
                   resources={recursos}
+                  headerOffset={headerOffset}
                   onEventMove={handleEventMoveWrapper}
                   onEventResize={handleEventResizeWrapper}
                   onEventClick={handleEventClick}

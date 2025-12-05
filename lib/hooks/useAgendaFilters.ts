@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { AgendaEvent } from '@/components/agenda/v2/agendaHelpers';
 import type { VistaAgenda } from '@/app/dashboard/agenda/AgendaClient';
+import { useDebouncedState } from '@/lib/hooks/useDebouncedState';
 import { captureError } from '@/lib/utils/errorLogging';
 
 const AGENDA_STORAGE_KEY = 'agenda.filters.v1';
@@ -21,7 +22,12 @@ export function useAgendaFilters() {
   const [selectedSala, setSelectedSala] = useState<string>('todas');
   const [estadoFilter, setEstadoFilter] = useState<AgendaEvent['estado'] | 'todos'>('todos');
   const [tipoFilter, setTipoFilter] = useState<AgendaEvent['tipo'] | 'todos'>('todos');
-  const [busquedaEvento, setBusquedaEvento] = useState('');
+
+  // Búsqueda con debounce (300ms)
+  // busquedaEvento: valor actual (UI responsive)
+  // debouncedBusqueda: valor debounced (usado para filtrar)
+  const [busquedaEvento, setBusquedaEvento, debouncedBusqueda] = useDebouncedState('', 300);
+
   const [resourcePreset, setResourcePreset] = useState<'todos' | 'medicina' | 'fisioterapia' | 'enfermeria'>('todos');
 
   // View states
@@ -136,8 +142,9 @@ export function useAgendaFilters() {
     setEstadoFilter,
     tipoFilter,
     setTipoFilter,
-    busquedaEvento,
+    busquedaEvento, // Valor actual (UI)
     setBusquedaEvento,
+    debouncedBusqueda, // Valor debounced (usar para filtrar)
     resourcePreset,
     setResourcePreset,
 

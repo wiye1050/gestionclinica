@@ -29,6 +29,7 @@ interface AgendaResourceViewProps {
   events: AgendaEvent[];
   resources: Resource[];
   catalogoServicios?: CatalogoServicio[];
+  headerOffset?: number;
   onEventMove?: (eventId: string, newStart: Date, newResourceId: string) => void;
   onEventResize?: (eventId: string, newDuration: number) => void;
   onEventClick?: (event: AgendaEvent) => void;
@@ -43,6 +44,7 @@ export default function AgendaResourceView({
   events,
   resources,
   catalogoServicios = [],
+  headerOffset = 0,
   onEventMove,
   onEventResize,
   onEventClick,
@@ -140,44 +142,16 @@ export default function AgendaResourceView({
 
   return (
     <div className="flex h-full flex-col rounded-[28px] bg-card">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/80 px-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-subtle text-brand">
-            <Users className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold capitalize text-text">{dayLabel}</p>
-            <p className="text-xs text-text-muted">
-              {resources.length} recursos · {dayEvents.length} eventos programados
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 text-xs font-semibold">
-          <span className="rounded-full bg-brand-subtle px-3 py-1 text-brand">
-            {dayEvents.length} eventos
-          </span>
-          <span className="rounded-full bg-success-bg px-3 py-1 text-success">
-            {overallOccupancy}% ocupación
-          </span>
-          {conflicts.length > 0 && (
-            <span className="rounded-full bg-danger-bg px-3 py-1 text-danger">
-              {conflicts.length} conflictos
-            </span>
-          )}
-        </div>
-      </div>
-
       <div className="relative flex-1 overflow-hidden rounded-b-[28px]">
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="flex h-full overflow-hidden">
             <div className="flex h-full w-full overflow-y-auto">
               <div className="flex min-h-full min-w-full">
-                <div className="sticky left-0 z-30 flex w-20 flex-shrink-0 flex-col border-r border-border bg-card">
-                  <div className="flex h-16 items-center justify-center border-b border-border bg-card">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                      Hora
-                    </span>
-                  </div>
+                <div
+                  className="sticky left-0 z-30 flex w-20 flex-shrink-0 flex-col border-r border-border bg-card"
+                  style={{ top: headerOffset }}
+                >
+                  <div className="flex h-16 items-center justify-center border-b border-border bg-card" />
                   <div className="relative" style={{ height: `${timelineHeight}px` }}>
                     {Array.from({ length: AGENDA_CONFIG.END_HOUR - AGENDA_CONFIG.START_HOUR }).map(
                       (_, index) => {
@@ -220,15 +194,16 @@ export default function AgendaResourceView({
                           : 'rgba(0, 135, 205, 0.4)';
 
                       return (
-                        <div
-                          key={resource.id}
-                          className="flex min-w-[260px] flex-1 flex-col border-r border-border/60 bg-cardHover/20 p-1 last:border-r-0"
-                        >
                           <div
-                            className="sticky top-0 z-20 flex h-16 flex-col justify-center gap-1 rounded-2xl border px-3 text-sm backdrop-blur"
+                            key={resource.id}
+                            className="flex min-w-[260px] flex-1 flex-col border-r border-border/60 bg-cardHover/20 p-1 last:border-r-0"
+                          >
+                          <div
+                            className="sticky z-20 flex h-16 flex-col justify-center gap-1 rounded-2xl border px-3 text-sm backdrop-blur cursor-pointer"
                             style={{
                               backgroundColor: softBg,
                               borderColor: softBorder,
+                              top: headerOffset,
                             }}
                           >
                             <div className="flex items-center gap-2">

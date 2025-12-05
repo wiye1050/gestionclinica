@@ -12,7 +12,6 @@ import { useProfesionalesManager } from '@/lib/hooks/useProfesionalesManager';
 import { getPendingFollowUpPatientIds } from '@/lib/utils/followUps';
 import ModuleHeader from '@/components/shared/ModuleHeader';
 import StatCard from '@/components/shared/StatCard';
-import ViewSelector from '@/components/shared/ViewSelector';
 import SkeletonLoader from '@/components/shared/SkeletonLoader';
 import CrossModuleAlert from '@/components/shared/CrossModuleAlert';
 import {
@@ -20,7 +19,6 @@ import {
   UserCheck,
   AlertTriangle,
   Calendar,
-  LayoutGrid,
   List,
   Download,
   Upload,
@@ -38,14 +36,10 @@ interface PacientesClientProps {
 const SavedFiltersSchema = z.object({
   followUpOnly: z.boolean().optional(),
   profesionalId: z.string().optional(),
-  vista: z.enum(['lista', 'kanban']).optional(),
 }).strict();
 
 // Lazy loading de componentes
 const PacientesTable = lazy(() => import('@/components/pacientes/PacientesTable').then(m => ({ default: m.PacientesTable })));
-const PacientesKanban = lazy(() => import('@/components/pacientes/PacientesKanban'));
-
-type Vista = 'lista' | 'kanban';
 
 function PacientesContent({ initialPage }: PacientesClientProps) {
   const searchParams = useSearchParams();
@@ -53,7 +47,6 @@ function PacientesContent({ initialPage }: PacientesClientProps) {
   
   const [pacientesSeguimiento, setPacientesSeguimiento] = useState<Set<string>>(new Set());
   const [loadingSeguimientos, setLoadingSeguimientos] = useState(true);
-  const [vista, setVista] = useState<Vista>('lista');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [estadoFilter, setEstadoFilter] = useState<'todos' | 'activo' | 'inactivo' | 'egresado'>('todos');
@@ -121,9 +114,6 @@ function PacientesContent({ initialPage }: PacientesClientProps) {
       if (saved.profesionalId) {
         setProfesionalFilter(saved.profesionalId);
       }
-      if (saved.vista) {
-        setVista(saved.vista);
-      }
     } catch (err) {
       logWarning('Error cargando filtros guardados', { module: 'pacientes-client', action: 'load-filters' });
       // Limpiar localStorage corrupto
@@ -139,14 +129,13 @@ function PacientesContent({ initialPage }: PacientesClientProps) {
     try {
       const payload = JSON.stringify({
         followUpOnly,
-        profesionalId: profesionalFilter,
-        vista
+        profesionalId: profesionalFilter
       });
       window.localStorage.setItem(STORAGE_KEY, payload);
     } catch (err) {
       logWarning('No se pudieron guardar los filtros', { module: 'pacientes-client', action: 'save-filters' });
     }
-  }, [followUpOnly, profesionalFilter, vista, filtersLoaded]);
+  }, [followUpOnly, profesionalFilter, filtersLoaded]);
 
   // Auto-seleccionar profesional del usuario logueado
   useEffect(() => {
@@ -316,45 +305,24 @@ function PacientesContent({ initialPage }: PacientesClientProps) {
         />
       )}
 
-      <ViewSelector
-        views={[
-          { id: 'lista', label: 'Lista', icon: <List className="w-4 h-4" /> },
-          { id: 'kanban', label: 'Kanban', icon: <LayoutGrid className="w-4 h-4" /> },
-        ]}
-        currentView={vista}
-        onViewChange={(v) => setVista(v as Vista)}
-        counter={{
-          current: pacientes.length,
-          total: pacientes.length
-        }}
-      />
-
       <Suspense fallback={<SkeletonLoader />}>
-        {vista === 'lista' ? (
-          <PacientesTable
-            pacientes={pacientes}
-            profesionales={profesionalesData}
-            pacientesSeguimiento={pacientesSeguimiento}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            estadoFilter={estadoFilter}
-            onEstadoFilterChange={(value) => setEstadoFilter(value as typeof estadoFilter)}
-            riesgoFilter={riesgoFilter}
-            onRiesgoFilterChange={(value) => setRiesgoFilter(value as typeof riesgoFilter)}
-            followUpOnly={followUpOnly}
-            onFollowUpOnlyChange={setFollowUpOnly}
-            profesionalFilter={profesionalFilter}
-            onProfesionalFilterChange={setProfesionalFilter}
-            loading={loading}
-            error={pacientesErrorMessage}
-          />
-        ) : (
-          <PacientesKanban
-            pacientes={pacientes}
-            profesionales={profesionalesData}
-            pacientesSeguimiento={pacientesSeguimiento}
-          />
-        )}
+        <PacientesTable
+          pacientes={pacientes}
+          profesionales={profesionalesData}
+          pacientesSeguimiento={pacientesSeguimiento}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          estadoFilter={estadoFilter}
+          onEstadoFilterChange={(value) => setEstadoFilter(value as typeof estadoFilter)}
+          riesgoFilter={riesgoFilter}
+          onRiesgoFilterChange={(value) => setRiesgoFilter(value as typeof riesgoFilter)}
+          followUpOnly={followUpOnly}
+          onFollowUpOnlyChange={setFollowUpOnly}
+          profesionalFilter={profesionalFilter}
+          onProfesionalFilterChange={setProfesionalFilter}
+          loading={loading}
+          error={pacientesErrorMessage}
+        />
       </Suspense>
 
       {hasNextPage && (

@@ -424,7 +424,7 @@ export default function Sidebar({ orientation = 'vertical' }: { orientation?: 'v
 
     return (
       <aside className="w-full">
-        <nav className="flex flex-wrap items-center gap-2 bg-white/80 px-3 py-2 overflow-x-auto">
+        <nav className="relative flex flex-wrap items-center gap-2 bg-white/80 px-3 py-2">
           {topLevel.map((item) => {
             const isActive =
               item.href &&
