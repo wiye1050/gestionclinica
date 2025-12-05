@@ -21,6 +21,26 @@ export default defineConfig({
         '**/*.config.*',
         '**/types/**',
       ],
+      // Coverage thresholds (FASE 1: Target 30% overall, 80% for critical code)
+      thresholds: {
+        lines: 30,
+        functions: 30,
+        branches: 30,
+        statements: 30,
+        // Critical modules should have higher coverage
+        'lib/validators/**': {
+          lines: 80,
+          functions: 80,
+          branches: 80,
+          statements: 80,
+        },
+        'lib/utils/helpers.ts': {
+          lines: 80,
+          functions: 80,
+          branches: 80,
+          statements: 80,
+        },
+      },
     },
   },
   resolve: {
