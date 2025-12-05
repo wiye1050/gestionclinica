@@ -3,6 +3,8 @@ import { adminDb } from '@/lib/firebaseAdmin';
 import { z } from 'zod';
 import type { FormularioPlantilla } from '@/types';
 import { logger } from '@/lib/utils/logger';
+import { getCurrentUser } from '@/lib/auth/server';
+import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 
 const createPlantillaSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio').max(200),
@@ -43,8 +45,21 @@ const createPlantillaSchema = z.object({
  * Query params opcionales:
  * - tipo: filtrar por tipo de formulario
  * - estado: filtrar por estado (activo, inactivo, borrador, archivado)
+ *
+ * @security Requiere autenticación y rol de lectura (admin, coordinador, profesional)
  */
 export async function GET(request: NextRequest) {
+  // Verificar autenticación
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+  }
+
+  // Verificar autorización (solo personal clínico puede ver formularios)
+  if (!hasAnyRole(user.roles, API_ROLES.READ)) {
+    return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
+  }
+
   try {
     if (!adminDb) {
       logger.error('[API /api/formularios GET] Admin DB not initialized');
@@ -107,8 +122,21 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/formularios
  * Crea una nueva plantilla de formulario
+ *
+ * @security Requiere autenticación y rol de escritura (admin, coordinador)
  */
 export async function POST(request: NextRequest) {
+  // Verificar autenticación
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+  }
+
+  // Verificar autorización (solo admin y coordinador pueden crear plantillas)
+  if (!hasAnyRole(user.roles, API_ROLES.WRITE)) {
+    return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
+  }
+
   try {
     if (!adminDb) {
       logger.error('[API /api/formularios POST] Admin DB not initialized');

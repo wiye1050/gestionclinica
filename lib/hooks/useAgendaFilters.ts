@@ -39,11 +39,13 @@ export function useAgendaFilters() {
     if (
       storedView === 'diaria' ||
       storedView === 'semanal' ||
-      storedView === 'multi' ||
-      storedView === 'boxes' ||
-      storedView === 'paciente'
+      storedView === 'multi'
     ) {
       setVista(storedView);
+    } else if (storedView) {
+      // Normalizar vistas antiguas o inválidas
+      window.localStorage.removeItem(VIEW_STORAGE_KEY);
+      setVista('semanal');
     }
   }, []);
 

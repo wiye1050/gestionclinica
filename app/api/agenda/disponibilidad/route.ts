@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { addDays, startOfDay, setHours, setMinutes, isSameDay, max as dateMax } from 'date-fns';
 import { adminDb } from '@/lib/firebaseAdmin';
@@ -6,6 +6,7 @@ import { AGENDA_CONFIG } from '@/components/agenda/v2/agendaHelpers';
 import { validateSearchParams } from '@/lib/utils/apiValidation';
 import { getCurrentUser } from '@/lib/auth/server';
 import { logger } from '@/lib/utils/logger';
+import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';
 
 // Schema de validación para query params
 const disponibilidadSchema = z.object({
@@ -13,7 +14,12 @@ const disponibilidadSchema = z.object({
   days: z.coerce.number().min(1).max(7).default(3),
 });
 
-export async function GET(request: Request) {
+const limiter = rateLimit(RATE_LIMIT_STRICT);
+
+export async function GET(request: NextRequest) {
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {

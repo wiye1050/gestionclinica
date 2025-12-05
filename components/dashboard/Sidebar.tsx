@@ -57,9 +57,12 @@ interface SidebarBadges {
   mejorasPendientes: number;
 }
 
-export default function Sidebar() {
+export default function Sidebar({ orientation = 'vertical' }: { orientation?: 'vertical' | 'horizontal' }) {
   const pathname = usePathname();
   const { role, loading: roleLoading } = useUserRole();
+  const isHorizontal = orientation === 'horizontal';
+  const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   // Estado de secciones colapsables
   const [sectionStates, setSectionStates] = useState<Record<string, boolean>>({
@@ -211,7 +214,7 @@ export default function Sidebar() {
   const sections: MenuSection[] = [
     {
       id: 'principal',
-      title: 'Principal',
+      title: 'Inicio',
       icon: Home,
       color: 'text-brand',
       collapsible: false,
@@ -269,13 +272,23 @@ export default function Sidebar() {
     },
   ];
 
-  // Filtrar secciones y items según rol
-  const filteredSections = sections
-    .map(section => ({
-      ...section,
-      items: section.items.filter(item => item.roles.includes(userRole)),
-    }))
-    .filter(section => section.items.length > 0);
+  // Filtrar secciones y items según rol (si rol no está listo, mostrar todo para evitar parpadeos)
+  const filteredSections = (roleLoading || !role)
+    ? sections
+    : sections
+        .map(section => ({
+          ...section,
+          items: section.items.filter(item => item.roles.includes(userRole)),
+        }))
+        .filter(section => section.items.length > 0);
+
+  // Establecer grupo activo inicial
+  useEffect(() => {
+    if (filteredSections.length === 0) return;
+    if (!activeGroup || !filteredSections.some((s) => s.id === activeGroup)) {
+      setActiveGroup(filteredSections[0]?.id ?? null);
+    }
+  }, [filteredSections, activeGroup]);
 
   const getBadgeValue = (badgeKey?: string): number => {
     if (!badgeKey) return 0;
@@ -300,22 +313,143 @@ export default function Sidebar() {
   // Mostrar skeleton mientras carga el rol
   if (roleLoading) {
     return (
-      <aside className="sidebar-panel flex w-full flex-col gap-2 px-3 py-4">
-        <div className="space-y-3">
-          {/* Skeleton de sección Principal */}
-          <div className="space-y-1">
-            <div className="h-4 w-20 animate-pulse rounded bg-slate-200" />
-            <div className="space-y-1">
-              <div className="h-9 animate-pulse rounded-lg bg-slate-100" />
-              <div className="h-9 animate-pulse rounded-lg bg-slate-100" />
-              <div className="h-9 animate-pulse rounded-lg bg-slate-100" />
-            </div>
-          </div>
-          {/* Skeleton de otras secciones */}
-          <div className="space-y-1">
-            <div className="h-9 animate-pulse rounded-lg bg-slate-100" />
-          </div>
+      <aside className={`sidebar-panel w-full ${isHorizontal ? 'px-3 py-2' : 'flex flex-col gap-2 px-3 py-4'}`}>
+        <div className="space-y-2">
+          <div className="h-9 animate-pulse rounded-lg bg-slate-100" />
         </div>
+      </aside>
+    );
+  }
+
+  if (isHorizontal) {
+    const topLevel: Array<{ id: string; label: string; href?: string; items?: MenuItem[] }> = [
+      {
+        id: 'inicio',
+        label: 'Inicio',
+        href: '/dashboard',
+      },
+      {
+        id: 'agenda',
+        label: 'Agenda',
+        href: '/dashboard/agenda',
+      },
+      {
+        id: 'pacientes',
+        label: 'Pacientes',
+        href: '/dashboard/pacientes',
+      },
+      {
+        id: 'operaciones',
+        label: 'Operaciones',
+        items:
+          filteredSections.find((s) => s.id === 'operaciones')?.items ?? [],
+      },
+      {
+        id: 'coordinacion',
+        label: 'Coordinación',
+        items:
+          filteredSections.find((s) => s.id === 'coordinacion')?.items ?? [],
+      },
+      {
+        id: 'configuracion',
+        label: 'Configuración',
+        items:
+          filteredSections.find((s) => s.id === 'configuracion')?.items ?? [],
+      },
+    ].filter(
+      (item) =>
+        (item.href ||
+          (item.items && item.items.length > 0))
+    );
+
+    const renderDropdown = (id: string, label: string, items: MenuItem[]) => (
+      <div key={id} className="relative">
+        <button
+          onClick={() => setOpenMenu((prev) => (prev === id ? null : id))}
+          className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm font-semibold transition focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+            openMenu === id ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-50'
+          }`}
+          aria-expanded={openMenu === id}
+          aria-haspopup="true"
+        >
+          {label}
+          {openMenu === id ? (
+            <ChevronDown className="h-3 w-3" />
+          ) : (
+            <ChevronRight className="h-3 w-3" />
+          )}
+        </button>
+        {openMenu === id && (
+          <div
+            className="absolute left-0 z-40 mt-2 w-64 rounded-lg border border-slate-200 bg-white shadow-lg"
+            role="menu"
+          >
+            <ul className="max-h-80 overflow-y-auto py-1">
+              {items.map((item) => {
+                const Icon = item.icon;
+                const isActive =
+                  pathname === item.href ||
+                  (item.href !== '/dashboard' && pathname.startsWith(item.href));
+                const badgeValue = getBadgeValue(item.badgeKey);
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      onClick={() => setOpenMenu(null)}
+                      className={`flex items-center justify-between px-3 py-2 text-sm transition focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+                        isActive
+                          ? 'bg-brand-50 text-brand-800'
+                          : 'text-slate-700 hover:bg-slate-50'
+                      }`}
+                      role="menuitem"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-brand-700' : 'text-slate-500'}`} />
+                        {item.name}
+                      </span>
+                      {badgeValue > 0 && (
+                        <span className="rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                          {badgeValue > 99 ? '99+' : badgeValue}
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+
+    return (
+      <aside className="w-full">
+        <nav className="flex flex-wrap items-center gap-2 bg-white/80 px-3 py-2 overflow-x-auto">
+          {topLevel.map((item) => {
+            const isActive =
+              item.href &&
+              (pathname === item.href ||
+                (item.href !== '/dashboard' && pathname.startsWith(item.href)));
+
+            if (item.items && item.items.length > 0) {
+              return renderDropdown(item.id, item.label, item.items);
+            }
+
+            return (
+              <Link
+                key={item.id}
+                href={item.href ?? '#'}
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm font-semibold transition focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+                  isActive
+                    ? 'bg-brand-50 text-brand-800'
+                    : 'text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
       </aside>
     );
   }

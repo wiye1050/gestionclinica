@@ -22,9 +22,7 @@ interface AgendaPageProps {
 const isVistaAgenda = (value?: string): value is VistaAgenda =>
   value === 'diaria' ||
   value === 'semanal' ||
-  value === 'multi' ||
-  value === 'boxes' ||
-  value === 'paciente';
+  value === 'multi';
 
 export default async function AgendaPage({ searchParams }: AgendaPageProps) {
   const user = await getCurrentUser();

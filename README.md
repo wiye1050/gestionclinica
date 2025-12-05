@@ -24,6 +24,8 @@ Aplicación operativa para coordinación de una clínica, desarrollada con **Nex
 - `npm run typecheck` – verificación estricta de tipos.
 - `npm run lint` – linting.
 - `npm run seed:servicios` – carga de datos iniciales en Firestore (servicios, profesionales, etc.).
+- `node scripts/set-role.js <uid> <rol> [email]` – asigna rol en claims y en `users/{uid}`. Ver `docs/roles.md`.
+- `docs/agenda.md` – arquitectura, vistas y deep links del módulo de Agenda.
 
 ### Integraciones Firebase
 

@@ -4,7 +4,6 @@ import MiniCalendar from '../MiniCalendar';
 import ProfesionalFilterList from './ProfesionalFilterList';
 import BasicFilters from './BasicFilters';
 import { AgendaEvent } from '../agendaHelpers';
-import { Calendar } from 'lucide-react';
 
 interface Profesional {
   id: string;
@@ -66,13 +65,6 @@ export default function AgendaSidebar({
   return (
     <aside className="w-[280px] h-full flex-shrink-0 border-r border-border bg-card overflow-y-auto">
       <div className="p-3 space-y-3">
-        {/* Header */}
-        <div className="flex items-center gap-2 pb-2 border-b border-border">
-          <div className="rounded-full bg-brand/10 p-1.5">
-            <Calendar className="h-4 w-4 text-brand" />
-          </div>
-          <h2 className="text-sm font-semibold text-text">Navegación y Filtros</h2>
-        </div>
 
         {/* Mini Calendar */}
         <div>

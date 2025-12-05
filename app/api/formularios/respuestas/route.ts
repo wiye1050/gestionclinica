@@ -4,6 +4,8 @@ import { z } from 'zod';
 import type { RespuestaFormulario } from '@/types';
 import { logger } from '@/lib/utils/logger';
 import { rateLimit, RATE_LIMIT_MODERATE } from '@/lib/middleware/rateLimit';
+import { getCurrentUser } from '@/lib/auth/server';
+import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 
 const limiter = rateLimit(RATE_LIMIT_MODERATE);
 
@@ -36,8 +38,22 @@ const createRespuestaSchema = z.object({
  * - formularioPlantillaId: filtrar por plantilla
  * - estado: filtrar por estado (borrador, completado, validado, archivado)
  * - limit: número máximo de resultados (default: 100)
+ *
+ * @security CRÍTICO: Contiene PHI (Protected Health Information)
+ * @security Requiere autenticación y rol de lectura clínica
  */
 export async function GET(request: NextRequest) {
+  // Verificar autenticación
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+  }
+
+  // Verificar autorización (solo personal clínico puede ver respuestas de pacientes)
+  if (!hasAnyRole(user.roles, API_ROLES.READ)) {
+    return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
+  }
+
   try {
     if (!adminDb) {
       logger.error('[API /api/formularios/respuestas GET] Admin DB not initialized');
@@ -119,8 +135,22 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/formularios/respuestas
  * Crea una nueva respuesta de formulario
+ *
+ * @security CRÍTICO: Crea registros con PHI (Protected Health Information)
+ * @security Requiere autenticación y rol de lectura clínica
  */
 export async function POST(request: NextRequest) {
+  // Verificar autenticación
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+  }
+
+  // Verificar autorización (profesionales pueden crear respuestas al atender pacientes)
+  if (!hasAnyRole(user.roles, API_ROLES.READ)) {
+    return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
+  }
+
   // Aplicar rate limiting
   const rateLimitResult = await limiter(request);
   if (rateLimitResult) return rateLimitResult;

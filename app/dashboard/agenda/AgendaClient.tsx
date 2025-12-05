@@ -13,6 +13,7 @@ import {
   usePacientes,
   useCatalogoServicios,
 } from '@/lib/hooks/useQueries';
+import type { VistaAgenda as AgendaView } from '@/components/agenda/v2/agendaConstants';
 import { useProfesionalesManager } from '@/lib/hooks/useProfesionalesManager';
 import SkeletonLoader from '@/components/shared/SkeletonLoader';
 import CrossModuleAlert from '@/components/shared/CrossModuleAlert';
@@ -36,7 +37,7 @@ const AgendaEventDrawer = dynamic(
   { ssr: false, loading: () => <div className="h-full w-full flex items-center justify-center"><SkeletonLoader /></div> }
 );
 
-export type VistaAgenda = 'diaria' | 'semanal' | 'multi' | 'boxes' | 'paciente';
+export type VistaAgenda = AgendaView;
 type AgendaResource = { id: string; nombre: string; tipo: 'profesional' | 'sala' };
 
 interface AgendaClientProps {
@@ -235,49 +236,21 @@ export default function AgendaClient({
   const resourceColumnLimit = Math.max(isResourceGridMode ? 6 : 4, 1);
 
   const recursos = useMemo<AgendaResource[]>(() => {
-    const cumplePreset = (prof?: (typeof profesionales)[number]) => {
-      if (!prof) return false;
-      if (resourcePreset === 'todos') return true;
-      return prof.especialidad === resourcePreset;
-    };
-
-    const selectedOrdered = selectedProfesionales
+    // Solo mostrar profesionales seleccionados explícitamente en el filtro
+    const seleccionados = selectedProfesionales
       .map((id) => profesionales.find((p) => p.id === id))
-      .filter((prof): prof is (typeof profesionales)[number] => Boolean(prof));
+      .filter(
+        (prof): prof is (typeof profesionales)[number] =>
+          Boolean(prof) && (resourcePreset === 'todos' || prof.especialidad === resourcePreset)
+      );
 
-    const fallbackProfesionales = profesionales.filter(cumplePreset);
-
-    const orderedPool: (typeof profesionales)[number][] = [];
-    const pushUnique = (prof?: (typeof profesionales)[number]) => {
-      if (!prof) return;
-      if (orderedPool.some((item) => item.id === prof.id)) return;
-      orderedPool.push(prof);
-    };
-
-    selectedOrdered.forEach(pushUnique);
-
-    if (orderedPool.length < resourceColumnLimit) {
-      fallbackProfesionales.forEach((prof) => {
-        if (orderedPool.length >= resourceColumnLimit) return;
-        pushUnique(prof);
-      });
-    }
-
-    if (orderedPool.length < resourceColumnLimit) {
-      profesionales.forEach((prof) => {
-        if (orderedPool.length >= resourceColumnLimit) return;
-        pushUnique(prof);
-      });
-    }
-
-    const finalProfesionales = orderedPool.slice(0, resourceColumnLimit);
-
-    return finalProfesionales.map((prof) => ({
+    return seleccionados.map((prof) => ({
       id: prof.id,
       nombre: `${prof.nombre} ${prof.apellidos}`,
       tipo: 'profesional',
+      color: prof.color ?? '#66b7e1', // fallback azul suave si no hay color asignado
     }));
-  }, [profesionales, selectedProfesionales, resourcePreset, resourceColumnLimit]);
+  }, [profesionales, selectedProfesionales, resourcePreset]);
 
   // Navigation handlers
   const handlePrev = () => {
@@ -378,9 +351,6 @@ export default function AgendaClient({
       } else if (e.key === '3') {
         e.preventDefault();
         setVista('multi');
-      } else if (e.key === '4' && false) { // Disabled until boxes is ready
-        e.preventDefault();
-        setVista('boxes');
       }
       // Today shortcut
       else if (e.key === 't' || e.key === 'T') {
@@ -553,30 +523,26 @@ export default function AgendaClient({
             )}
 
             {vista === 'multi' && (
-              <AgendaResourceView
-                day={currentDate}
-                events={eventosFiltrados}
-                resources={recursos}
-                onEventMove={handleEventMoveWrapper}
-                onEventResize={handleEventResizeWrapper}
-                onEventClick={handleEventClick}
-                onQuickAction={handleQuickAction}
-                hourHeight={hourHeight}
-                catalogoServicios={catalogoServicios}
-              />
+              recursos.length > 0 ? (
+                <AgendaResourceView
+                  day={currentDate}
+                  events={eventosFiltrados}
+                  resources={recursos}
+                  onEventMove={handleEventMoveWrapper}
+                  onEventResize={handleEventResizeWrapper}
+                  onEventClick={handleEventClick}
+                  onQuickAction={handleQuickAction}
+                  hourHeight={hourHeight}
+                  catalogoServicios={catalogoServicios}
+                />
+              ) : (
+                renderPlaceholder(
+                  'Selecciona profesionales',
+                  'Marca uno o más profesionales en el panel izquierdo para ver sus columnas en la agenda.'
+                )
+              )
             )}
 
-            {vista === 'boxes' &&
-              renderPlaceholder(
-                'Vista de boxes en preparación',
-                'Aquí podrás organizar la ocupación de cada box y gestionar bloqueos. Lo dejaremos preparado para la siguiente fase.'
-              )}
-
-            {vista === 'paciente' &&
-              renderPlaceholder(
-                'Vista por paciente',
-                'Consulta la historia completa de citas, documentos y notas de un paciente en un único timeline.'
-              )}
           </div>
         </main>
       </div>

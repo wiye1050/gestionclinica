@@ -121,13 +121,13 @@ body {
 }
 
 .dashboard-canvas {
-  border-radius: 12px;
-  background: hsl(var(--card));
+  border-radius: 0;
+  background: transparent;
   color: hsl(var(--text));
-  border: 1px solid hsl(var(--border));
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  padding: clamp(0.75rem, 1.5vw, 1.25rem);
-  min-height: calc(100vh - 4.5rem);
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  min-height: auto;
 }
 
 .dashboard-canvas__inner {

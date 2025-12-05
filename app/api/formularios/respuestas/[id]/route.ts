@@ -3,6 +3,8 @@ import { adminDb } from '@/lib/firebaseAdmin';
 import { z } from 'zod';
 import type { RespuestaFormulario } from '@/types';
 import { logger } from '@/lib/utils/logger';
+import { getCurrentUser } from '@/lib/auth/server';
+import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 
 const updateRespuestaSchema = z.object({
   respuestas: z.record(z.string(), z.unknown()).optional(),
@@ -31,11 +33,25 @@ interface RouteContext {
 /**
  * GET /api/formularios/respuestas/[id]
  * Obtiene una respuesta especifica
+ *
+ * @security CRÍTICO: Expone PHI (Protected Health Information) de un paciente específico
+ * @security Requiere autenticación y rol de lectura clínica
  */
 export async function GET(
   request: NextRequest,
   context: RouteContext
 ) {
+  // Verificar autenticación
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+  }
+
+  // Verificar autorización
+  if (!hasAnyRole(user.roles, API_ROLES.READ)) {
+    return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
+  }
+
   try {
     if (!adminDb) {
       logger.error('[API /api/formularios/respuestas/[id] GET] Admin DB not initialized');
@@ -106,11 +122,25 @@ export async function GET(
 /**
  * PATCH /api/formularios/respuestas/[id]
  * Actualiza una respuesta de formulario
+ *
+ * @security CRÍTICO: Modifica PHI (Protected Health Information)
+ * @security Requiere autenticación y rol de lectura clínica
  */
 export async function PATCH(
   request: NextRequest,
   context: RouteContext
 ) {
+  // Verificar autenticación
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+  }
+
+  // Verificar autorización (profesionales pueden actualizar respuestas)
+  if (!hasAnyRole(user.roles, API_ROLES.READ)) {
+    return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
+  }
+
   try {
     if (!adminDb) {
       logger.error('[API /api/formularios/respuestas/[id] PATCH] Admin DB not initialized');
@@ -199,11 +229,25 @@ export async function PATCH(
 /**
  * DELETE /api/formularios/respuestas/[id]
  * Elimina una respuesta de formulario
+ *
+ * @security CRÍTICO: Elimina registros con PHI (Protected Health Information)
+ * @security Requiere autenticación y rol de escritura (admin, coordinador solamente)
  */
 export async function DELETE(
   request: NextRequest,
   context: RouteContext
 ) {
+  // Verificar autenticación
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+  }
+
+  // Verificar autorización (solo admin y coordinador pueden eliminar respuestas de pacientes)
+  if (!hasAnyRole(user.roles, API_ROLES.WRITE)) {
+    return NextResponse.json({ error: 'Permisos insuficientes - Solo admins y coordinadores' }, { status: 403 });
+  }
+
   try {
     if (!adminDb) {
       logger.error('[API /api/formularios/respuestas/[id] DELETE] Admin DB not initialized');

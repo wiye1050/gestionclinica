@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/dashboard/Sidebar';
-import { Search } from 'lucide-react';
+import { Search, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { GlobalSearch } from '@/components/ui/GlobalSearch';
 import { useGlobalSearch } from '@/lib/hooks/useGlobalSearch';
@@ -146,53 +146,62 @@ export function DashboardLayoutClient({
   return (
     <QueryProvider>
       <div className="app-shell app-shell--dashboard text-text">
-        <div className="app-shell__content min-h-screen px-4 py-6 lg:px-10">
+        <div className="app-shell__content min-h-screen w-full px-0 py-0 bg-white">
           <header
-            className={`sticky top-4 z-30 rounded-xl border bg-white/85 px-4 py-2.5 backdrop-blur transition-all duration-200 ${
+            className={`sticky top-0 z-30 rounded-none border-b bg-white px-2 py-1.5 transition-all duration-150 ${
               isScrolled
-                ? 'border-slate-200/80 shadow-lg shadow-slate-200/50'
-                : 'border-white/40 shadow-[0_8px_20px_rgba(15,23,42,0.06)]'
+                ? 'border-slate-200 shadow-[0_2px_6px_rgba(15,23,42,0.08)]'
+                : 'border-slate-100 shadow-[0_1px_4px_rgba(15,23,42,0.05)]'
             }`}
           >
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-3">
-                  <h1 className="text-sm font-semibold text-slate-900">IO</h1>
-                  <Breadcrumbs />
-                </div>
+            <div className="flex items-center gap-2">
+              <div className="flex flex-1 items-center gap-2">
+                <ErrorBoundary fallback={
+                  <div className="rounded-lg border border-danger/20 bg-danger-bg p-4">
+                    <p className="text-sm font-medium text-danger">Error cargando menú</p>
+                    <p className="text-xs text-text-muted mt-1">Recarga la página</p>
+                  </div>
+                }>
+                  <Sidebar orientation="horizontal" />
+                </ErrorBoundary>
               </div>
 
-              <div className="hidden md:flex flex-1 max-w-md mx-4">
+              <div className="hidden md:flex items-center gap-2">
+                <span className="h-6 w-px bg-slate-200" />
                 <button
                   onClick={open}
-                  className="flex w-full items-center gap-2 rounded-lg border border-slate-200/60 bg-slate-50/80 px-3 py-2 text-sm text-slate-500 transition-colors hover:bg-white hover:border-slate-300"
+                  className="flex w-40 items-center gap-1.5 rounded-md border border-slate-200/70 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600 transition-colors hover:bg-white hover:border-slate-300"
                 >
-                  <Search className="h-4 w-4" />
-                  <span className="flex-1 text-left">Buscar pacientes, citas...</span>
+                  <Search className="h-3.5 w-3.5" />
+                  <span className="flex-1 text-left">Buscar...</span>
                   <kbd className="hidden lg:flex items-center gap-0.5 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] text-slate-400">
                     ⌘K
                   </kbd>
                 </button>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={open}
-                  className="md:hidden inline-flex items-center justify-center rounded-lg border border-slate-200/60 bg-white/80 p-2 text-slate-600 transition hover:bg-white"
+                  className="md:hidden inline-flex items-center justify-center rounded-md border border-slate-200/60 bg-white p-2 text-slate-600 transition hover:bg-white"
                   aria-label="Abrir búsqueda"
                 >
                   <Search className="h-4 w-4" />
                 </button>
 
-                <div className="hidden sm:flex items-center gap-1.5 rounded-full border border-slate-200/70 bg-white px-2.5 py-1.5 text-[11px] font-medium text-slate-600">
-                  <span className={`h-2 w-2 rounded-full ${statusMeta[alertStatus].dot}`}></span>
-                  <span className="hidden lg:inline">{statusMeta[alertStatus].label}</span>
+                <button
+                  className="hidden sm:inline-flex h-8 min-w-[34px] items-center justify-center gap-1 rounded-full border border-slate-200/70 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-600"
+                  title={statusMeta[alertStatus].label}
+                  aria-label="Incidencias"
+                  type="button"
+                >
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
                   {alertCount !== null && alertCount > 0 && (
-                    <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                    <span className="rounded-full bg-slate-100 px-1 py-0.5 text-[10px] font-bold text-slate-700">
                       {alertCount}
                     </span>
                   )}
-                </div>
+                </button>
 
                 <NotificacionesDropdown userUid={resolvedUser.uid} />
 
@@ -206,20 +215,10 @@ export function DashboardLayoutClient({
             </div>
           </header>
 
-          <div className="mt-3 flex flex-col gap-3 lg:flex-row">
-            <aside className="w-full shrink-0 lg:sticky lg:top-24 lg:w-48">
-              <ErrorBoundary fallback={
-                <div className="rounded-lg border border-danger/20 bg-danger-bg p-4">
-                  <p className="text-sm font-medium text-danger">Error cargando menú</p>
-                  <p className="text-xs text-text-muted mt-1">Recarga la página</p>
-                </div>
-              }>
-                <Sidebar />
-              </ErrorBoundary>
-            </aside>
+          <div className="mt-0 flex flex-col gap-0">
             <main className="min-w-0 flex-1">
-              <div className="dashboard-canvas">
-                <div className="dashboard-canvas__inner">
+              <div className="dashboard-canvas p-0 bg-transparent">
+                <div className="dashboard-canvas__inner p-0 rounded-none">
                   <ErrorBoundary>{children}</ErrorBoundary>
                 </div>
               </div>

@@ -210,6 +210,14 @@ export default function AgendaResourceView({
 
                       // Color dinámico del profesional (con fallback)
                       const resourceColor = resource.color || '#3B82F6';
+                      const softBg =
+                        resourceColor.startsWith('#') && (resourceColor.length === 7 || resourceColor.length === 9)
+                          ? `${resourceColor.slice(0, 7)}26` // ~15% alpha
+                          : 'rgba(0, 135, 205, 0.12)';
+                      const softBorder =
+                        resourceColor.startsWith('#') && (resourceColor.length === 7 || resourceColor.length === 9)
+                          ? `${resourceColor.slice(0, 7)}66`
+                          : 'rgba(0, 135, 205, 0.4)';
 
                       return (
                         <div
@@ -219,8 +227,8 @@ export default function AgendaResourceView({
                           <div
                             className="sticky top-0 z-20 flex h-16 flex-col justify-center gap-1 rounded-2xl border px-3 text-sm backdrop-blur"
                             style={{
-                              backgroundColor: `${resourceColor}15`,
-                              borderColor: `${resourceColor}66`,
+                              backgroundColor: softBg,
+                              borderColor: softBorder,
                             }}
                           >
                             <div className="flex items-center gap-2">

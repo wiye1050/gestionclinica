@@ -80,6 +80,22 @@ export default function AgendaEventCard({
   const stateBadge = EVENT_STATE_BADGES[event.estado];
   const typeBadgeClass = EVENT_TYPE_BADGES[event.tipo] ?? 'bg-gray-200 text-gray-700';
 
+  const softColor = useMemo(() => {
+    // Generar un color de fondo suave a partir del color principal (hex)
+    if (eventColor?.startsWith('#') && (eventColor.length === 7 || eventColor.length === 9)) {
+      // #RRGGBB -> añadir alpha ligera
+      return `${eventColor.slice(0, 7)}1F`; // ~12% alpha
+    }
+    return 'rgba(0, 135, 205, 0.12)'; // fallback azul suave
+  }, [eventColor]);
+
+  const borderColor = useMemo(() => {
+    if (eventColor?.startsWith('#') && (eventColor.length === 7 || eventColor.length === 9)) {
+      return `${eventColor.slice(0, 7)}80`; // ~50% alpha
+    }
+    return 'rgba(0, 135, 205, 0.5)';
+  }, [eventColor]);
+
   // Iconos por estado
   const estadoIcon = {
     programada: <Circle className="w-3 h-3" />,
@@ -182,6 +198,8 @@ export default function AgendaEventCard({
             `}
             style={{
               borderLeftColor: eventColor,
+              backgroundColor: softColor,
+              borderColor,
             }}
           >
             {/* Contenido */}

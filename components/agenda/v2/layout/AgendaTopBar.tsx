@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, Search, Plus, Calendar, List, LayoutGrid, Boxes, Maximize2, Minimize2, Grid3x3, Menu } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Plus, Calendar, List, LayoutGrid, Maximize2, Minimize2, Grid3x3, Menu } from 'lucide-react';
 import type { VistaAgenda } from '@/app/dashboard/agenda/AgendaClient';
 
 type ViewDensity = 'compact' | 'normal' | 'spacious';
@@ -45,7 +45,6 @@ const VISTA_OPTIONS: Array<{
   { id: 'diaria', label: 'Día', icon: <Calendar className="h-3.5 w-3.5" /> },
   { id: 'semanal', label: 'Semana', icon: <List className="h-3.5 w-3.5" /> },
   { id: 'multi', label: 'Multi', icon: <LayoutGrid className="h-3.5 w-3.5" /> },
-  { id: 'boxes', label: 'Boxes', icon: <Boxes className="h-3.5 w-3.5" /> },
 ];
 
 export default function AgendaTopBar({
@@ -84,20 +83,20 @@ export default function AgendaTopBar({
           <div className="flex items-center gap-1 rounded-lg border border-brand/20 bg-brand/5 px-1.5 py-1 shadow-sm">
             <button
               onClick={onPrev}
-              className="rounded p-1 text-brand transition-all hover:bg-brand/10 focus-visible:focus-ring"
+              className="rounded p-1 text-brand-700 transition-all hover:bg-brand/10 focus-visible:focus-ring"
               aria-label="Anterior"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
               onClick={onToday}
-              className="rounded border border-brand/30 bg-white px-2 py-1 text-xs font-semibold uppercase tracking-wide text-brand transition-all hover:bg-brand hover:text-white hover:border-brand focus-visible:focus-ring"
+              className="rounded border border-brand/30 bg-white px-2 py-1 text-xs font-semibold uppercase tracking-wide text-brand-700 transition-all hover:bg-brand-600 hover:text-white hover:border-brand focus-visible:focus-ring"
             >
               Hoy
             </button>
             <button
               onClick={onNext}
-              className="rounded p-1 text-brand transition-all hover:bg-brand/10 focus-visible:focus-ring"
+              className="rounded p-1 text-brand-700 transition-all hover:bg-brand/10 focus-visible:focus-ring"
               aria-label="Siguiente"
             >
               <ChevronRight className="h-4 w-4" />
@@ -105,35 +104,26 @@ export default function AgendaTopBar({
           </div>
 
           {/* Label de fecha */}
-          <div className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-brand to-brand/80 px-3 py-1.5 text-sm font-semibold capitalize text-white shadow-sm">
-            <Calendar className="h-3.5 w-3.5" />
-            <span>{dateLabel}</span>
+          <div className="flex items-center gap-2 rounded-lg border border-brand/30 bg-white/90 px-3 py-1.5 text-sm font-semibold text-brand-800 shadow-sm">
+            <Calendar className="h-3.5 w-3.5 text-brand-700" />
+            <span className="text-left">{dateLabel}</span>
           </div>
 
-          {/* Contador de eventos */}
-          <div className="hidden rounded-full bg-gradient-to-r from-brand-subtle to-brand-subtle/50 px-3 py-1 text-xs font-semibold text-brand shadow-sm sm:inline-flex items-center gap-1.5">
-            <div className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
-            <span>{eventCount} {eventCount === 1 ? 'evento' : 'eventos'}</span>
-          </div>
         </div>
 
-        {/* Right: Vista + Búsqueda + Nueva cita */}
-        <div className="flex items-center gap-2">
-          {/* Selector de vista */}
-          <div className="flex items-center gap-0.5 rounded-lg border border-brand/30 bg-gradient-to-r from-card to-brand-subtle/10 p-1 shadow-sm">
+        {/* Right: Controles de vista, densidad y acciones */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Selector de vista (único bloque) */}
+          <div className="flex items-center gap-0.5 rounded-lg border border-brand/30 bg-transparent p-1 shadow-sm">
             {VISTA_OPTIONS.map((option) => (
               <button
                 key={option.id}
                 onClick={() => onVistaChange(option.id)}
-                disabled={option.id === 'boxes'}
                 className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-all focus-visible:focus-ring ${
                   vista === option.id
-                    ? 'bg-brand text-white shadow-md scale-105'
-                    : option.id === 'boxes'
-                    ? 'cursor-not-allowed text-text-muted/50 opacity-40'
-                    : 'text-text hover:bg-card hover:text-brand'
+                    ? 'bg-brand-600 text-white shadow-md scale-105'
+                    : 'bg-transparent text-brand-800 hover:bg-brand/10 hover:text-brand-900'
                 }`}
-                title={option.id === 'boxes' ? 'Próximamente' : undefined}
               >
                 {option.icon}
                 <span className="hidden sm:inline">{option.label}</span>
@@ -141,13 +131,15 @@ export default function AgendaTopBar({
             ))}
           </div>
 
-          {/* Density controls */}
+          {/* Density controls (desktop) */}
           {onViewDensityChange && viewDensity && (
-            <div className="hidden items-center gap-0.5 rounded-lg border border-brand/30 bg-gradient-to-r from-card to-brand-subtle/10 p-1 shadow-sm xl:flex" title="Densidad">
+            <div className="hidden items-center gap-0.5 rounded-lg border border-brand/30 bg-transparent p-1 shadow-sm lg:flex" title="Densidad">
               <button
                 onClick={() => onViewDensityChange('compact')}
                 className={`rounded-md p-1.5 transition-all focus-visible:focus-ring ${
-                  viewDensity === 'compact' ? 'bg-brand text-white shadow-sm' : 'text-text hover:bg-card hover:text-brand'
+                  viewDensity === 'compact'
+                    ? 'border border-brand-700 text-brand-800 bg-transparent'
+                    : 'border border-transparent text-brand-800 hover:border-brand-200 hover:bg-brand/10 hover:text-brand-900'
                 }`}
                 aria-label="Compacto"
               >
@@ -156,7 +148,9 @@ export default function AgendaTopBar({
               <button
                 onClick={() => onViewDensityChange('normal')}
                 className={`rounded-md p-1.5 transition-all focus-visible:focus-ring ${
-                  viewDensity === 'normal' ? 'bg-brand text-white shadow-sm' : 'text-text hover:bg-card hover:text-brand'
+                  viewDensity === 'normal'
+                    ? 'border border-brand-700 text-brand-800 bg-transparent'
+                    : 'border border-transparent text-brand-800 hover:border-brand-200 hover:bg-brand/10 hover:text-brand-900'
                 }`}
                 aria-label="Normal"
               >
@@ -165,7 +159,9 @@ export default function AgendaTopBar({
               <button
                 onClick={() => onViewDensityChange('spacious')}
                 className={`rounded-md p-1.5 transition-all focus-visible:focus-ring ${
-                  viewDensity === 'spacious' ? 'bg-brand text-white shadow-sm' : 'text-text hover:bg-card hover:text-brand'
+                  viewDensity === 'spacious'
+                    ? 'border border-brand-700 text-brand-800 bg-transparent'
+                    : 'border border-transparent text-brand-800 hover:border-brand-200 hover:bg-brand/10 hover:text-brand-900'
                 }`}
                 aria-label="Espacioso"
               >
@@ -174,13 +170,15 @@ export default function AgendaTopBar({
             </div>
           )}
 
-          {/* Day View Mode (solo visible en vista diaria) */}
+          {/* Day View Mode (solo vista diaria, desktop) */}
           {vista === 'diaria' && onDayViewModeChange && dayViewMode && (
-            <div className="hidden items-center gap-0.5 rounded-lg border border-brand/30 bg-gradient-to-r from-card to-brand-subtle/10 p-1 shadow-sm xl:flex" title="Modo vista diaria">
+            <div className="hidden items-center gap-0.5 rounded-lg border border-brand/30 bg-transparent p-1 shadow-sm lg:flex" title="Modo vista diaria">
               <button
                 onClick={() => onDayViewModeChange('single')}
                 className={`inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-all focus-visible:focus-ring ${
-                  dayViewMode === 'single' ? 'bg-brand text-white shadow-sm' : 'text-text hover:bg-card hover:text-brand'
+                  dayViewMode === 'single'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-transparent text-brand-800 hover:bg-brand/10 hover:text-brand-900'
                 }`}
               >
                 <Calendar className="h-3.5 w-3.5" />
@@ -189,7 +187,9 @@ export default function AgendaTopBar({
               <button
                 onClick={() => onDayViewModeChange('multi')}
                 className={`inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-all focus-visible:focus-ring ${
-                  dayViewMode === 'multi' ? 'bg-brand text-white shadow-sm' : 'text-text hover:bg-card hover:text-brand'
+                  dayViewMode === 'multi'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-transparent text-brand-800 hover:bg-brand/10 hover:text-brand-900'
                 }`}
               >
                 <Grid3x3 className="h-3.5 w-3.5" />
@@ -213,7 +213,7 @@ export default function AgendaTopBar({
           {/* Botón Nueva cita */}
           <button
             onClick={onNewEvent}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-success px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-success/90 hover:shadow-md focus-visible:focus-ring"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-brand/40 bg-white px-3 py-1.5 text-xs font-semibold text-brand-700 shadow-sm transition-all hover:bg-brand-50 hover:text-brand-800 focus-visible:focus-ring"
             title="Nueva cita (presiona N)"
           >
             <Plus className="h-4 w-4" />
@@ -222,8 +222,33 @@ export default function AgendaTopBar({
         </div>
       </div>
 
-      {/* Búsqueda móvil (row separada) */}
+      {/* Búsqueda y acciones compactas en móvil */}
       <div className="border-t border-border p-2 md:hidden">
+        <div className="mb-2 flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-lg border border-brand/30 bg-transparent p-1 shadow-sm">
+            {VISTA_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                onClick={() => onVistaChange(option.id)}
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold transition-all focus-visible:focus-ring ${
+                  vista === option.id
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-transparent text-brand-800 hover:bg-brand/10 hover:text-brand-900'
+                }`}
+              >
+                {option.icon}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={onNewEvent}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-brand/40 bg-white px-3 py-1.5 text-xs font-semibold text-brand-700 shadow-sm transition-all hover:bg-brand-50 hover:text-brand-800 focus-visible:focus-ring"
+            title="Nueva cita (presiona N)"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Nueva</span>
+          </button>
+        </div>
         <div className="relative">
           <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted" />
           <input

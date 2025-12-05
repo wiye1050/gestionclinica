@@ -3,6 +3,8 @@ import { adminDb } from '@/lib/firebaseAdmin';
 import { z } from 'zod';
 import type { FormularioPlantilla } from '@/types';
 import { logger } from '@/lib/utils/logger';
+import { getCurrentUser } from '@/lib/auth/server';
+import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 
 const updatePlantillaSchema = z.object({
   nombre: z.string().min(1).max(200).optional(),
@@ -43,11 +45,24 @@ interface RouteContext {
 /**
  * GET /api/formularios/[id]
  * Obtiene una plantilla específica
+ *
+ * @security Requiere autenticación y rol de lectura
  */
 export async function GET(
   request: NextRequest,
   context: RouteContext
 ) {
+  // Verificar autenticación
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+  }
+
+  // Verificar autorización
+  if (!hasAnyRole(user.roles, API_ROLES.READ)) {
+    return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
+  }
+
   try {
     if (!adminDb) {
       logger.error('[API /api/formularios/[id] GET] Admin DB not initialized');
@@ -107,11 +122,24 @@ export async function GET(
 /**
  * PATCH /api/formularios/[id]
  * Actualiza una plantilla de formulario
+ *
+ * @security Requiere autenticación y rol de escritura
  */
 export async function PATCH(
   request: NextRequest,
   context: RouteContext
 ) {
+  // Verificar autenticación
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+  }
+
+  // Verificar autorización
+  if (!hasAnyRole(user.roles, API_ROLES.WRITE)) {
+    return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
+  }
+
   try {
     if (!adminDb) {
       logger.error('[API /api/formularios/[id] PATCH] Admin DB not initialized');
@@ -172,11 +200,24 @@ export async function PATCH(
 /**
  * DELETE /api/formularios/[id]
  * Elimina una plantilla de formulario
+ *
+ * @security Requiere autenticación y rol de escritura
  */
 export async function DELETE(
   request: NextRequest,
   context: RouteContext
 ) {
+  // Verificar autenticación
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+  }
+
+  // Verificar autorización
+  if (!hasAnyRole(user.roles, API_ROLES.WRITE)) {
+    return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
+  }
+
   try {
     if (!adminDb) {
       logger.error('[API /api/formularios/[id] DELETE] Admin DB not initialized');

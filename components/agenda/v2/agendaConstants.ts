@@ -1,15 +1,9 @@
 import type { ReactNode } from 'react'
-import {
-  CalendarDays,
-  List,
-  LayoutGrid,
-  Boxes,
-  UserCircle,
-} from 'lucide-react'
+import { CalendarDays, List, LayoutGrid } from 'lucide-react'
 import { createElement } from 'react'
 import { AgendaEvent } from './agendaHelpers'
 
-export type VistaAgenda = 'diaria' | 'semanal' | 'multi' | 'boxes' | 'paciente'
+export type VistaAgenda = 'diaria' | 'semanal' | 'multi'
 
 export const AGENDA_STORAGE_KEY = 'agenda.filters.v1'
 export const VIEW_STORAGE_KEY = 'agenda.view.v1'
@@ -69,17 +63,5 @@ export const VIEW_TABS: Array<{
     label: 'Multi',
     helper: 'Columnas por profesional',
     icon: createElement(LayoutGrid, { className: 'h-4 w-4' })
-  },
-  {
-    id: 'boxes',
-    label: 'Boxes',
-    helper: 'Flujo por salas',
-    icon: createElement(Boxes, { className: 'h-4 w-4' })
-  },
-  {
-    id: 'paciente',
-    label: 'Paciente',
-    helper: 'Seguimiento individual',
-    icon: createElement(UserCircle, { className: 'h-4 w-4' })
   },
 ]

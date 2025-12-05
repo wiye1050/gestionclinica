@@ -1,11 +1,16 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth/server';
 import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 import { createDailyReport, getSerializedDailyReports } from '@/lib/server/reports';
+import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';
 
+const limiter = rateLimit(RATE_LIMIT_STRICT);
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
@@ -27,7 +32,10 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
