@@ -32,6 +32,7 @@ import { useAgendaActions } from '@/lib/hooks/useAgendaActions';
 import { useAgendaModals } from '@/lib/hooks/useAgendaModals';
 import { useAgendaNavigation } from '@/lib/hooks/useAgendaNavigation';
 import { useAgendaKeyboard } from '@/lib/hooks/useAgendaKeyboard';
+import { useAgendaResources } from '@/lib/hooks/useAgendaResources';
 import { useLayoutEffect, useRef } from 'react';
 
 // Lazy load AgendaEventDrawer for better performance
@@ -220,6 +221,15 @@ export default function AgendaClient({
     [highRiskPacientes]
   );
 
+  // Resource filtering and mapping (extracted to hook)
+  const { recursos, isResourceGridMode, resourceColumnLimit } = useAgendaResources({
+    profesionales,
+    selectedProfesionales,
+    resourcePreset,
+    vista,
+    dayViewMode,
+  });
+
   // Usar valor debounced para filtrado (mejor performance)
   const normalizedEventSearch = debouncedBusqueda.trim().toLowerCase();
 
@@ -243,27 +253,6 @@ export default function AgendaClient({
     normalizedEventSearch,
     pacienteMap,
   ]);
-
-
-  const isResourceGridMode = vista === 'multi' || (vista === 'diaria' && dayViewMode === 'multi');
-  const resourceColumnLimit = Math.max(isResourceGridMode ? 6 : 4, 1);
-
-  const recursos = useMemo<AgendaResource[]>(() => {
-    // Solo mostrar profesionales seleccionados explícitamente en el filtro
-    const seleccionados = selectedProfesionales
-      .map((id) => profesionales.find((p) => p.id === id))
-      .filter(
-        (prof): prof is (typeof profesionales)[number] =>
-          Boolean(prof) && (resourcePreset === 'todos' || prof?.especialidad === resourcePreset)
-      );
-
-    return seleccionados.map((prof) => ({
-      id: prof.id,
-      nombre: `${prof.nombre} ${prof.apellidos}`,
-      tipo: 'profesional',
-      color: prof.color ?? '#66b7e1', // fallback azul suave si no hay color asignado
-    }));
-  }, [profesionales, selectedProfesionales, resourcePreset]);
 
   // Focus agenda on specific event
   const focusAgendaOnEvent = (profesionalId?: string | null, fechaInicio?: Date) => {

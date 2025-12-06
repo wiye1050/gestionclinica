@@ -1,11 +1,30 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { format } from 'date-fns';
 import { X, Calendar, Clock, User, MapPin, AlertCircle } from 'lucide-react';
 import { AgendaEvent } from './agendaHelpers';
 import { sanitizeHTML, sanitizeInput } from '@/lib/utils/sanitize';
 import { captureError } from '@/lib/utils/errorLogging';
+
+// Zod schema para el formulario
+const eventFormSchema = z.object({
+  titulo: z.string().min(1, 'El título es requerido').max(200, 'Título muy largo'),
+  tipo: z.enum(['consulta', 'seguimiento', 'revision', 'tratamiento', 'urgencia', 'administrativo']),
+  fechaInicio: z.string().min(1, 'La fecha es requerida'),
+  horaInicio: z.string().min(1, 'La hora es requerida'),
+  duracion: z.number().int().min(5, 'Duración mínima 5 minutos').max(480, 'Duración máxima 8 horas'),
+  profesionalId: z.string().optional(),
+  salaId: z.string().optional(),
+  pacienteId: z.string().optional(),
+  prioridad: z.enum(['baja', 'media', 'alta']),
+  notas: z.string().max(1000, 'Notas muy largas').optional(),
+});
+
+type EventFormData = z.infer<typeof eventFormSchema>;
 
 interface EventModalProps {
   isOpen: boolean;
@@ -32,24 +51,33 @@ export default function EventModal({
   prefillPacienteId,
   prefillProfesionalId,
 }: EventModalProps) {
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    titulo: '',
-    tipo: 'consulta' as AgendaEvent['tipo'],
-    fechaInicio: '',
-    horaInicio: '',
-    duracion: 30,
-    profesionalId: '',
-    salaId: '',
-    pacienteId: '',
-    prioridad: 'media' as AgendaEvent['prioridad'],
-    notas: '',
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<EventFormData>({
+    resolver: zodResolver(eventFormSchema),
+    defaultValues: {
+      titulo: '',
+      tipo: 'consulta',
+      fechaInicio: initialDate ? format(initialDate, 'yyyy-MM-dd') : '',
+      horaInicio: initialDate ? format(initialDate, 'HH:mm') : '',
+      duracion: 30,
+      profesionalId: '',
+      salaId: '',
+      pacienteId: '',
+      prioridad: 'media',
+      notas: '',
+    },
   });
 
+  // Resetear formulario cuando se abre/cierra o cambia el evento
   useEffect(() => {
     if (event) {
       // Modo edición
-      setFormData({
+      reset({
         titulo: event.titulo,
         tipo: event.tipo,
         fechaInicio: format(event.fechaInicio, 'yyyy-MM-dd'),
@@ -63,27 +91,29 @@ export default function EventModal({
       });
     } else if (initialDate) {
       // Modo creación con fecha inicial
-      setFormData(prev => ({
-        ...prev,
+      reset({
+        titulo: '',
+        tipo: 'consulta',
         fechaInicio: format(initialDate, 'yyyy-MM-dd'),
         horaInicio: format(initialDate, 'HH:mm'),
-      }));
+        duracion: 30,
+        profesionalId: prefillProfesionalId || '',
+        salaId: '',
+        pacienteId: prefillPacienteId || '',
+        prioridad: 'media',
+        notas: '',
+      });
     }
-  }, [event, initialDate]);
+  }, [event, initialDate, reset, prefillPacienteId, prefillProfesionalId]);
 
+  // Aplicar prefills cuando se abre el modal
   useEffect(() => {
     if (!isOpen || Boolean(event)) return;
-    setFormData((prev) => ({
-      ...prev,
-      pacienteId: prefillPacienteId ?? prev.pacienteId,
-      profesionalId: prefillProfesionalId ?? prev.profesionalId,
-    }));
-  }, [isOpen, event, prefillPacienteId, prefillProfesionalId]);
+    if (prefillPacienteId) setValue('pacienteId', prefillPacienteId);
+    if (prefillProfesionalId) setValue('profesionalId', prefillProfesionalId);
+  }, [isOpen, event, prefillPacienteId, prefillProfesionalId, setValue]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
+  const onSubmit = async (formData: EventFormData) => {
     try {
       const fechaInicio = new Date(`${formData.fechaInicio}T${formData.horaInicio}`);
       const fechaFin = new Date(fechaInicio.getTime() + formData.duracion * 60000);
@@ -130,8 +160,6 @@ export default function EventModal({
       onClose();
     } catch (error) {
       captureError(error, { module: 'event-modal', action: 'save-event', metadata: { isEdit: !!event } });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -154,7 +182,7 @@ export default function EventModal({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4 p-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 p-4">
           {/* Título */}
           <div>
             <label className="block text-sm font-medium text-text mb-1">
@@ -162,12 +190,13 @@ export default function EventModal({
             </label>
             <input
               type="text"
-              required
-              value={formData.titulo}
-              onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
+              {...register('titulo')}
               className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
               placeholder="Ej: Consulta inicial"
             />
+            {errors.titulo && (
+              <p className="mt-1 text-sm text-red-500">{errors.titulo.message}</p>
+            )}
           </div>
 
           {/* Tipo */}
@@ -176,9 +205,7 @@ export default function EventModal({
               Tipo de cita *
             </label>
             <select
-              required
-              value={formData.tipo}
-              onChange={(e) => setFormData({ ...formData, tipo: e.target.value as AgendaEvent['tipo'] })}
+              {...register('tipo')}
               className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
             >
               <option value="consulta">Consulta</option>
@@ -188,6 +215,9 @@ export default function EventModal({
               <option value="urgencia">Urgencia</option>
               <option value="administrativo">Administrativo</option>
             </select>
+            {errors.tipo && (
+              <p className="mt-1 text-sm text-red-500">{errors.tipo.message}</p>
+            )}
           </div>
 
           {/* Fecha y Hora */}
@@ -199,11 +229,12 @@ export default function EventModal({
               </label>
               <input
                 type="date"
-                required
-                value={formData.fechaInicio}
-                onChange={(e) => setFormData({ ...formData, fechaInicio: e.target.value })}
+                {...register('fechaInicio')}
                 className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
               />
+              {errors.fechaInicio && (
+                <p className="mt-1 text-sm text-red-500">{errors.fechaInicio.message}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-text mb-1">
@@ -212,11 +243,12 @@ export default function EventModal({
               </label>
               <input
                 type="time"
-                required
-                value={formData.horaInicio}
-                onChange={(e) => setFormData({ ...formData, horaInicio: e.target.value })}
+                {...register('horaInicio')}
                 className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
               />
+              {errors.horaInicio && (
+                <p className="mt-1 text-sm text-red-500">{errors.horaInicio.message}</p>
+              )}
             </div>
           </div>
 
@@ -226,9 +258,7 @@ export default function EventModal({
               Duración (minutos) *
             </label>
             <select
-              required
-              value={formData.duracion}
-              onChange={(e) => setFormData({ ...formData, duracion: Number(e.target.value) })}
+              {...register('duracion', { valueAsNumber: true })}
               className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
             >
               <option value={15}>15 minutos</option>
@@ -238,6 +268,9 @@ export default function EventModal({
               <option value={90}>1 hora 30 min</option>
               <option value={120}>2 horas</option>
             </select>
+            {errors.duracion && (
+              <p className="mt-1 text-sm text-red-500">{errors.duracion.message}</p>
+            )}
           </div>
 
           {/* Profesional y Sala */}
@@ -248,8 +281,7 @@ export default function EventModal({
                 Profesional
               </label>
               <select
-                value={formData.profesionalId}
-                onChange={(e) => setFormData({ ...formData, profesionalId: e.target.value })}
+                {...register('profesionalId')}
                 className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
               >
                 <option value="">Sin asignar</option>
@@ -266,8 +298,7 @@ export default function EventModal({
                 Sala
               </label>
               <select
-                value={formData.salaId}
-                onChange={(e) => setFormData({ ...formData, salaId: e.target.value })}
+                {...register('salaId')}
                 className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
               >
                 <option value="">Sin asignar</option>
@@ -287,8 +318,7 @@ export default function EventModal({
                 Paciente
               </label>
               <select
-                value={formData.pacienteId}
-                onChange={(e) => setFormData({ ...formData, pacienteId: e.target.value })}
+                {...register('pacienteId')}
                 className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
               >
                 <option value="">Sin asignar</option>
@@ -308,14 +338,16 @@ export default function EventModal({
               Prioridad
             </label>
             <select
-              value={formData.prioridad}
-              onChange={(e) => setFormData({ ...formData, prioridad: e.target.value as AgendaEvent['prioridad'] })}
+              {...register('prioridad')}
               className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
             >
               <option value="baja">Baja</option>
               <option value="media">Media</option>
               <option value="alta">Alta</option>
             </select>
+            {errors.prioridad && (
+              <p className="mt-1 text-sm text-red-500">{errors.prioridad.message}</p>
+            )}
           </div>
 
           {/* Notas */}
@@ -324,12 +356,14 @@ export default function EventModal({
               Notas
             </label>
             <textarea
-              value={formData.notas}
-              onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
+              {...register('notas')}
               rows={3}
               className="w-full px-3 py-2 border border-border rounded-lg focus-visible:focus-ring bg-card text-text"
               placeholder="Información adicional..."
             />
+            {errors.notas && (
+              <p className="mt-1 text-sm text-red-500">{errors.notas.message}</p>
+            )}
           </div>
 
           {/* Botones */}
@@ -343,10 +377,10 @@ export default function EventModal({
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={isSubmitting}
               className="flex-1 rounded-pill bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
             >
-              {loading ? 'Guardando...' : (event ? 'Actualizar' : 'Crear Cita')}
+              {isSubmitting ? 'Guardando...' : (event ? 'Actualizar' : 'Crear Cita')}
             </button>
           </div>
         </form>
