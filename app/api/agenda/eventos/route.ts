@@ -21,6 +21,10 @@ const limiter = rateLimit(RATE_LIMIT_STRICT);
  * @security Requiere autenticación y rol de lectura
  */
 export async function GET(request: NextRequest) {
+  // Aplicar rate limiting
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   // Verificar autenticación
   const user = await getCurrentUser();
   if (!user) {
