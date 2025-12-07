@@ -16,7 +16,11 @@ const createUserSchema = z.object({
 });
 
 // GET - Listar todos los usuarios
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Aplicar rate limiting
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser || !currentUser.roles?.includes('admin')) {

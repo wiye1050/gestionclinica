@@ -13,7 +13,11 @@ import { rateLimit, RATE_LIMIT_MODERATE } from '@/lib/middleware/rateLimit';
 
 const limiter = rateLimit(RATE_LIMIT_MODERATE);
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  // Aplicar rate limiting
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });

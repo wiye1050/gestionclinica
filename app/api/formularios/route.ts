@@ -3,8 +3,11 @@ import { adminDb } from '@/lib/firebaseAdmin';
 import { z } from 'zod';
 import type { FormularioPlantilla } from '@/types';
 import { logger } from '@/lib/utils/logger';
+import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';
 import { getCurrentUser } from '@/lib/auth/server';
 import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
+
+const limiter = rateLimit(RATE_LIMIT_STRICT);
 
 const createPlantillaSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio').max(200),
@@ -49,6 +52,10 @@ const createPlantillaSchema = z.object({
  * @security Requiere autenticación y rol de lectura (admin, coordinador, profesional)
  */
 export async function GET(request: NextRequest) {
+  // Aplicar rate limiting
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   // Verificar autenticación
   const user = await getCurrentUser();
   if (!user) {
@@ -126,6 +133,10 @@ export async function GET(request: NextRequest) {
  * @security Requiere autenticación y rol de escritura (admin, coordinador)
  */
 export async function POST(request: NextRequest) {
+  // Aplicar rate limiting
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   // Verificar autenticación
   const user = await getCurrentUser();
   if (!user) {
