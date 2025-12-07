@@ -1,7 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
+import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';
 import { deleteServicioAsignado, updateServicioAsignado } from '@/lib/server/servicios';
+
+const limiter = rateLimit(RATE_LIMIT_STRICT);
 
 
 const ensureAuth = async () => {
@@ -15,7 +18,11 @@ const ensureAuth = async () => {
   return { user };
 };
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // Aplicar rate limiting
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const auth = await ensureAuth();
   if ('error' in auth) return auth.error;
   const { user } = auth;
@@ -51,7 +58,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 }
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // Aplicar rate limiting
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const auth = await ensureAuth();
   if ('error' in auth) return auth.error;
   const { user } = auth;
