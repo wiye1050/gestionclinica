@@ -1,9 +1,16 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getMonthlyReportData } from '@/lib/server/informes';
 import { getCurrentUser } from '@/lib/auth/server';
+import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';
 import { logger } from '@/lib/utils/logger';
 
+const limiter = rateLimit(RATE_LIMIT_STRICT);
+
 export async function POST(request: NextRequest) {
+  // Aplicar rate limiting
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
