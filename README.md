@@ -1,4 +1,14 @@
-## Gestión Clínica – Resumen
+# Gestión Clínica
+
+![Next.js](https://img.shields.io/badge/Next.js-15.5.7-black?logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
+![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react)
+![Firebase](https://img.shields.io/badge/Firebase-12.4-FFCA28?logo=firebase)
+![Tests](https://img.shields.io/badge/tests-358%20passing-brightgreen?logo=vitest)
+![Code Style](https://img.shields.io/badge/code%20style-prettier-ff69b4?logo=prettier)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+## Resumen
 
 Aplicación operativa para coordinación de una clínica, desarrollada con **Next.js 15 + TypeScript + Firebase**.
 
@@ -19,13 +29,27 @@ Aplicación operativa para coordinación de una clínica, desarrollada con **Nex
 
 ### Scripts útiles
 
-- `npm run dev` – desarrollo con Turbopack.
-- `npm run build` / `npm run start` – compilación y servidor de producción.
-- `npm run typecheck` – verificación estricta de tipos.
-- `npm run lint` – linting.
-- `npm run seed:servicios` – carga de datos iniciales en Firestore (servicios, profesionales, etc.).
-- `node scripts/set-role.js <uid> <rol> [email]` – asigna rol en claims y en `users/{uid}`. Ver `docs/roles.md`.
-- `docs/agenda.md` – arquitectura, vistas y deep links del módulo de Agenda.
+**Desarrollo:**
+- `npm run dev` – desarrollo con Turbopack
+- `npm run build` / `npm run start` – compilación y servidor de producción
+
+**Calidad de código:**
+- `npm run typecheck` – verificación estricta de tipos
+- `npm run lint` – linting con ESLint
+- `npm run format` – formatear código con Prettier
+- `npm run format:check` – verificar formato sin modificar
+
+**Testing:**
+- `npm run test` – tests en modo watch
+- `npm run test:run` – ejecutar todos los tests
+- `npm run test:coverage` – coverage report
+
+**Datos:**
+- `npm run seed:servicios` – carga de datos iniciales en Firestore (servicios, profesionales, etc.)
+- `node scripts/set-role.js <uid> <rol> [email]` – asigna rol en claims y en `users/{uid}`. Ver `docs/roles.md`
+
+**Documentación:**
+- `docs/agenda.md` – arquitectura, vistas y deep links del módulo de Agenda
 
 ### Integraciones Firebase
 
