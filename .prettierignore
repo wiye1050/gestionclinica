@@ -1,0 +1,33 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build output
+.next
+out
+dist
+build
+
+# Firebase
+.firebase
+
+# Testing
+coverage
+__tests__/coverage
+
+# Cache
+.turbo
+.swc
+
+# Environment files
+.env*.local
+
+# Lock files
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Generated files
+*.min.js
+*.min.css
