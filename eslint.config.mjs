@@ -23,6 +23,25 @@ const eslintConfig = [
       "set-roles.js",
     ],
   },
+  // Reglas estrictas globales
+  {
+    rules: {
+      "no-console": ["warn", { allow: ["warn", "error"] }], // Permitir console.warn y console.error
+      "@typescript-eslint/no-explicit-any": "error", // Prohibir 'any'
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+      "react-hooks/exhaustive-deps": "error", // Dependencias correctas en useEffect/useMemo
+      "react-hooks/rules-of-hooks": "error", // Reglas de Hooks
+      "no-debugger": "error", // Prohibir debugger
+      "prefer-const": "error", // Preferir const
+    },
+  },
   {
     files: ["types/**/*.d.ts"],
     rules: {
