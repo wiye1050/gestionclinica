@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { getCurrentUser } from '@/lib/auth/server';
 import { canViewFullPatientHistory } from '@/lib/auth/roles';
 import { logger } from '@/lib/utils/logger';
+import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';
 import {
   transformPaciente,
   transformHistorialPaciente,
@@ -12,7 +13,13 @@ import {
   transformPacienteDocumento,
 } from '@/lib/utils/firestoreTransformers';
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+const limiter = rateLimit(RATE_LIMIT_STRICT);
+
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // Aplicar rate limiting estricto (PHI endpoint)
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const { id: pacienteId } = await params;
   if (!pacienteId) {
     return NextResponse.json({ error: 'Paciente no especificado.' }, { status: 400 });

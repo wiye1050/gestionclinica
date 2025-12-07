@@ -3,11 +3,11 @@ import { adminDb } from '@/lib/firebaseAdmin';
 import { z } from 'zod';
 import type { RespuestaFormulario } from '@/types';
 import { logger } from '@/lib/utils/logger';
-import { rateLimit, RATE_LIMIT_MODERATE } from '@/lib/middleware/rateLimit';
+import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';
 import { getCurrentUser } from '@/lib/auth/server';
 import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 
-const limiter = rateLimit(RATE_LIMIT_MODERATE);
+const limiter = rateLimit(RATE_LIMIT_STRICT);
 
 const createRespuestaSchema = z.object({
   formularioPlantillaId: z.string().min(1, 'El ID de la plantilla es obligatorio'),
@@ -43,6 +43,10 @@ const createRespuestaSchema = z.object({
  * @security Requiere autenticación y rol de lectura clínica
  */
 export async function GET(request: NextRequest) {
+  // Aplicar rate limiting estricto (PHI endpoint)
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
   // Verificar autenticación
   const user = await getCurrentUser();
   if (!user) {
