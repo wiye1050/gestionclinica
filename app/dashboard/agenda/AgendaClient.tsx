@@ -1,11 +1,7 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { addDays, addWeeks, startOfWeek, format, isSameDay } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useEventosAgenda,
@@ -33,7 +29,6 @@ import { useAgendaModals } from '@/lib/hooks/useAgendaModals';
 import { useAgendaNavigation } from '@/lib/hooks/useAgendaNavigation';
 import { useAgendaKeyboard } from '@/lib/hooks/useAgendaKeyboard';
 import { useAgendaResources } from '@/lib/hooks/useAgendaResources';
-import { useLayoutEffect, useRef } from 'react';
 
 // Lazy load AgendaEventDrawer for better performance
 const AgendaEventDrawer = dynamic(
@@ -42,7 +37,6 @@ const AgendaEventDrawer = dynamic(
 );
 
 export type VistaAgenda = AgendaView;
-type AgendaResource = { id: string; nombre: string; tipo: 'profesional' | 'sala' };
 
 interface AgendaClientProps {
   initialWeekStart: string;
@@ -70,25 +64,16 @@ export default function AgendaClient({
   const {
     selectedProfesionales,
     setSelectedProfesionales,
-    selectedSala,
-    setSelectedSala,
-    estadoFilter,
-    setEstadoFilter,
-    tipoFilter,
-    setTipoFilter,
     busquedaEvento,
     setBusquedaEvento,
     debouncedBusqueda, // Valor debounced para filtrado
     resourcePreset,
-    setResourcePreset,
     vista,
     setVista,
     viewDensity,
     setViewDensity,
     dayViewMode,
     setDayViewMode,
-    filtersLoaded,
-    clearFilters: clearAgendaFilters,
   } = useAgendaFilters();
 
   // Modal and drawer state (managed by useAgendaModals hook)
@@ -222,7 +207,7 @@ export default function AgendaClient({
   );
 
   // Resource filtering and mapping (extracted to hook)
-  const { recursos, isResourceGridMode, resourceColumnLimit } = useAgendaResources({
+  const { recursos } = useAgendaResources({
     profesionales,
     selectedProfesionales,
     resourcePreset,

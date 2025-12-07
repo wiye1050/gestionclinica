@@ -1,7 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState, Suspense, lazy, useEffect } from 'react';
-import Link from 'next/link';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -23,11 +22,8 @@ import DetailPanel from '@/components/shared/DetailPanel';
 import { TabErrorBoundary } from '@/components/pacientes/TabErrorBoundary';
 import { TabLoadingFallback } from '@/components/pacientes/TabLoadingFallback';
 import { toast } from 'sonner';
-import { resolverSeguimientoAction } from '../actions';
 import { hasActiveFollowUpInHistory } from '@/lib/utils/followUps';
 import {
-  HISTORIAL_FILTROS,
-  HISTORIAL_BADGE_COLORS,
   filtrarHistorial,
   type HistorialFiltro,
 } from '@/components/pacientes/v2/pacientesConstants';
