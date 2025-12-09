@@ -23,6 +23,7 @@ function createTestEvent(overrides: Partial<AgendaEvent> = {}): AgendaEvent {
     fechaFin: new Date('2024-01-15T10:00:00'),
     estado: 'confirmada',
     tipo: 'consulta',
+    profesionalId: 'test-prof-id', // REQUERIDO
     ...overrides,
   }
 }

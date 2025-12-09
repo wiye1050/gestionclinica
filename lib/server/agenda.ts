@@ -15,7 +15,7 @@ export type SerializedAgendaEvent = {
   tipo: 'consulta' | 'seguimiento' | 'revision' | 'tratamiento' | 'urgencia' | 'administrativo';
   pacienteId?: string;
   pacienteNombre?: string;
-  profesionalId?: string;
+  profesionalId: string; // REQUERIDO - siempre debe haber un profesional asignado
   profesionalNombre?: string;
   salaId?: string;
   salaNombre?: string;
@@ -39,12 +39,21 @@ export async function getSerializedAgendaEvents(weekStart: Date): Promise<Serial
     .limit(500)
     .get();
 
-  return snapshot.docs.map((docSnap) => {
+  const events: SerializedAgendaEvent[] = [];
+
+  for (const docSnap of snapshot.docs) {
     const data = docSnap.data() ?? {};
+
+    // profesionalId es REQUERIDO - filtrar eventos sin profesional
+    if (!data.profesionalId) {
+      logger.warn(`[agenda] Evento ${docSnap.id} sin profesionalId - será omitido`);
+      continue;
+    }
+
     const fechaInicio = data.fechaInicio?.toDate?.() ?? new Date();
     const fechaFin = data.fechaFin?.toDate?.() ?? new Date();
 
-    return {
+    events.push({
       id: docSnap.id,
       titulo: data.titulo ?? 'Sin título',
       fechaInicio: fechaInicio.toISOString(),
@@ -53,13 +62,15 @@ export async function getSerializedAgendaEvents(weekStart: Date): Promise<Serial
       tipo: data.tipo ?? 'consulta',
       pacienteId: data.pacienteId ?? undefined,
       pacienteNombre: data.pacienteNombre ?? undefined,
-      profesionalId: data.profesionalId ?? undefined,
+      profesionalId: data.profesionalId, // REQUERIDO - ya verificado arriba
       profesionalNombre: data.profesionalNombre ?? undefined,
       salaId: data.salaId ?? undefined,
       salaNombre: data.salaNombre ?? undefined,
       prioridad: data.prioridad ?? undefined,
       notas: data.notas ?? undefined,
       color: data.color ?? undefined,
-    };
-  });
+    });
+  }
+
+  return events;
 }

@@ -148,10 +148,10 @@ export function DashboardLayoutClient({
       <div className="app-shell app-shell--dashboard text-text">
         <div className="app-shell__content min-h-screen w-full px-0 py-0 bg-white">
           <header
-            className={`sticky top-0 z-30 rounded-none border-b bg-brand/5 px-2 py-1.5 transition-all duration-150 ${
+            className={`sticky top-0 z-30 rounded-none border-b bg-brand-200 px-2 py-1.5 transition-all duration-150 ${
               isScrolled
-                ? 'border-brand/20 shadow-[0_2px_6px_rgba(0,135,205,0.12)]'
-                : 'border-brand/15 shadow-[0_1px_4px_rgba(0,135,205,0.08)]'
+                ? 'border-brand-300 shadow-[0_2px_6px_rgba(0,135,205,0.18)]'
+                : 'border-brand-300 shadow-[0_1px_4px_rgba(0,135,205,0.14)]'
             }`}
           >
             <div className="flex items-center gap-2">
@@ -167,12 +167,12 @@ export function DashboardLayoutClient({
               </div>
 
               <div className="hidden md:flex items-center gap-2">
-                <span className="h-6 w-px bg-slate-200" />
+                <span className="h-6 w-px bg-brand/20" />
                 <button
                   onClick={open}
-                  className="flex w-40 items-center gap-1.5 rounded-md border border-slate-200/70 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600 transition-colors hover:bg-white hover:border-slate-300"
+                  className="flex w-40 items-center gap-1.5 rounded-md border border-brand/30 bg-white/85 px-2 py-0.5 text-[11px] text-brand-800 transition-colors hover:bg-white hover:border-brand/50"
                 >
-                  <Search className="h-3.5 w-3.5" />
+                  <Search className="h-3.5 w-3.5 text-brand-700" />
                   <span className="flex-1 text-left">Buscar...</span>
                   <kbd className="hidden lg:flex items-center gap-0.5 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] text-slate-400">
                     ⌘K
@@ -186,18 +186,18 @@ export function DashboardLayoutClient({
                   className="md:hidden inline-flex items-center justify-center rounded-md border border-slate-200/60 bg-white p-2 text-slate-600 transition hover:bg-white"
                   aria-label="Abrir búsqueda"
                 >
-                  <Search className="h-4 w-4" />
+                  <Search className="h-4 w-4 text-brand-700" />
                 </button>
 
                 <button
-                  className="hidden sm:inline-flex h-8 min-w-[34px] items-center justify-center gap-1 rounded-full border border-slate-200/70 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-600"
+                  className="hidden sm:inline-flex h-8 min-w-[34px] items-center justify-center gap-1 rounded-full border border-brand/30 bg-white/90 px-2 py-0.5 text-[10px] font-medium text-brand-700"
                   title={statusMeta[alertStatus].label}
                   aria-label="Incidencias"
                   type="button"
                 >
                   <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
                   {alertCount !== null && alertCount > 0 && (
-                    <span className="rounded-full bg-slate-100 px-1 py-0.5 text-[10px] font-bold text-slate-700">
+                    <span className="rounded-full bg-brand-50 px-1 py-0.5 text-[10px] font-bold text-brand-800">
                       {alertCount}
                     </span>
                   )}

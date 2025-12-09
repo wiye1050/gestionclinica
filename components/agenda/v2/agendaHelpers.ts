@@ -11,7 +11,7 @@ export interface AgendaEvent {
   tipo: 'consulta' | 'seguimiento' | 'revision' | 'tratamiento' | 'urgencia' | 'administrativo';
   pacienteId?: string;
   pacienteNombre?: string;
-  profesionalId?: string;
+  profesionalId: string; // REQUERIDO - siempre debe haber un profesional asignado
   profesionalNombre?: string;
   salaId?: string;
   salaNombre?: string;
