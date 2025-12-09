@@ -15,12 +15,13 @@ describe('Pacientes Validators', () => {
     it('should accept valid estados', () => {
       expect(() => estadoPacienteSchema.parse('activo')).not.toThrow();
       expect(() => estadoPacienteSchema.parse('inactivo')).not.toThrow();
-      expect(() => estadoPacienteSchema.parse('alta')).not.toThrow();
+      expect(() => estadoPacienteSchema.parse('egresado')).not.toThrow();
     });
 
     it('should reject invalid estados', () => {
       expect(() => estadoPacienteSchema.parse('pendiente')).toThrow();
       expect(() => estadoPacienteSchema.parse('deleted')).toThrow();
+      expect(() => estadoPacienteSchema.parse('alta')).toThrow(); // 'alta' ya no es válido, usar 'egresado'
     });
   });
 

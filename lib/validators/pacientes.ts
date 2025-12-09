@@ -6,7 +6,7 @@ import { optionalEmail, optionalString, optionalArray, estadoGenerico } from './
  */
 
 // Estados específicos de paciente
-export const estadoPacienteSchema = z.enum(['activo', 'inactivo', 'alta']);
+export const estadoPacienteSchema = z.enum(['activo', 'inactivo', 'egresado']);
 
 export const riesgoPacienteSchema = z.enum(['alto', 'medio', 'bajo']);
 
