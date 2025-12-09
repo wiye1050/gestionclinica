@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth/server';
 import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';
 import { deleteDailyReport, updateDailyReport } from '@/lib/server/reports';
+import { updateReporteDiarioSchema } from '@/lib/validators';
 
 const limiter = rateLimit(RATE_LIMIT_STRICT);
 
@@ -35,7 +36,23 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ error: 'No se enviaron cambios.' }, { status: 400 });
     }
 
-    await updateDailyReport(id, body, { userId: user.uid, userEmail: user.email ?? undefined });
+    // Validar con Zod (omitiendo el campo 'id' que viene de params)
+    const updateSchemaWithoutId = updateReporteDiarioSchema.omit({ id: true });
+    const validation = updateSchemaWithoutId.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: 'Datos inválidos',
+          details: validation.error.issues.map((e) => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
+        { status: 400 }
+      );
+    }
+
+    await updateDailyReport(id, validation.data, { userId: user.uid, userEmail: user.email ?? undefined });
     revalidateTag('reports');
     revalidateTag('reports-daily');
     return NextResponse.json({ success: true });

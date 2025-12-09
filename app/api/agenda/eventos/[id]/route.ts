@@ -6,6 +6,7 @@ import { checkEventConflicts, validateEventDates } from '@/lib/server/agendaVali
 import { adminDb } from '@/lib/firebaseAdmin';
 import { logAuditServer } from '@/lib/utils/auditServer';
 import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';
+import { updateEventoAgendaSchema } from '@/lib/validators';
 
 const limiter = rateLimit(RATE_LIMIT_STRICT);
 
@@ -42,6 +43,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       __profesionalNombre,
       ...updates
     } = body satisfies Record<string, unknown>;
+
+    // Validar updates con Zod (omitiendo el campo 'id' que viene de params)
+    const updateSchemaWithoutId = updateEventoAgendaSchema.omit({ id: true }).partial();
+    const validation = updateSchemaWithoutId.safeParse(updates);
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: 'Datos inválidos',
+          details: validation.error.issues.map((e) => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
+        { status: 400 }
+      );
+    }
 
     // Validar fechas si se están actualizando
     if (updates.fechaInicio && updates.fechaFin) {

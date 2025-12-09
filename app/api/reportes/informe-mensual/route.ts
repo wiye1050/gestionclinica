@@ -3,6 +3,7 @@ import { getMonthlyReportData } from '@/lib/server/informes';
 import { getCurrentUser } from '@/lib/auth/server';
 import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';
 import { logger } from '@/lib/utils/logger';
+import { generateInformeMensualSchema } from '@/lib/validators';
 
 const limiter = rateLimit(RATE_LIMIT_STRICT);
 
@@ -23,12 +24,23 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { year, month } = body ?? {};
 
-    if (typeof year !== 'number' || typeof month !== 'number') {
-      return NextResponse.json({ error: 'Parámetros inválidos' }, { status: 400 });
+    // Validar con Zod
+    const validation = generateInformeMensualSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: 'Parámetros inválidos',
+          details: validation.error.issues.map((e) => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
+        { status: 400 }
+      );
     }
 
+    const { año: year, mes: month } = validation.data;
     const data = await getMonthlyReportData(year, month);
     return NextResponse.json(data);
   } catch (error) {

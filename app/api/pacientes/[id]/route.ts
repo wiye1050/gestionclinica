@@ -3,6 +3,8 @@ import { getCurrentUser } from '@/lib/auth/server';
 import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
 import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';
 import { updatePaciente, deletePaciente } from '@/lib/server/pacientesAdmin';
+import { validateRequest } from '@/lib/utils/apiValidation';
+import { updatePacienteSchema } from '@/lib/validators';
 
 const limiter = rateLimit(RATE_LIMIT_STRICT);
 
@@ -29,9 +31,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { user } = auth;
   const { id } = await params;
 
+  // Validar request con Zod
+  const validation = await validateRequest(request, updatePacienteSchema);
+  if (!validation.success) {
+    return validation.error;
+  }
+
   try {
-    const body = await request.json();
-    await updatePaciente(id, body, { email: user.email ?? undefined, uid: user.uid });
+    await updatePaciente(id, validation.data, { email: user.email ?? undefined, uid: user.uid });
     return NextResponse.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error inesperado';
