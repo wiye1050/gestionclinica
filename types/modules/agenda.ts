@@ -5,7 +5,13 @@
 // ============================================
 
 export type EstadoEventoAgenda = 'programada' | 'confirmada' | 'realizada' | 'cancelada';
-export type TipoEventoAgenda = 'clinico' | 'coordinacion' | 'reunion';
+export type TipoEventoAgenda =
+  | 'consulta'
+  | 'seguimiento'
+  | 'revision'
+  | 'tratamiento'
+  | 'urgencia'
+  | 'administrativo';
 
 export interface EventoAgenda {
   id: string;
