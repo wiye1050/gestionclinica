@@ -10,25 +10,29 @@ export const estadoPacienteSchema = z.enum(['activo', 'inactivo', 'alta']);
 
 export const riesgoPacienteSchema = z.enum(['alto', 'medio', 'bajo']);
 
+// Género del paciente
+export const generoPacienteSchema = z.enum(['masculino', 'femenino', 'otro', 'no-especificado']);
+
 // Schema para crear un paciente
 export const createPacienteSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido').max(100, 'Nombre muy largo'),
   apellidos: z.string().min(1, 'Los apellidos son requeridos').max(100, 'Apellidos muy largos'),
+  fechaNacimiento: z.string().min(1, 'La fecha de nacimiento es requerida'),
+  genero: generoPacienteSchema,
   documentoId: optionalString(50),
   email: optionalEmail,
   telefono: optionalString(20),
-  fechaNacimiento: optionalString(50),
   direccion: optionalString(200),
   codigoPostal: optionalString(10),
   ciudad: optionalString(100),
   estado: estadoPacienteSchema.default('activo'),
-  riesgo: riesgoPacienteSchema.optional(),
+  riesgo: riesgoPacienteSchema.default('bajo'),
   profesionalReferenteId: optionalString(50),
   grupoPacienteId: optionalString(50),
   notas: optionalString(2000),
-  alergias: optionalArray(z.string()),
-  alertasClinicas: optionalArray(z.string()),
-  diagnosticosPrincipales: optionalArray(z.string()),
+  alergias: z.array(z.string()).default([]),
+  alertasClinicas: z.array(z.string()).default([]),
+  diagnosticosPrincipales: z.array(z.string()).default([]),
 });
 
 // Schema para actualizar un paciente (todos los campos opcionales)
@@ -40,10 +44,11 @@ export const importPacientesSchema = z.object({
     z.object({
       nombre: z.string().min(1),
       apellidos: z.string().min(1),
+      fechaNacimiento: z.string().min(1, 'La fecha de nacimiento es requerida'),
+      genero: generoPacienteSchema,
       documentoId: z.string().optional(),
       email: optionalEmail,
       telefono: z.string().optional(),
-      fechaNacimiento: z.string().optional(),
       estado: estadoPacienteSchema.optional(),
     })
   ).min(1, 'Debe haber al menos un paciente para importar'),

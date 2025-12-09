@@ -41,10 +41,11 @@ describe('Pacientes Validators', () => {
     const validPaciente = {
       nombre: 'Juan',
       apellidos: 'Pérez García',
+      fechaNacimiento: '1990-01-15',
+      genero: 'masculino' as const,
       documentoId: '12345678A',
       email: 'juan@example.com',
       telefono: '+34912345678',
-      fechaNacimiento: '1990-01-15',
       direccion: 'Calle Principal 123',
       codigoPostal: '28001',
       ciudad: 'Madrid',
@@ -66,6 +67,8 @@ describe('Pacientes Validators', () => {
       const minimalPaciente = {
         nombre: 'Juan',
         apellidos: 'Pérez',
+        fechaNacimiento: '1990-01-15',
+        genero: 'masculino' as const,
       };
       expect(() => createPacienteSchema.parse(minimalPaciente)).not.toThrow();
     });
@@ -102,6 +105,8 @@ describe('Pacientes Validators', () => {
       const pacienteWithEmptyOptionals = {
         nombre: 'Juan',
         apellidos: 'Pérez',
+        fechaNacimiento: '1990-01-15',
+        genero: 'masculino' as const,
         email: '',
         telefono: '',
         notas: '',
@@ -113,6 +118,8 @@ describe('Pacientes Validators', () => {
       const result = createPacienteSchema.parse({
         nombre: 'Juan',
         apellidos: 'Pérez',
+        fechaNacimiento: '1990-01-15',
+        genero: 'masculino' as const,
       });
       expect(result.estado).toBe('activo');
     });
@@ -121,6 +128,8 @@ describe('Pacientes Validators', () => {
       const result = createPacienteSchema.parse({
         nombre: 'Juan',
         apellidos: 'Pérez',
+        fechaNacimiento: '1990-01-15',
+        genero: 'masculino' as const,
       });
       expect(result.alergias).toEqual([]);
       expect(result.alertasClinicas).toEqual([]);
@@ -151,15 +160,18 @@ describe('Pacientes Validators', () => {
         {
           nombre: 'Juan',
           apellidos: 'Pérez',
+          fechaNacimiento: '1990-01-15',
+          genero: 'masculino' as const,
           documentoId: '12345678A',
           email: 'juan@example.com',
           telefono: '+34912345678',
-          fechaNacimiento: '1990-01-15',
           estado: 'activo' as const,
         },
         {
           nombre: 'María',
           apellidos: 'García',
+          fechaNacimiento: '1985-05-20',
+          genero: 'femenino' as const,
         },
       ],
     };
@@ -171,7 +183,12 @@ describe('Pacientes Validators', () => {
     it('should accept minimal patient data in import', () => {
       const minimalImport = {
         pacientes: [
-          { nombre: 'Juan', apellidos: 'Pérez' },
+          {
+            nombre: 'Juan',
+            apellidos: 'Pérez',
+            fechaNacimiento: '1990-01-15',
+            genero: 'masculino' as const,
+          },
         ],
       };
       expect(() => importPacientesSchema.parse(minimalImport)).not.toThrow();
@@ -369,6 +386,8 @@ describe('Pacientes Validators', () => {
         createPacienteSchema.parse({
           nombre: "O'Connor-Smith",
           apellidos: 'García López',
+          fechaNacimiento: '1990-01-15',
+          genero: 'masculino' as const,
         })
       ).not.toThrow();
     });
@@ -378,6 +397,8 @@ describe('Pacientes Validators', () => {
         createPacienteSchema.parse({
           nombre: '李明',
           apellidos: 'الأحمد',
+          fechaNacimiento: '1990-01-15',
+          genero: 'otro' as const,
         })
       ).not.toThrow();
     });
@@ -388,6 +409,8 @@ describe('Pacientes Validators', () => {
         createPacienteSchema.parse({
           nombre: 'Juan',
           apellidos: 'Pérez',
+          fechaNacimiento: '1990-01-15',
+          genero: 'masculino' as const,
           alergias: longArray,
         })
       ).not.toThrow();
@@ -398,6 +421,8 @@ describe('Pacientes Validators', () => {
         createPacienteSchema.parse({
           nombre: 'A'.repeat(100),
           apellidos: 'B'.repeat(100),
+          fechaNacimiento: '1990-01-15',
+          genero: 'no-especificado' as const,
           notas: 'C'.repeat(2000),
         })
       ).not.toThrow();
