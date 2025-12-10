@@ -37,7 +37,8 @@ const createRespuestaSchema = z.object({
  * - pacienteId: filtrar por paciente
  * - formularioPlantillaId: filtrar por plantilla
  * - estado: filtrar por estado (borrador, completado, validado, archivado)
- * - limit: número máximo de resultados (default: 100)
+ * - limit: número máximo de resultados (default: 50, max: 200)
+ * - cursor: ID del último documento para paginación
  *
  * @security CRÍTICO: Contiene PHI (Protected Health Information)
  * @security Requiere autenticación y rol de lectura clínica
@@ -61,14 +62,16 @@ export async function GET(request: NextRequest) {
   try {
     if (!adminDb) {
       logger.error('[API /api/formularios/respuestas GET] Admin DB not initialized');
-      return NextResponse.json([]);
+      return NextResponse.json({ items: [], nextCursor: null, hasMore: false });
     }
 
     const searchParams = request.nextUrl.searchParams;
     const pacienteId = searchParams.get('pacienteId');
     const formularioPlantillaId = searchParams.get('formularioPlantillaId');
     const estadoParam = searchParams.get('estado');
-    const limitParam = parseInt(searchParams.get('limit') || '100');
+    const limitParam = parseInt(searchParams.get('limit') || '50');
+    const limit = Math.min(limitParam, 200); // Máximo 200 por página
+    const cursorId = searchParams.get('cursor');
 
     let query = adminDb.collection('formularios_respuestas').orderBy('createdAt', 'desc');
 
@@ -83,12 +86,21 @@ export async function GET(request: NextRequest) {
       query = query.where('estado', '==', estadoParam);
     }
 
-    // Aplicar límite
-    query = query.limit(limitParam);
+    // Aplicar cursor si existe
+    if (cursorId) {
+      const cursorDoc = await adminDb.collection('formularios_respuestas').doc(cursorId).get();
+      if (cursorDoc.exists) {
+        query = query.startAfter(cursorDoc);
+      }
+    }
 
-    const snapshot = await query.get();
+    // Fetch limit + 1 para detectar si hay más resultados
+    const snapshot = await query.limit(limit + 1).get();
+    const docs = snapshot.docs;
+    const hasMore = docs.length > limit;
+    const items = docs.slice(0, limit);
 
-    const respuestas: RespuestaFormulario[] = snapshot.docs.map((doc) => {
+    const respuestas: RespuestaFormulario[] = items.map((doc) => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -128,11 +140,16 @@ export async function GET(request: NextRequest) {
       } as RespuestaFormulario;
     });
 
-    return NextResponse.json(respuestas);
+    return NextResponse.json({
+      items: respuestas,
+      nextCursor: hasMore ? items[items.length - 1].id : null,
+      hasMore,
+      limit,
+    });
   } catch (error) {
     logger.error('[API /api/formularios/respuestas GET] Error:', error as Error);
-    // En caso de error (por ejemplo, colección no existe), retornar array vacío
-    return NextResponse.json([]);
+    // En caso de error (por ejemplo, colección no existe), retornar respuesta paginada vacía
+    return NextResponse.json({ items: [], nextCursor: null, hasMore: false });
   }
 }
 
