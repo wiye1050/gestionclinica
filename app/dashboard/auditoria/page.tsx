@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase';
 import { AuditLogEntry } from '@/types';
 import { Activity, Filter, RefreshCcw, Search } from 'lucide-react';
 import { logger } from '@/lib/utils/logger';
+import { ModuleErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 type TimeRange = '24h' | '7d' | '30d' | 'all';
 
@@ -129,8 +130,9 @@ export default function AuditoriaPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <header className="flex items-center justify-between gap-4">
+    <ModuleErrorBoundary moduleName="Auditoría">
+      <div className="space-y-6">
+        <header className="flex items-center justify-between gap-4">
         <div>
           <p className="text-sm text-gray-500 uppercase tracking-wide">Control</p>
           <h1 className="text-3xl font-bold text-gray-900">Auditoría</h1>
@@ -291,7 +293,8 @@ export default function AuditoriaPage() {
           </table>
         </div>
       </section>
-    </div>
+      </div>
+    </ModuleErrorBoundary>
   );
 }
 

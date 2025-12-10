@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth/server';
 import { redirect } from 'next/navigation';
 import { type KPIResponse } from '@/lib/server/kpis';
 import { serverFetchGet } from '@/lib/utils/serverFetch';
+import { ModuleErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 export default async function KPIsPage() {
   const user = await getCurrentUser();
@@ -12,5 +13,9 @@ export default async function KPIsPage() {
 
   const initialData = await serverFetchGet<KPIResponse>('/api/kpis', 'kpis-page', 'fetch-kpis');
 
-  return <KPIsPageClient initialData={initialData} />;
+  return (
+    <ModuleErrorBoundary moduleName="KPIs">
+      <KPIsPageClient initialData={initialData} />
+    </ModuleErrorBoundary>
+  );
 }

@@ -8,6 +8,7 @@ import { db } from '@/lib/firebase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { logger } from '@/lib/utils/logger';
+import { ModuleErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 export default function InformesPage() {
   const [loading, setLoading] = useState(false);
@@ -241,8 +242,9 @@ export default function InformesPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <ModuleErrorBoundary moduleName="Informes">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Informes Mensuales</h1>
           <p className="text-gray-600 mt-2">Genera informes en PDF consolidados</p>
@@ -345,6 +347,7 @@ export default function InformesPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </ModuleErrorBoundary>
   );
 }

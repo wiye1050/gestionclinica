@@ -9,6 +9,7 @@ import { useProtocolos } from '@/lib/hooks/useQueries';
 import { ExportColumn } from '@/lib/utils/export';
 import { LoadingTable } from '@/components/ui/Loading';
 import type { Protocolo } from '@/types';
+import { ModuleErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 const ExportButton = lazy(() => import('@/components/ui/ExportButton').then((m) => ({ default: m.ExportButton })));
 
@@ -179,8 +180,10 @@ function ProtocolosContent() {
 
 export default function ProtocolosPage() {
   return (
-    <Suspense fallback={<ProtocolosSkeleton />}>
-      <ProtocolosContent />
-    </Suspense>
+    <ModuleErrorBoundary moduleName="Protocolos">
+      <Suspense fallback={<ProtocolosSkeleton />}>
+        <ProtocolosContent />
+      </Suspense>
+    </ModuleErrorBoundary>
   );
 }

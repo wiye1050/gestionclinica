@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { ROLE_LABELS, AppRole } from '@/lib/auth/roles';
 import { logger } from '@/lib/utils/logger';
+import { ModuleErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 interface User {
   uid: string;
@@ -132,8 +133,9 @@ export default function UsuariosPage() {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
+    <ModuleErrorBoundary moduleName="Usuarios">
+      <div className="space-y-4">
+        {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold text-slate-900">Gestión de Usuarios</h1>
@@ -321,7 +323,8 @@ export default function UsuariosPage() {
           onClick={() => setActionMenuOpen(null)}
         />
       )}
-    </div>
+      </div>
+    </ModuleErrorBoundary>
   );
 }
 
