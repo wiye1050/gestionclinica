@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { optionalEmail, optionalString, optionalArray, estadoGenerico } from './common';
+import { optionalEmail, optionalString, optionalArray } from './common';
 
 /**
  * Validadores para el módulo de Pacientes

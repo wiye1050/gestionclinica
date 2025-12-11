@@ -53,8 +53,8 @@ export default async function PacienteDetallePage({ params }: PageProps) {
     <Suspense fallback={<TabLoadingFallback message="Cargando informacion del paciente..." />}>
       <PatientDetailClient
         pacienteId={pacienteId}
-        initialDetailData={detailData}
-        initialProfesionales={profesionales}
+        _initialDetailData={detailData}
+        _initialProfesionales={profesionales}
         initialFormResponses={formResponses}
       />
     </Suspense>

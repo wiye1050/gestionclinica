@@ -19,7 +19,6 @@ import {
   UserCheck,
   AlertTriangle,
   Calendar,
-  List,
   Download,
   Upload,
   Plus
@@ -114,7 +113,7 @@ function PacientesContent({ initialPage }: PacientesClientProps) {
       if (saved.profesionalId) {
         setProfesionalFilter(saved.profesionalId);
       }
-    } catch (err) {
+    } catch (_err) {
       logWarning('Error cargando filtros guardados', { module: 'pacientes-client', action: 'load-filters' });
       // Limpiar localStorage corrupto
       window.localStorage.removeItem(STORAGE_KEY);
@@ -132,7 +131,7 @@ function PacientesContent({ initialPage }: PacientesClientProps) {
         profesionalId: profesionalFilter
       });
       window.localStorage.setItem(STORAGE_KEY, payload);
-    } catch (err) {
+    } catch (_err) {
       logWarning('No se pudieron guardar los filtros', { module: 'pacientes-client', action: 'save-filters' });
     }
   }, [followUpOnly, profesionalFilter, filtersLoaded]);

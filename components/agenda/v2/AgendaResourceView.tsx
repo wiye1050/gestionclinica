@@ -14,7 +14,7 @@ import {
   roundToNearestSlot,
   calculateOccupancyRate,
 } from './agendaHelpers';
-import { Users, TrendingUp } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import type { CatalogoServicio } from '@/types';
 
 interface Resource {
@@ -137,8 +137,8 @@ export default function AgendaResourceView({
     }
   };
 
-  const dayLabel = format(day, "EEEE, d 'de' MMMM", { locale: es });
-  const overallOccupancy = useMemo(() => calculateOccupancyRate(dayEvents, day), [dayEvents, day]);
+  const _dayLabel = format(day, "EEEE, d 'de' MMMM", { locale: es });
+  const _overallOccupancy = useMemo(() => calculateOccupancyRate(dayEvents, day), [dayEvents, day]);
 
   return (
     <div className="flex h-full flex-col rounded-[28px] bg-card">

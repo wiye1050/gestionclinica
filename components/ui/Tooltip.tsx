@@ -32,7 +32,7 @@ export function Tooltip({
   const [coords, setCoords] = useState({ x: 0, y: 0 });
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLElement>(null);
+  const _triggerRef = useRef<HTMLElement>(null);
 
   const handleMouseEnter = (e: React.MouseEvent) => {
     timeoutRef.current = setTimeout(() => {
@@ -43,8 +43,8 @@ export function Tooltip({
       let y = 0;
 
       const offset = 8; // Distancia del tooltip al elemento
-      const tooltipWidth = tooltipRect.width || 0;
-      const tooltipHeight = tooltipRect.height || 0;
+      const _tooltipWidth = tooltipRect.width || 0;
+      const _tooltipHeight = tooltipRect.height || 0;
 
       switch (position) {
         case 'top':

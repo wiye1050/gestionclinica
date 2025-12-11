@@ -42,6 +42,7 @@ export function logError(
     } else if (level === 'warn') {
       console.warn(fullMessage, { context });
     } else {
+      // eslint-disable-next-line no-console
       console.info(fullMessage, { context });
     }
   }

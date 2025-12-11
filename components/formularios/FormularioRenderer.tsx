@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Save, Check, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { FormularioPlantilla, CampoFormulario } from '@/types';
@@ -11,13 +11,13 @@ import { logger } from '@/lib/utils/logger';
 
 interface FormularioRendererProps {
   plantilla: FormularioPlantilla;
-  pacienteId: string;
+  _pacienteId: string;
   pacienteNombre: string;
   pacienteNHC?: string;
-  eventoAgendaId?: string;
-  servicioId?: string;
-  episodioId?: string;
-  userId: string;
+  _eventoAgendaId?: string;
+  _servicioId?: string;
+  _episodioId?: string;
+  _userId: string;
   respuestaInicial?: Record<string, string | number | boolean | string[] | null>;
   onGuardar?: (respuesta: Record<string, string | number | boolean | string[] | null>, estado: 'borrador' | 'completado') => Promise<void>;
   onCancel?: () => void;
@@ -25,13 +25,13 @@ interface FormularioRendererProps {
 
 export default function FormularioRenderer({
   plantilla,
-  pacienteId,
+  _pacienteId,
   pacienteNombre,
   pacienteNHC,
-  eventoAgendaId,
-  servicioId,
-  episodioId,
-  userId,
+  _eventoAgendaId,
+  _servicioId,
+  _episodioId,
+  _userId,
   respuestaInicial = {},
   onGuardar,
   onCancel,
@@ -39,7 +39,7 @@ export default function FormularioRenderer({
   const [respuestas, setRespuestas] = useState<Record<string, string | number | boolean | string[] | null>>(respuestaInicial);
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [guardando, setGuardando] = useState(false);
-  const [tiempoInicio] = useState(Date.now());
+  const [_tiempoInicio] = useState(Date.now());
 
   // Agrupar campos por ancho para layout responsive
   const getCampoWidth = (ancho: 'full' | 'half' | 'third') => {

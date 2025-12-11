@@ -16,6 +16,65 @@ const disponibilidadSchema = z.object({
 
 const limiter = rateLimit(RATE_LIMIT_STRICT);
 
+/**
+ * GET /api/agenda/disponibilidad
+ * Calcula slots de tiempo disponibles para un profesional en los próximos días
+ *
+ * @async
+ * @param {NextRequest} request - Request de Next.js
+ *
+ * @query {string} profesionalId - ID del profesional (requerido)
+ * @query {number} [days=3] - Número de días a consultar (1-7)
+ *
+ * @returns {Promise<NextResponse>} Slots disponibles
+ * @returns {200} Éxito - { slots: AvailabilitySlot[] }
+ * @returns {400} Parámetros inválidos
+ * @returns {401} No autenticado
+ * @returns {403} No autorizado (requiere rol específico)
+ * @returns {500} Error del servidor
+ *
+ * @typedef {Object} AvailabilitySlot
+ * @property {string} start - Fecha/hora ISO de inicio del slot
+ * @property {string} end - Fecha/hora ISO de fin del slot
+ * @property {number} durationMinutes - Duración en minutos
+ *
+ * @security Requiere autenticación
+ * @security Requiere rol: admin | coordinador | profesional | recepcion
+ *
+ * @algorithm
+ * 1. Obtiene eventos del profesional en el rango de días
+ * 2. Para cada día, calcula gaps entre eventos
+ * 3. Filtra gaps menores a MIN_EVENT_DURATION (30 min)
+ * 4. Respeta horario de trabajo (START_HOUR - END_HOUR)
+ * 5. Retorna máximo 6 slots disponibles
+ *
+ * @example
+ * // Obtener disponibilidad para 5 días
+ * GET /api/agenda/disponibilidad?profesionalId=prof-123&days=5
+ *
+ * @example
+ * // Respuesta exitosa
+ * {
+ *   "slots": [
+ *     {
+ *       "start": "2024-03-20T09:00:00.000Z",
+ *       "end": "2024-03-20T10:00:00.000Z",
+ *       "durationMinutes": 60
+ *     },
+ *     {
+ *       "start": "2024-03-20T14:30:00.000Z",
+ *       "end": "2024-03-20T16:00:00.000Z",
+ *       "durationMinutes": 90
+ *     }
+ *   ]
+ * }
+ *
+ * @note Solo considera eventos del profesional específico
+ * @note Ignora slots menores a 30 minutos
+ * @note Limita resultados a 6 slots máximo
+ *
+ * @throws {ZodError} Si los parámetros no pasan la validación
+ */
 export async function GET(request: NextRequest) {
   const rateLimitResult = await limiter(request);
   if (rateLimitResult) return rateLimitResult;

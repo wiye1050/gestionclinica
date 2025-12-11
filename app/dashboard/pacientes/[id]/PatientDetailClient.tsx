@@ -74,8 +74,8 @@ const CompletarFormularioModal = dynamic(
 
 interface PatientDetailClientProps {
   pacienteId: string;
-  initialDetailData?: PatientDetailData | null;
-  initialProfesionales?: Profesional[];
+  _initialDetailData?: PatientDetailData | null;
+  _initialProfesionales?: Profesional[];
   initialFormResponses?: RespuestaFormulario[];
 }
 
@@ -90,8 +90,8 @@ interface PatientDetailClientProps {
  */
 export default function PatientDetailClient({
   pacienteId,
-  initialDetailData,
-  initialProfesionales = [],
+  _initialDetailData,
+  _initialProfesionales = [],
   initialFormResponses = [],
 }: PatientDetailClientProps) {
   const router = useRouter();
@@ -850,7 +850,7 @@ export default function PatientDetailClient({
         <TabLoadingFallback message="Cargando formularios del paciente..." />
       ) : (
         <PatientFormulariosTab
-        pacienteId={pacienteId}
+        _pacienteId={pacienteId}
         respuestas={respuestasFormularios}
         onNuevoFormulario={() => setMostrarModalFormulario(true)}
         />

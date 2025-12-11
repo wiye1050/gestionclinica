@@ -31,7 +31,7 @@ export default function CompletarFormularioClient({
   userId,
 }: CompletarFormularioClientProps) {
   const router = useRouter();
-  const [guardando, setGuardando] = useState(false);
+  const [_guardando, setGuardando] = useState(false);
 
   const handleGuardar = async (
     respuestas: Record<string, string | number | boolean | string[] | null>,
@@ -100,13 +100,13 @@ export default function CompletarFormularioClient({
       {/* Formulario */}
       <FormularioRenderer
         plantilla={plantilla}
-        pacienteId={paciente.id}
+        _pacienteId={paciente.id}
         pacienteNombre={`${paciente.nombre} ${paciente.apellidos}`}
         pacienteNHC={paciente.numeroHistoria}
-        eventoAgendaId={respuesta.eventoAgendaId}
-        servicioId={respuesta.servicioId}
-        episodioId={respuesta.episodioId}
-        userId={userId}
+        _eventoAgendaId={respuesta.eventoAgendaId}
+        _servicioId={respuesta.servicioId}
+        _episodioId={respuesta.episodioId}
+        _userId={userId}
         respuestaInicial={respuesta.respuestas}
         onGuardar={handleGuardar}
         onCancel={handleCancelar}

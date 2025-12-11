@@ -1,8 +1,6 @@
 import { CheckSquare, Square, Trash2 } from 'lucide-react';
 import type { ServicioAsignado, Profesional } from '@/types';
 
-type TiquetValue = 'SI' | 'NO' | 'CORD' | 'ESPACH';
-
 interface ServiciosTableProps {
   servicios: ServicioAsignado[];
   profesionales: Profesional[];

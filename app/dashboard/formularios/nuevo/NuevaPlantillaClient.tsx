@@ -13,7 +13,7 @@ import { logger } from '@/lib/utils/logger';
 
 interface NuevaPlantillaClientProps {
   userId: string;
-  userName: string;
+  _userName: string;
 }
 
 const TIPOS_FORMULARIO: Array<{ value: TipoFormulario; label: string }> = [
@@ -48,7 +48,7 @@ const TIPOS_CAMPO: Array<{ value: TipoCampoFormulario; label: string }> = [
   { value: 'signature', label: 'Firma' },
 ];
 
-export default function NuevaPlantillaClient({ userId, userName }: NuevaPlantillaClientProps) {
+export default function NuevaPlantillaClient({ userId,_userName }: NuevaPlantillaClientProps) {
   const router = useRouter();
   const [guardando, setGuardando] = useState(false);
 
@@ -335,7 +335,7 @@ export default function NuevaPlantillaClient({ userId, userName }: NuevaPlantill
             </div>
           ) : (
             <div className="space-y-2">
-              {campos.map((campo, index) => (
+              {campos.map((campo, _index) => (
                 <div
                   key={campo.id}
                   className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"

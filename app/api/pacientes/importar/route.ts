@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Solo admins pueden importar
-  const hasAccess = (user.roles ?? []).some((role) => ADMIN_ROLES.has(role));
+  const _hasAccess = (user.roles ?? []).some((role) => ADMIN_ROLES.has(role));
   if (!hasAnyRole(user.roles, API_ROLES.WRITE)) {
     return NextResponse.json(
       { error: 'Solo administradores pueden importar pacientes' },

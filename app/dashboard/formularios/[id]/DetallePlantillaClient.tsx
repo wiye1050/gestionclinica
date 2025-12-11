@@ -11,7 +11,6 @@ import {
   FileText,
   Eye,
   CheckCircle,
-  BarChart3,
   Calendar,
   User,
   Clock,

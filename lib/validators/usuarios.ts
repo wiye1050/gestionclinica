@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { optionalEmail, optionalString, userRolesArraySchema, phoneSchema } from './common';
+import { optionalEmail, userRolesArraySchema, phoneSchema } from './common';
 
 /**
  * Validadores para el módulo de Usuarios

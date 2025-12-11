@@ -6,7 +6,6 @@
  */
 
 import { captureError } from './errorLogging';
-import { logger } from '@/lib/utils/logger';
 
 interface ApiClientOptions extends Omit<RequestInit, 'method' | 'body'> {
   /** Module name for error logging */

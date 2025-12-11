@@ -24,7 +24,7 @@ export default async function CompletarFormularioPage({ params, searchParams }: 
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
   const respuestaId = resolvedParams.id;
-  const pacienteId = resolvedSearchParams.pacienteId;
+  const _pacienteId = resolvedSearchParams.pacienteId;
 
   // Cargar la respuesta (que debe estar en estado borrador)
   const respuesta = await serverFetchGet<RespuestaFormulario>(

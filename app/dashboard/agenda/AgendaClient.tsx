@@ -123,7 +123,7 @@ export default function AgendaClient({
     if (!Number.isNaN(parsed.getTime())) {
       setCurrentDate(parsed);
     }
-  }, [prefillRequest?.targetDate]);
+  }, [prefillRequest?.targetDate, setCurrentDate]);
 
   const queryClient = useQueryClient();
 
@@ -354,7 +354,7 @@ export default function AgendaClient({
                 busqueda={busquedaEvento}
                 onBusquedaChange={setBusquedaEvento}
                 onNewEvent={() => openModal(new Date())}
-                eventCount={eventosFiltrados.length}
+                _eventCount={eventosFiltrados.length}
                 viewDensity={viewDensity}
                 onViewDensityChange={setViewDensity}
                 dayViewMode={dayViewMode}

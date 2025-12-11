@@ -99,8 +99,9 @@ describe('detectConflicts', () => {
     const conflicts = detectConflicts(events)
 
     expect(conflicts).toHaveLength(1)
-    expect(conflicts[0].type).toBe('overlap')
-    expect(conflicts[0].severity).toBe('warning')
+    // Mismo profesional con overlap = double-booking (más severo que overlap)
+    expect(conflicts[0].type).toBe('double-booking')
+    expect(conflicts[0].severity).toBe('error')
   })
 
   it('detecta double-booking del mismo profesional', () => {

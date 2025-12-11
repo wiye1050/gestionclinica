@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { optionalEmail, optionalString, estadoGenerico, phoneSchema } from './common';
 
 /**
  * Validadores para el módulo de Profesionales

@@ -16,7 +16,7 @@ export default async function NuevaPlantillaPage() {
 
   return (
     <ModuleErrorBoundary moduleName="Nueva Plantilla">
-      <NuevaPlantillaClient userId={user.uid} userName={user.displayName || user.email || ''} />
+      <NuevaPlantillaClient userId={user.uid} _userName={user.displayName || user.email || ''} />
     </ModuleErrorBoundary>
   );
 }

@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { bucket } from '@/lib/storage/client';
 import { getCurrentUser } from '@/lib/auth/server';
-import { API_ROLES, hasAnyRole } from '@/lib/auth/apiRoles';
+import { hasAnyRole } from '@/lib/auth/apiRoles';
 import { logger } from '@/lib/utils/logger';
 import {
-  MAX_FILE_SIZE,
-  ALLOWED_FILE_TYPES,
   validateFileMetadataSchema,
   getFileExtension,
   getContentTypeFromExtension,
-  type AllowedFolder,
 } from '@/lib/validators';
 import type { AppRole } from '@/lib/auth/roles';
 import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';

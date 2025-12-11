@@ -9,13 +9,13 @@ import { Badge } from '@/components/ui/Badge';
 import { formatDate } from '@/lib/utils/helpers';
 
 interface PatientFormulariosTabProps {
-  pacienteId: string;
+  _pacienteId: string;
   respuestas: RespuestaFormulario[];
   onNuevoFormulario?: () => void;
 }
 
 export default function PatientFormulariosTab({
-  pacienteId,
+  _pacienteId,
   respuestas,
   onNuevoFormulario,
 }: PatientFormulariosTabProps) {

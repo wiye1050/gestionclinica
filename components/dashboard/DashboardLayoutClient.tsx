@@ -10,7 +10,6 @@ import { useGlobalSearch } from '@/lib/hooks/useGlobalSearch';
 import { NotificacionesDropdown } from '@/components/ui/NotificacionesDropdown';
 import { QueryProvider } from '@/lib/providers/QueryProvider';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
-import { Breadcrumbs } from '@/components/dashboard/Breadcrumbs';
 import { UserDropdown } from '@/components/dashboard/UserDropdown';
 import { collection, getCountFromServer, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';

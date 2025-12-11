@@ -15,10 +15,41 @@ const limiter = rateLimit(RATE_LIMIT_STRICT);
  * GET /api/agenda/eventos
  * Obtiene eventos de agenda para una semana específica
  *
- * Query params:
- * - weekStart: ISO string de la fecha de inicio de semana
+ * @async
+ * @param {NextRequest} request - Request de Next.js
  *
- * @security Requiere autenticación y rol de lectura
+ * @query {string} weekStart - Fecha ISO de inicio de semana (requerido)
+ *
+ * @returns {Promise<NextResponse>} Eventos de la semana
+ * @returns {200} Éxito - { events: AgendaEvento[] }
+ * @returns {400} weekStart faltante o inválido
+ * @returns {401} No autenticado
+ * @returns {403} Permisos insuficientes
+ * @returns {500} Error del servidor
+ *
+ * @security Requiere autenticación
+ * @security Requiere rol de lectura: admin | coordinador | profesional | recepcion
+ *
+ * @example
+ * // Obtener eventos de la semana del 18 de marzo
+ * GET /api/agenda/eventos?weekStart=2024-03-18T00:00:00.000Z
+ *
+ * @example
+ * // Respuesta exitosa
+ * {
+ *   "events": [
+ *     {
+ *       "id": "evt-123",
+ *       "titulo": "Consulta Juan Pérez",
+ *       "tipo": "consulta",
+ *       "fechaInicio": "2024-03-18T10:00:00.000Z",
+ *       "fechaFin": "2024-03-18T11:00:00.000Z",
+ *       "profesionalId": "prof-1",
+ *       "pacienteId": "pac-1",
+ *       "estado": "programada"
+ *     }
+ *   ]
+ * }
  */
 export async function GET(request: NextRequest) {
   // Aplicar rate limiting
@@ -68,6 +99,67 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * POST /api/agenda/eventos
+ * Crea un nuevo evento en la agenda con validación de conflictos
+ *
+ * @async
+ * @param {NextRequest} request - Request de Next.js con body JSON
+ *
+ * @body {string} titulo - Título del evento (requerido, máx 200 caracteres)
+ * @body {string} tipo - Tipo: 'consulta' | 'seguimiento' | 'revision' | 'tratamiento' | 'urgencia' | 'administrativo'
+ * @body {string} [pacienteId] - ID del paciente (opcional)
+ * @body {string} profesionalId - ID del profesional asignado (requerido)
+ * @body {string} [salaId] - ID de la sala (opcional)
+ * @body {string} [servicioId] - ID del servicio asociado (opcional)
+ * @body {string} fechaInicio - Fecha/hora de inicio ISO (requerido)
+ * @body {string} fechaFin - Fecha/hora de fin ISO (requerido)
+ * @body {string} [estado='programada'] - Estado: 'programada' | 'confirmada' | 'realizada' | 'cancelada'
+ * @body {string} [prioridad='media'] - Prioridad: 'alta' | 'media' | 'baja'
+ * @body {string} [notas] - Notas adicionales (máx 1000 caracteres)
+ * @body {boolean} [requiereSeguimiento=false] - Si requiere seguimiento posterior
+ *
+ * @returns {Promise<NextResponse>} Evento creado
+ * @returns {201} Éxito - { id: string, ...eventoData }
+ * @returns {400} Datos inválidos o fechas incorrectas
+ * @returns {401} No autenticado
+ * @returns {403} Permisos insuficientes (requiere rol de escritura)
+ * @returns {409} Conflicto de horario (double-booking)
+ * @returns {500} Error del servidor
+ *
+ * @security Requiere autenticación
+ * @security Requiere rol: admin | coordinador | profesional | recepcion
+ *
+ * @validation Valida que fechaFin > fechaInicio
+ * @validation Detecta conflictos de horario para profesional y sala
+ *
+ * @example
+ * // Crear consulta básica
+ * POST /api/agenda/eventos
+ * {
+ *   "titulo": "Consulta Dr. García",
+ *   "tipo": "consulta",
+ *   "profesionalId": "prof-123",
+ *   "pacienteId": "pac-456",
+ *   "fechaInicio": "2024-03-20T10:00:00.000Z",
+ *   "fechaFin": "2024-03-20T11:00:00.000Z",
+ *   "estado": "programada",
+ *   "prioridad": "media"
+ * }
+ *
+ * @example
+ * // Error de conflicto (409)
+ * {
+ *   "error": "Conflicto de horario detectado",
+ *   "details": {
+ *     "message": "El profesional ya tiene una cita en ese horario: 'Consulta anterior'",
+ *     "conflictType": "double-booking-profesional",
+ *     "conflictingEventId": "evt-789"
+ *   }
+ * }
+ *
+ * @throws {ZodError} Si los datos no pasan la validación del schema
+ */
 export async function POST(request: NextRequest) {
   const rateLimitResult = await limiter(request);
   if (rateLimitResult) return rateLimitResult;

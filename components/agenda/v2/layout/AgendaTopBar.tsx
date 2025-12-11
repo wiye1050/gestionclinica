@@ -25,7 +25,7 @@ interface AgendaTopBarProps {
   onNewEvent: () => void;
 
   // Contador de eventos
-  eventCount: number;
+  _eventCount: number;
 
   // Density controls (opcionales)
   viewDensity?: ViewDensity;
@@ -57,7 +57,7 @@ export default function AgendaTopBar({
   busqueda,
   onBusquedaChange,
   onNewEvent,
-  eventCount,
+  _eventCount,
   viewDensity,
   onViewDensityChange,
   dayViewMode,

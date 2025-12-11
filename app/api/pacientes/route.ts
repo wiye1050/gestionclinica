@@ -13,6 +13,36 @@ import { rateLimit, RATE_LIMIT_MODERATE } from '@/lib/middleware/rateLimit';
 
 const limiter = rateLimit(RATE_LIMIT_MODERATE);
 
+/**
+ * GET /api/pacientes
+ * Obtiene lista paginada de pacientes con filtros y búsqueda
+ *
+ * @async
+ * @param {NextRequest} request - Request de Next.js
+ *
+ * @query {string} [estado] - Filtrar por estado: 'activo' | 'inactivo' | 'egresado'
+ * @query {string} [q] - Búsqueda por nombre, apellidos, documento o número de historia
+ * @query {number} [limit=200] - Límite de resultados (máx 500)
+ * @query {string} [cursor] - ID del último paciente para paginación
+ *
+ * @returns {Promise<NextResponse>} Lista de pacientes con paginación
+ * @returns {200} Éxito - { items: Paciente[], nextCursor: string | null, limit: number }
+ * @returns {401} No autenticado
+ * @returns {500} Error del servidor
+ *
+ * @security Requiere autenticación
+ * @security Admin/Coordinador: Ve todos los pacientes
+ * @security Profesional: Solo ve pacientes asignados (profesionalReferenteId)
+ * @security Paciente: Solo ve su propio registro
+ *
+ * @example
+ * // Obtener pacientes activos con búsqueda
+ * GET /api/pacientes?estado=activo&q=juan&limit=50
+ *
+ * @example
+ * // Paginación
+ * GET /api/pacientes?cursor=paciente-123&limit=100
+ */
 export async function GET(request: NextRequest) {
   // Aplicar rate limiting
   const rateLimitResult = await limiter(request);
@@ -119,6 +149,54 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * POST /api/pacientes
+ * Crea un nuevo paciente en el sistema
+ *
+ * @async
+ * @param {NextRequest} request - Request de Next.js con body JSON
+ *
+ * @body {string} nombre - Nombre del paciente (requerido, máx 100 caracteres)
+ * @body {string} apellidos - Apellidos del paciente (requerido, máx 100 caracteres)
+ * @body {string} genero - Género: 'masculino' | 'femenino' | 'otro' (requerido)
+ * @body {string} fechaNacimiento - Fecha de nacimiento ISO (requerido)
+ * @body {string} [documentoId] - DNI/NIE/Pasaporte (máx 50 caracteres)
+ * @body {string} [email] - Email de contacto
+ * @body {string} [telefono] - Teléfono de contacto (máx 20 caracteres)
+ * @body {string} [direccion] - Dirección completa (máx 200 caracteres)
+ * @body {string} [codigoPostal] - Código postal (máx 10 caracteres)
+ * @body {string} [ciudad] - Ciudad (máx 100 caracteres)
+ * @body {string} [estado='activo'] - Estado: 'activo' | 'inactivo' | 'egresado'
+ * @body {string} [riesgo='bajo'] - Nivel de riesgo: 'alto' | 'medio' | 'bajo'
+ * @body {string} [profesionalReferenteId] - ID del profesional asignado
+ * @body {string} [grupoPacienteId] - ID del grupo al que pertenece
+ * @body {string} [notas] - Notas adicionales (máx 2000 caracteres)
+ *
+ * @returns {Promise<NextResponse>} Paciente creado
+ * @returns {201} Éxito - { id: string, numeroHistoria: string, ...pacienteData }
+ * @returns {400} Datos inválidos - { error: string, details?: object }
+ * @returns {401} No autenticado
+ * @returns {403} Permisos insuficientes (requiere rol de escritura)
+ * @returns {500} Error del servidor
+ *
+ * @security Requiere autenticación
+ * @security Requiere rol: admin | coordinador | profesional
+ *
+ * @example
+ * // Crear paciente básico
+ * POST /api/pacientes
+ * {
+ *   "nombre": "Juan",
+ *   "apellidos": "García López",
+ *   "genero": "masculino",
+ *   "fechaNacimiento": "1985-03-15",
+ *   "documentoId": "12345678A",
+ *   "telefono": "666555444",
+ *   "email": "juan.garcia@example.com"
+ * }
+ *
+ * @throws {ZodError} Si los datos no pasan la validación del schema
+ */
 export async function POST(request: NextRequest) {
   // Aplicar rate limiting
   const rateLimitResult = await limiter(request);
