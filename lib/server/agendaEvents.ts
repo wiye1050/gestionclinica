@@ -197,6 +197,25 @@ export async function updateAgendaEvent(
 
   await docRef.update(updateData);
 
+  // Si el estado cambió a 'realizada', actualizar el historial vinculado
+  const eventoData = snapshot.data();
+  if (changes.estado === 'realizada' && eventoData?.pacienteId) {
+    // Buscar el registro de historial vinculado
+    const historialSnap = await adminDb
+      .collection('pacientes-historial')
+      .where('eventoAgendaId', '==', eventId)
+      .limit(1)
+      .get();
+
+    if (!historialSnap.empty) {
+      const historialDoc = historialSnap.docs[0];
+      await historialDoc.ref.update({
+        resultado: changes.notas || 'Cita completada',
+        updatedAt: new Date(),
+      });
+    }
+  }
+
   await adminDb.collection('auditLogs').add({
     modulo: 'agenda',
     accion: 'update',

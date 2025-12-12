@@ -1,3 +1,6 @@
+import Link from 'next/link';
+import { Calendar } from 'lucide-react';
+import { Button } from '@/components/ui';
 import { HISTORIAL_BADGE_COLORS } from './pacientesConstants';
 import type { RegistroHistorialPaciente } from '@/types';
 
@@ -32,8 +35,18 @@ export default function PatientHistorialListItem({ registro }: PatientHistorialL
             </p>
           </div>
         </div>
-        <div className="text-sm text-text-muted">
-          {registro.profesionalNombre ?? 'Profesional no asignado'}
+        <div className="flex flex-col items-end gap-2">
+          <div className="text-sm text-text-muted">
+            {registro.profesionalNombre ?? 'Profesional no asignado'}
+          </div>
+          {registro.eventoAgendaId && (
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={`/dashboard/agenda?event=${registro.eventoAgendaId}`}>
+                <Calendar className="h-4 w-4 mr-2" />
+                Ver cita
+              </Link>
+            </Button>
+          )}
         </div>
       </header>
       <div className="space-y-3 px-6 py-4 text-sm text-text">

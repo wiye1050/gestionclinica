@@ -19,6 +19,7 @@ export interface AgendaEvent {
   prioridad?: 'alta' | 'media' | 'baja';
   notas?: string;
   color?: string;
+  hasHistorialEntry?: boolean; // Indica si existe una entrada de historial vinculada
 }
 
 export interface TimeSlot {

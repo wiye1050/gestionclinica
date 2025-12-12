@@ -11,7 +11,8 @@ import {
   Circle,
   AlertTriangle,
   Edit,
-  Trash2
+  Trash2,
+  FileText
 } from 'lucide-react';
 import {
   AgendaEvent,
@@ -229,6 +230,12 @@ export default function AgendaEventCard({
                     <span className={`rounded-full px-2 py-0.5 capitalize ${typeBadgeClass}`}>
                       {event.tipo}
                     </span>
+                    {event.hasHistorialEntry && (
+                      <span className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 bg-brand-subtle text-brand border border-brand/30">
+                        <FileText className="h-2.5 w-2.5" />
+                        <span>Historial</span>
+                      </span>
+                    )}
                   </div>
                 </div>
 
