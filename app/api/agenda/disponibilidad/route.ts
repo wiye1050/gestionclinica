@@ -7,6 +7,7 @@ import { validateSearchParams } from '@/lib/utils/apiValidation';
 import { getCurrentUser } from '@/lib/auth/server';
 import { logger } from '@/lib/utils/logger';
 import { rateLimit, RATE_LIMIT_STRICT } from '@/lib/middleware/rateLimit';
+import { findBestAvailableSlots } from '@/lib/server/availability';
 
 // Schema de validación para query params
 const disponibilidadSchema = z.object({
@@ -176,5 +177,66 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     logger.error('[agenda|disponibilidad]', error as Error);
     return NextResponse.json({ error: 'No se pudo obtener disponibilidad' }, { status: 500 });
+  }
+}
+
+// Schema de validación para POST (búsqueda avanzada)
+const busquedaAvanzadaSchema = z.object({
+  profesionalId: z.string().optional(),
+  fecha: z.string().min(1, 'fecha es requerida'),
+  duracionMinutos: z.number().min(15).max(180),
+  preferencias: z.object({
+    horaInicio: z.string().optional(),
+    horaFin: z.string().optional(),
+    excluirAlmuerzo: z.boolean().optional(),
+    profesionalPreferido: z.string().optional(),
+  }).optional(),
+});
+
+/**
+ * POST /api/agenda/disponibilidad
+ * Búsqueda avanzada de slots disponibles con preferencias
+ */
+export async function POST(request: NextRequest) {
+  const rateLimitResult = await limiter(request);
+  if (rateLimitResult) return rateLimitResult;
+
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+    }
+
+    const allowedRoles = new Set(['admin', 'coordinador', 'profesional', 'recepcion']);
+    const hasAccess = (currentUser.roles ?? []).some((role) => allowedRoles.has(role));
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const validation = busquedaAvanzadaSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: 'Datos inválidos',
+          details: validation.error.issues.map((e) => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
+        { status: 400 }
+      );
+    }
+
+    const slots = await findBestAvailableSlots(validation.data, 10);
+
+    return NextResponse.json({ slots });
+  } catch (error) {
+    logger.error('[agenda|disponibilidad|post]', error as Error);
+    return NextResponse.json(
+      { error: 'No se pudo buscar disponibilidad' },
+      { status: 500 }
+    );
   }
 }
