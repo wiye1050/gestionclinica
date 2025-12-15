@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useQueryClient } from '@tanstack/react-query';
 import { Profesional } from '@/types';
-import { Plus, Edit2, Trash2, Save, X, UserCheck, Mail, Phone, Clock, Calendar } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, UserCheck, Mail, Phone, Clock, Calendar, ArrowRight } from 'lucide-react';
 import { sanitizeInput, sanitizeStringArray } from '@/lib/utils/sanitize';
 import { captureError } from '@/lib/utils/errorLogging';
 import ColorPicker from '@/components/shared/ColorPicker';
@@ -518,10 +519,10 @@ export default function ProfesionalesClient({ initialProfesionales }: Profesiona
                 </div>
               </div>
 
-              <div className="mt-4">
+              <div className="mt-4 flex gap-2">
                 <button
                   onClick={() => toggleActivo(prof.id, prof.activo)}
-                  className={`w-full rounded-pill px-4 py-2 text-sm font-medium transition-colors focus-visible:focus-ring ${
+                  className={`flex-1 rounded-pill px-4 py-2 text-sm font-medium transition-colors focus-visible:focus-ring ${
                     prof.activo
                       ? 'bg-success-bg text-success hover:bg-success-bg'
                       : 'border border-border bg-card text-text hover:bg-cardHover'
@@ -529,6 +530,13 @@ export default function ProfesionalesClient({ initialProfesionales }: Profesiona
                 >
                   {prof.activo ? 'Activo' : 'Inactivo'}
                 </button>
+                <Link
+                  href={`/dashboard/profesionales/${prof.id}`}
+                  className="inline-flex items-center gap-2 rounded-pill border border-brand bg-brand-subtle px-4 py-2 text-sm font-medium text-brand transition-colors hover:bg-brand hover:text-white focus-visible:focus-ring"
+                >
+                  Ver detalle
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
             </div>
           ))
