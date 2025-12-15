@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Proyecto } from '@/types/proyectos';
 import {
   X, Calendar, Users, Tag, DollarSign, Clock, Link as LinkIcon,
   Target, CheckCircle, AlertCircle, TrendingUp, MessageSquare,
-  Edit, Trash2, Plus
+  Edit, Trash2, Plus, ExternalLink
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -75,6 +76,16 @@ export default function ProyectoDetalle({ proyecto, onClose, onEditar, onElimina
                 <span>Hitos: {hitosCompletados}/{totalHitos}</span>
               </div>
             </div>
+
+            {/* Ver detalle completo button */}
+            <Link
+              href={`/dashboard/proyectos/${proyecto.id}`}
+              className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-white text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ExternalLink className="w-4 h-4" />
+              Ver detalle completo
+            </Link>
           </div>
 
           <div className="flex items-center gap-2">
