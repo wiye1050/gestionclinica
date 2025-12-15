@@ -249,3 +249,24 @@ export async function getSerializedProyectos(): Promise<SerializedProyecto[]> {
   const snapshot = await adminDb.collection('proyectos').get();
   return snapshot.docs.map((docSnap) => serializeProyecto(mapProyecto(docSnap.id, docSnap.data() ?? {})));
 }
+
+/**
+ * Obtiene un proyecto específico por su ID
+ * Retorna el proyecto serializado o null si no existe
+ */
+export async function getProyectoById(proyectoId: string): Promise<SerializedProyecto | null> {
+  if (!adminDb) {
+    logger.warn('[proyectos] Firebase Admin no configurado');
+    return null;
+  }
+
+  const docSnap = await adminDb.collection('proyectos').doc(proyectoId).get();
+
+  if (!docSnap.exists) {
+    return null;
+  }
+
+  const data = docSnap.data() ?? {};
+  const proyecto = mapProyecto(docSnap.id, data);
+  return serializeProyecto(proyecto);
+}
