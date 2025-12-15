@@ -78,6 +78,35 @@ export async function createProfesional(
   return { id: docRef.id };
 }
 
+export async function getProfesionalById(profesionalId: string): Promise<SerializedProfesional | null> {
+  const db = assertAdminDb();
+  const docSnap = await db.collection('profesionales').doc(profesionalId).get();
+
+  if (!docSnap.exists) {
+    return null;
+  }
+
+  const data = docSnap.data() ?? {};
+  return {
+    id: docSnap.id,
+    nombre: data.nombre ?? 'Sin nombre',
+    apellidos: data.apellidos ?? '',
+    especialidad: data.especialidad ?? 'medicina',
+    email: data.email ?? '',
+    telefono: data.telefono ?? '',
+    activo: data.activo ?? true,
+    horasSemanales: data.horasSemanales ?? 40,
+    diasTrabajo: Array.isArray(data.diasTrabajo) ? data.diasTrabajo : [],
+    horaInicio: data.horaInicio ?? '08:00',
+    horaFin: data.horaFin ?? '16:00',
+    serviciosAsignados: data.serviciosAsignados ?? 0,
+    cargaTrabajo: data.cargaTrabajo ?? 0,
+    createdAt: toISO(data.createdAt),
+    updatedAt: toISO(data.updatedAt),
+    color: data.color ?? undefined,
+  } satisfies SerializedProfesional;
+}
+
 export async function getSerializedProfesionales(limit = 400): Promise<SerializedProfesional[]> {
   if (!adminDb) {
     if (process.env.NODE_ENV !== 'production') {
