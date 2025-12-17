@@ -1,4 +1,5 @@
-import { CheckSquare, Square, Trash2 } from 'lucide-react';
+import { CheckSquare, Square, Trash2, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 import type { ServicioAsignado, Profesional } from '@/types';
 
 interface ServiciosTableProps {
@@ -145,7 +146,13 @@ export default function ServiciosTable({
                   </button>
                 </td>
                 <td className="px-4 py-3 text-sm font-medium text-text">
-                  {servicio.catalogoServicioNombre}
+                  <Link
+                    href={`/dashboard/servicios/${servicio.catalogoServicioId}`}
+                    className="inline-flex items-center gap-1.5 text-brand hover:underline"
+                  >
+                    {servicio.catalogoServicioNombre}
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Link>
                 </td>
                 <td className="px-4 py-3 text-sm text-text-muted">{servicio.grupoNombre}</td>
                 <td className="px-4 py-3">
