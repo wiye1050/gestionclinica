@@ -209,6 +209,57 @@ export async function getServiciosModuleSerialized(): Promise<SerializedServicio
 
 export { deserializeServiciosModule };
 
+/**
+ * Obtiene un servicio del catálogo por su ID
+ * @param catalogoId - ID del servicio en el catálogo
+ * @returns El servicio del catálogo o null si no existe
+ */
+export async function getCatalogoServicioById(
+  catalogoId: string
+): Promise<SerializedCatalogoServicio | null> {
+  if (!adminDb) {
+    logger.warn('[servicios] Firebase Admin no configurado');
+    return null;
+  }
+
+  try {
+    const docSnap = await adminDb.collection('catalogo-servicios').doc(catalogoId).get();
+
+    if (!docSnap.exists) {
+      return null;
+    }
+
+    // Mapear manualmente ya que DocumentSnapshot no es QueryDocumentSnapshot
+    const data = docSnap.data() ?? {};
+    return {
+      id: docSnap.id,
+      nombre: ensureString(data.nombre, 'Servicio'),
+      categoria: ensureCategoria(data.categoria),
+      color: ensureString(data.color ?? '#3B82F6'),
+      descripcion: ensureString(data.descripcion ?? '') || undefined,
+      protocolosRequeridos: Array.isArray(data.protocolosRequeridos)
+        ? (data.protocolosRequeridos.filter((item: unknown) => typeof item === 'string') as string[])
+        : [],
+      tiempoEstimado: ensureNumber(data.tiempoEstimado, 45),
+      requiereSala: ensureBoolean(data.requiereSala),
+      salaPredeterminada: ensureString(data.salaPredeterminada ?? '') || undefined,
+      requiereSupervision: ensureBoolean(data.requiereSupervision),
+      requiereApoyo: ensureBoolean(data.requiereApoyo),
+      frecuenciaMensual: typeof data.frecuenciaMensual === 'number' ? data.frecuenciaMensual : undefined,
+      cargaMensualEstimada: ensureString(data.cargaMensualEstimada ?? '') || undefined,
+      profesionalesHabilitados: Array.isArray(data.profesionalesHabilitados)
+        ? (data.profesionalesHabilitados.filter((id: unknown) => typeof id === 'string') as string[])
+        : [],
+      activo: data.activo === undefined ? true : Boolean(data.activo),
+      createdAt: toISO(data.createdAt),
+      updatedAt: toISO(data.updatedAt),
+    };
+  } catch (error) {
+    logger.error('[servicios] Error al obtener servicio del catálogo:', error);
+    return null;
+  }
+}
+
 const notFoundError = (message: string) => {
   const error = new Error(message);
   error.name = 'NotFoundError';
